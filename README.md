@@ -1,1 +1,1 @@
-# amuzik-proyect
+# amuzik-project
