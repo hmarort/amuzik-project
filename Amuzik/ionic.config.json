@@ -1,0 +1,7 @@
+{
+  "name": "Amuzik",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
