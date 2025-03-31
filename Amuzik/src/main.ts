@@ -21,10 +21,38 @@ bootstrapApplication(AppComponent, {
   providers: [
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     provideIonicAngular(),
-    provideRouter(routes, withPreloading(PreloadAllModules)), provideFirebaseApp(() => initializeApp({ projectId: "amuzik-38d5c", appId: "1:142614205335:web:919e66396d143fc658ead2", storageBucket: "amuzik-38d5c.firebasestorage.app", apiKey: "AIzaSyAxqDUI3mkgl9lRctgmqmIfPMv-HRMQ0BE", authDomain: "amuzik-38d5c.firebaseapp.com", messagingSenderId: "142614205335", measurementId: "G-YGSB2ZZGX4" })), provideAuth(() => getAuth()), provideAnalytics(() => getAnalytics()), ScreenTrackingService, UserTrackingService, provideAppCheck(() => {
-  // TODO get a reCAPTCHA Enterprise here https://console.cloud.google.com/security/recaptcha?project=_
-  const provider = new ReCaptchaEnterpriseProvider("6LejIgUrAAAAAIXTlu4xLwSRS8cych1C5hOOPR7r");
-  return initializeAppCheck(undefined, { provider, isTokenAutoRefreshEnabled: true });
-}), provideFirestore(() => getFirestore()), provideDatabase(() => getDatabase()), provideFunctions(() => getFunctions()), provideMessaging(() => getMessaging()), providePerformance(() => getPerformance()), provideStorage(() => getStorage()), provideRemoteConfig(() => getRemoteConfig()), provideVertexAI(() => getVertexAI()),
+    provideRouter(routes, withPreloading(PreloadAllModules)),
+    provideFirebaseApp(() =>
+      initializeApp({
+        projectId: 'amuzik-38d5c',
+        appId: '1:142614205335:web:919e66396d143fc658ead2',
+        storageBucket: 'amuzik-38d5c.firebasestorage.app',
+        apiKey: 'AIzaSyAxqDUI3mkgl9lRctgmqmIfPMv-HRMQ0BE',
+        authDomain: 'amuzik-38d5c.firebaseapp.com',
+        messagingSenderId: '142614205335',
+        measurementId: 'G-YGSB2ZZGX4',
+      })
+    ),
+    provideAuth(() => getAuth()),
+    provideAnalytics(() => getAnalytics()),
+    ScreenTrackingService,
+    UserTrackingService,
+    provideAppCheck(() => {
+      const provider = new ReCaptchaEnterpriseProvider(
+        '6LejIgUrAAAAAIXTlu4xLwSRS8cych1C5hOOPR7r'
+      );
+      return initializeAppCheck(undefined, {
+        provider,
+        isTokenAutoRefreshEnabled: true,
+      });
+    }),
+    provideFirestore(() => getFirestore()),
+    provideDatabase(() => getDatabase()),
+    provideFunctions(() => getFunctions()),
+    provideMessaging(() => getMessaging()),
+    providePerformance(() => getPerformance()),
+    provideStorage(() => getStorage()),
+    provideRemoteConfig(() => getRemoteConfig()),
+    provideVertexAI(() => getVertexAI()),
   ],
 });
