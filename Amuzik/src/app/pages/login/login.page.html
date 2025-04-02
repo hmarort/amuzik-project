@@ -1,13 +1,119 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>login</ion-title>
-  </ion-toolbar>
-</ion-header>
+<!-- login.page.html -->
+<ion-content class="bg-gradient-to-br from-blue-500 to-indigo-700">
+  <div class="flex min-h-full items-center justify-center py-12 px-4">
+    <div class="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
+      <!-- Logo y título -->
+      <div class="text-center mb-8">
+        <ion-icon name="lock-closed" class="text-6xl text-indigo-600"></ion-icon>
+        <h2 class="mt-3 text-2xl font-bold text-gray-900">Iniciar Sesión</h2>
+        <p class="mt-2 text-sm text-gray-500">Ingresa tus credenciales para acceder</p>
+      </div>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">login</ion-title>
-    </ion-toolbar>
-  </ion-header>
+      <!-- Formulario -->
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+        <!-- Email -->
+        <div class="mb-4">
+          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <div class="relative">
+            <ion-icon name="mail" class="absolute left-3 top-3 text-gray-400"></ion-icon>
+            <input 
+              type="email" 
+              id="email" 
+              formControlName="email" 
+              class="pl-10 w-full py-2 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" 
+              placeholder="tucorreo@ejemplo.com"
+            />
+          </div>
+          <div *ngIf="loginForm.get('email')?.touched && loginForm.get('email')?.invalid" class="mt-1 text-xs text-red-600">
+            <div *ngIf="loginForm.get('email')?.errors?.['required']">El email es requerido</div>
+            <div *ngIf="loginForm.get('email')?.errors?.['email']">Ingresa un email válido</div>
+          </div>
+        </div>
+
+        <!-- Contraseña -->
+        <div class="mb-6">
+          <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+          <div class="relative">
+            <ion-icon name="lock-closed" class="absolute left-3 top-3 text-gray-400"></ion-icon>
+            <input 
+              [type]="showPassword ? 'text' : 'password'" 
+              id="password" 
+              formControlName="password" 
+              class="pl-10 w-full py-2 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" 
+              placeholder="Tu contraseña"
+            />
+            <button 
+              type="button" 
+              (click)="togglePasswordVisibility()" 
+              class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 focus:outline-none"
+            >
+              <ion-icon [name]="showPassword ? 'eye-off' : 'eye'"></ion-icon>
+            </button>
+          </div>
+          <div *ngIf="loginForm.get('password')?.touched && loginForm.get('password')?.invalid" class="mt-1 text-xs text-red-600">
+            <div *ngIf="loginForm.get('password')?.errors?.['required']">La contraseña es requerida</div>
+            <div *ngIf="loginForm.get('password')?.errors?.['minlength']">La contraseña debe tener al menos 6 caracteres</div>
+          </div>
+        </div>
+
+        <!-- Recordarme y olvidé mi contraseña -->
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center">
+            <input 
+              id="remember-me" 
+              type="checkbox" 
+              formControlName="rememberMe" 
+              class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+            />
+            <label for="remember-me" class="ml-2 block text-sm text-gray-700">Recordarme</label>
+          </div>
+          <a href="#" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">¿Olvidaste tu contraseña?</a>
+        </div>
+
+        <!-- Botón de inicio de sesión -->
+        <div>
+          <button 
+            type="submit" 
+            [disabled]="isSubmitting" 
+            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out flex justify-center items-center"
+          >
+            <ion-spinner *ngIf="isSubmitting" name="crescent" class="mr-2"></ion-spinner>
+            {{ isSubmitting ? 'Iniciando sesión...' : 'Iniciar sesión' }}
+          </button>
+        </div>
+      </form>
+
+      <!-- Divisor -->
+      <div class="mt-6">
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-gray-300"></div>
+          </div>
+          <div class="relative flex justify-center text-sm">
+            <span class="px-2 bg-white text-gray-500">O continúa con</span>
+          </div>
+        </div>
+
+        <!-- Botones de redes sociales -->
+        <div class="mt-6 grid grid-cols-2 gap-3">
+          <a href="#" class="flex justify-center items-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white hover:bg-gray-50">
+            <ion-icon name="logo-google" class="text-xl text-red-500 mr-2"></ion-icon>
+            <span class="text-sm font-medium text-gray-700">Google</span>
+          </a>
+          <a href="#" class="flex justify-center items-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white hover:bg-gray-50">
+            <ion-icon name="logo-facebook" class="text-xl text-blue-600 mr-2"></ion-icon>
+            <span class="text-sm font-medium text-gray-700">Facebook</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Enlace para registrarse -->
+      <div class="mt-6 text-center">
+        <p class="text-sm text-gray-600">
+          ¿No tienes una cuenta?
+          <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500">Regístrate</a>
+        </p>
+      </div>
+    </div>
+  </div>
 </ion-content>
