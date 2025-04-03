@@ -6,7 +6,7 @@ import { catchError, Observable, of, tap  } from 'rxjs';
 })
 export class AudiusRequest {
   private readonly API_URL = 'https://discoveryprovider.audius.co/v1';
-  private readonly APP_NAME = 'ExampleApp';
+  private readonly APP_NAME = 'amuzik';
   private currentAudio: HTMLAudioElement | null = null; // Guardar la canción en reproducción
 
   constructor(private http: HttpClient) { }
@@ -18,6 +18,17 @@ export class AudiusRequest {
       }),
       catchError(error => {
         console.error('Error al obtener tracks:', error);
+        return of({ data: [] });
+      })
+    );
+  }
+  getPlaylists(): Observable<any> {
+    return this.http.get(`${this.API_URL}/playlists/trending?app_name=${this.APP_NAME}`).pipe(
+      tap(response => {
+        console.log('Playlists recibidos:', response);
+      }),
+      catchError(error => {
+        console.error('Error al obtener playlists:', error);
         return of({ data: [] });
       })
     );

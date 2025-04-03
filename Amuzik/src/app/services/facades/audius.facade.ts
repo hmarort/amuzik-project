@@ -13,6 +13,9 @@ export class AudiusFacade {
   public tracks(): Observable<any> {
     return this.request.getTrendingTracks();
   }
+  public playlists(): Observable<any> {
+    return this.request.getPlaylists();
+  }
   public trackUrl(trackId: string): Promise<string> {
     return this.request.getTrackStreamUrl(trackId);
   }

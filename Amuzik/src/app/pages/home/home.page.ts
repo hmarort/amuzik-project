@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonContent, IonHeader, IonTitle, IonToolbar, IonList, IonItem, IonLabel, IonButton, IonThumbnail, IonIcon} from '@ionic/angular/standalone';
 import { AudiusFacade } from 'src/app/services/facades/audius.facade';
+import { addIcons } from 'ionicons';
+import { playOutline, pauseOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'app-home',
@@ -19,12 +21,21 @@ export class HomePage implements OnInit {
   tracks: any[] = [];
   currentTrack: any = null;
 
-  constructor(private audiusFacade: AudiusFacade) {}
+  constructor(private audiusFacade: AudiusFacade) {
+    addIcons({
+      playOutline,
+      pauseOutline,
+    });
+  }
 
   ngOnInit() {
     this.audiusFacade.tracks().subscribe((data) => {
       this.tracks = data.data;
     });
+    this.audiusFacade.playlists().subscribe((data) => {
+      console.log('Playlists:', data);
+    }
+    );
   }
 
   playTrack(trackId: string | undefined) {
