@@ -1,27 +1,227 @@
-#container {
-  text-align: center;
-
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+/* Estilos generales */
+ion-content {
+  --background: #121212;
 }
 
-#container strong {
+ion-list {
+  margin-top: 10px;
+  background: transparent;
+}
+
+ion-item {
+  --background: #232323;
+  --border-radius: 10px;
+  margin-bottom: 12px;
+  --padding-start: 10px;
+  --padding-end: 10px;
+  --padding-top: 10px;
+  --padding-bottom: 10px;
+  --inner-padding-end: 0;
+}
+
+/* Estilos para la información de la pista */
+.track-info {
+  overflow: hidden;
+  padding-left: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.track-title {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.track-artist {
+  font-size: 0.8rem;
+  color: #bbb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Estilos para botones */
+.button-group {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+  min-width: 80px;
+  justify-content: flex-end;
+  margin-left: auto;
+  position: relative;
+  z-index: 5;
+}
+
+ion-button {
+  --color: #ffffff;
+  --background: rgba(255, 255, 255, 0.2);
+  --background-activated: rgba(255, 255, 255, 0.3);
+  --background-hover: rgba(255, 255, 255, 0.25);
+  z-index: 10;
+  min-width: 35px;
+  height: 35px;
+}
+
+ion-button::part(native) {
+  padding: 0 8px;
+}
+
+ion-icon {
   font-size: 20px;
-  line-height: 26px;
 }
 
-#container p {
-  font-size: 16px;
-  line-height: 22px;
-
-  color: #8c8c8c;
-
-  margin: 0;
+/* Estilos para las miniaturas */
+ion-thumbnail {
+  --size: 60px;
+  --border-radius: 8px;
+  margin-right: 12px;
+  overflow: hidden;
 }
 
-#container a {
-  text-decoration: none;
+ion-thumbnail img {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+/* Estilos de la barra de herramientas */
+ion-toolbar {
+  --background: #1e1e1e;
+  --color: #fff;
+  --border-style: none;
+}
+
+ion-title {
+  font-weight: 600;
+}
+
+/* Media queries para diferentes tamaños de pantalla */
+/* Móviles pequeños */
+@media (max-width: 320px) {
+  ion-thumbnail {
+    --size: 50px;
+  }
+  
+  .track-title {
+    font-size: 0.85rem;
+  }
+  
+  .track-artist {
+    font-size: 0.7rem;
+  }
+  
+  ion-button {
+    --padding-start: 4px;
+    --padding-end: 4px;
+    min-width: 30px;
+    height: 30px;
+  }
+  
+  ion-item {
+    --padding-start: 5px;
+    --padding-end: 5px;
+    --padding-top: 5px;
+    --padding-bottom: 5px;
+  }
+}
+
+/* Móviles medianos */
+@media (min-width: 321px) and (max-width: 576px) {
+  ion-item {
+    --padding-start: 8px;
+    --padding-end: 8px;
+  }
+  
+  .button-group {
+    min-width: 70px;
+  }
+}
+
+/* Tablets */
+@media (min-width: 577px) and (max-width: 991px) {
+  ion-thumbnail {
+    --size: 70px;
+  }
+  
+  .track-title {
+    font-size: 1rem;
+  }
+  
+  .track-artist {
+    font-size: 0.8rem;
+  }
+  
+  ion-button {
+    --padding-start: 10px;
+    --padding-end: 10px;
+    min-width: 40px;
+    height: 40px;
+  }
+}
+
+/* Escritorio */
+@media (min-width: 992px) {
+  ion-thumbnail {
+    --size: 80px;
+  }
+  
+  .track-title {
+    font-size: 1.1rem;
+  }
+  
+  .track-artist {
+    font-size: 0.9rem;
+  }
+  
+  ion-button {
+    --padding-start: 12px;
+    --padding-end: 12px;
+    min-width: 45px;
+    height: 45px;
+  }
+  
+  ion-icon {
+    font-size: 24px;
+  }
+}
+
+/* Corrección para evitar problemas con los botones en móviles */
+@supports (-webkit-touch-callout: none) {
+  /* CSS específico para iOS */
+  .button-group {
+    margin-right: 5px;
+  }
+  
+  ion-button {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+}
+
+/* Fix para dispositivos Android */
+@supports not (-webkit-touch-callout: none) {
+  /* CSS específico para Android y otros dispositivos */
+  .button-group {
+    margin-right: 2px;
+  }
+}
+
+/* Asegura que los botones sean siempre clickeables */
+ion-button {
+  pointer-events: auto !important;
+}
+
+/* Quita cualquier elemento que pueda estar encima de los botones */
+ion-label, ion-thumbnail {
+  z-index: 1;
+}
+
+/* Ajustes para la vista de lista completa */
+ion-list {
+  padding: 8px;
 }

@@ -1,20 +1,27 @@
-<ion-header [translucent]="true">
+<ion-header>
   <ion-toolbar>
-    <ion-title>
-      Blank
-    </ion-title>
+    <ion-title>Audius Music</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Blank</ion-title>
-    </ion-toolbar>
-  </ion-header>
-
-  <div id="container">
-    <strong>Ready to create an app?</strong>
-    <p>Start with Ionic <a target="_blank" rel="noopener noreferrer" href="https://ionicframework.com/docs/components">UI Components</a></p>
-  </div>
+<ion-content class="ion-padding">
+  <ion-list>
+    <ion-item *ngFor="let track of tracks" lines="none" class="track-item">
+      <ion-thumbnail slot="start">
+        <img [src]="track.artwork?.['1000x1000'] || 'assets/default.jpg'" alt="Album artwork"/>
+      </ion-thumbnail>
+      <ion-label class="track-info">
+        <h2 class="track-title">{{ track.title }}</h2>
+        <p class="track-artist">{{ track.user?.name || 'Artista Desconocido' }}</p>
+      </ion-label>
+      <div class="button-group">
+        <ion-button mode="md" *ngIf="track.id" fill="clear" size="small" (click)="playTrack(track.id)">
+          <ion-icon name="play"></ion-icon>
+        </ion-button>
+        <ion-button mode="md" fill="clear" size="small" (click)="pauseTrack()">
+          <ion-icon name="pause"></ion-icon>
+        </ion-button>
+      </div>
+    </ion-item>
+  </ion-list>
 </ion-content>

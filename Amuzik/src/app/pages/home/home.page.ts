@@ -1,12 +1,68 @@
-import { Component } from '@angular/core';
-import { IonHeader, IonToolbar, IonTitle, IonContent } from '@ionic/angular/standalone';
+import { Component, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { IonContent, IonHeader, IonTitle, IonToolbar, IonList, IonItem, IonLabel, IonButton, IonThumbnail, IonIcon} from '@ionic/angular/standalone';
+import { AudiusFacade } from 'src/app/services/facades/audius.facade';
 
 @Component({
   selector: 'app-home',
-  templateUrl: 'home.page.html',
-  styleUrls: ['home.page.scss'],
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent],
+  standalone: true,
+  imports: [
+    CommonModule, FormsModule, IonContent, IonHeader, IonTitle, IonToolbar, 
+    IonList, IonItem, IonLabel, IonButton, IonThumbnail, IonIcon
+  ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  templateUrl: './home.page.html',
+  styleUrls: ['./home.page.scss'],
 })
-export class HomePage {
-  constructor() {}
+export class HomePage implements OnInit {
+  tracks: any[] = [];
+  currentTrack: any = null;
+
+  constructor(private audiusFacade: AudiusFacade) {}
+
+  ngOnInit() {
+    this.audiusFacade.getTrendingTracks().subscribe((data) => {
+      this.tracks = data.data;
+    });
+  }
+
+  playTrack(trackId: string | undefined) {
+    if (!trackId) {
+      console.error('Error: trackId es undefined. No se puede reproducir.');
+      return;
+    }
+    console.log('Reproduciendo track con ID:', trackId);
+    this.audiusFacade.playTrack(trackId);
+  }
+
+  pauseTrack() {
+    this.audiusFacade.pauseTrack();
+  }
+
+  updateMediaSession() {
+    if ('mediaSession' in navigator && this.currentTrack) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: this.currentTrack.title || 'Unknown Title',
+        artist: this.currentTrack.user?.name || 'Unknown Artist',
+        album: 'Audius',
+        artwork: [
+          {
+            src:
+              this.currentTrack.artwork?.['1000x1000'] || 'assets/default.jpg',
+            sizes: '1000x1000',
+            type: 'image/jpeg',
+          },
+        ],
+      });
+
+      navigator.mediaSession.setActionHandler('play', () => {
+        this.playTrack(this.currentTrack);
+      });
+
+      navigator.mediaSession.setActionHandler('pause', () => {
+        this.pauseTrack();
+      });
+    }
+  }
 }

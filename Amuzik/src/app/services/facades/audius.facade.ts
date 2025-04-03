@@ -11,12 +11,7 @@ export class AudiusFacade {
   constructor(private request:AudiusRequest) { }
 
   public getTrendingTracks(): Observable<any> {
-    return this.request.getTrendingTracks().pipe(
-      map((response) => {
-        console.log('AudiusFacade - getTrendingTracks:', response);
-        return response.data;
-      })
-    );
+    return this.request.getTrendingTracks();
   }
   public getTrackStreamUrl(trackId: string): Promise<string> {
     return this.request.getTrackStreamUrl(trackId);
