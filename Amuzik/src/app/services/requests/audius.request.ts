@@ -22,6 +22,9 @@ export class AudiusRequest {
       })
     );
   }
+  /*
+  curl -L -X GET 'https://discoveryprovider.audius.co/v1/tracks/search' \
+-H 'Accept: application/json' */
   getPlaylists(): Observable<any> {
     return this.http.get(`${this.API_URL}/playlists/trending?app_name=${this.APP_NAME}`).pipe(
       tap(response => {
