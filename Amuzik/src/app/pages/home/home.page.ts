@@ -21,12 +21,7 @@ export class HomePage implements OnInit {
   tracks: any[] = [];
   currentTrack: any = null;
 
-  constructor(private audiusFacade: AudiusFacade) {
-    addIcons({
-      playOutline,
-      pauseOutline,
-    });
-  }
+  constructor(private audiusFacade: AudiusFacade) {}
 
   ngOnInit() {
     this.audiusFacade.tracks().subscribe((data) => {
@@ -34,8 +29,7 @@ export class HomePage implements OnInit {
     });
     this.audiusFacade.playlists().subscribe((data) => {
       console.log('Playlists:', data);
-    }
-    );
+    });
   }
 
   playTrack(trackId: string | undefined) {
