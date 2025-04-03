@@ -10,19 +10,19 @@ export class AudiusFacade {
 
   constructor(private request:AudiusRequest) { }
 
-  public getTrendingTracks(): Observable<any> {
+  public tracks(): Observable<any> {
     return this.request.getTrendingTracks();
   }
-  public getTrackStreamUrl(trackId: string): Promise<string> {
+  public trackUrl(trackId: string): Promise<string> {
     return this.request.getTrackStreamUrl(trackId);
   }
-  public playTrack(trackId: string | undefined) { 
+  public play(trackId: string | undefined) { 
     return this.request.playTrack(trackId);
   }
-  public stopCurrentTrack() {
+  public stop() {
     return this.request.stopCurrentTrack();
   }
-  public pauseTrack() {
+  public pause() {
     return this.request.pauseTrack();
   }
 }

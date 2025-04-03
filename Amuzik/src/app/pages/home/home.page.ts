@@ -22,7 +22,7 @@ export class HomePage implements OnInit {
   constructor(private audiusFacade: AudiusFacade) {}
 
   ngOnInit() {
-    this.audiusFacade.getTrendingTracks().subscribe((data) => {
+    this.audiusFacade.tracks().subscribe((data) => {
       this.tracks = data.data;
     });
   }
@@ -33,11 +33,11 @@ export class HomePage implements OnInit {
       return;
     }
     console.log('Reproduciendo track con ID:', trackId);
-    this.audiusFacade.playTrack(trackId);
+    this.audiusFacade.play(trackId);
   }
 
   pauseTrack() {
-    this.audiusFacade.pauseTrack();
+    this.audiusFacade.pause();
   }
 
   updateMediaSession() {
