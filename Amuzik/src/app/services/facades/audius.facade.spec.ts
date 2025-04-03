@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { AudiusService } from './audius.facade';
+import { AudiusFacade } from './audius.facade';
 
 describe('AudiusService', () => {
-  let service: AudiusService;
+  let service: AudiusFacade;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(AudiusService);
+    service = TestBed.inject(AudiusFacade);
   });
 
   it('should be created', () => {

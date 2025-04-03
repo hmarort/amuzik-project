@@ -45,7 +45,8 @@ import {
   logoFacebook,
   eye,
 } from 'ionicons/icons';
-
+import { HttpClientModule } from '@angular/common/http';
+import { importProvidersFrom } from '@angular/core';
 addIcons({
   'lock-closed': lockClosed,
   mail: mail,
@@ -59,6 +60,7 @@ bootstrapApplication(AppComponent, {
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     provideIonicAngular(),
     provideRouter(routes, withPreloading(PreloadAllModules)),
+    importProvidersFrom(HttpClientModule),
     provideFirebaseApp(() =>
       initializeApp({
         projectId: 'amuzik-38d5c',
