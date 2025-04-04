@@ -92,7 +92,6 @@ export class AudiusRequest {
     
     this.currentAudio = new Audio();
     this.currentAudio.src = streamUrl;
-    
     // Agregar evento para actualizar la UI cuando termine la canción
     this.currentAudio.onended = () => {
       // Aquí puedes emitir un evento o manejar la finalización
@@ -130,6 +129,7 @@ export class AudiusRequest {
   
   // Método para obtener la duración total
   getDuration(): number {
+    console.log('Duración total:', this.currentAudio ? this.currentAudio.duration : 0);
     return this.currentAudio ? this.currentAudio.duration : 0;
   }
 }

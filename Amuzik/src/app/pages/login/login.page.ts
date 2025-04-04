@@ -47,7 +47,7 @@ export class LoginPage {
       // await this.authService.login(this.loginForm.value.email, this.loginForm.value.password);
       
       // Si la autenticación es exitosa:
-      this.router.navigate(['/dashboard']);
+      this.router.navigate(['/tabs']);
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
     } finally {

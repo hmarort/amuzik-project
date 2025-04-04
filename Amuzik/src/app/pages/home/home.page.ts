@@ -1,10 +1,11 @@
 import { Component, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonContent, IonHeader, IonTitle, IonToolbar, IonList, IonItem, IonLabel, IonButton, IonThumbnail, IonIcon, IonCard, IonCardHeader, IonCardTitle, IonCardContent } from '@ionic/angular/standalone';
+import { IonContent, IonHeader, IonTitle, IonToolbar, IonItem, IonButton, IonThumbnail, IonIcon, IonCard, IonCardHeader, IonCardContent } from '@ionic/angular/standalone';
 import { AudiusFacade } from 'src/app/services/facades/audius.facade';
 import { addIcons } from 'ionicons';
 import { playOutline, pauseOutline, musicalNotesOutline, stopOutline } from 'ionicons/icons';
+import { SplashScreen } from '@capacitor/splash-screen';
 
 @Component({
   selector: 'app-home',
@@ -29,14 +30,19 @@ export class HomePage implements OnInit {
   }
 
   ngOnInit() {
+    SplashScreen.show({
+      autoHide: false,
+    });
+  
     // Cargar tracks individuales
     this.audiusFacade.tracks().subscribe((response) => {
       if (response && response.data) {
         this.tracks = response.data;
         console.log('Tracks cargados:', this.tracks.length);
       }
+      this.checkDataLoaded(); // Verificar si todos los datos están cargados
     });
-
+  
     // Cargar playlists
     this.audiusFacade.playlists().subscribe((response) => {
       if (response && response.data && response.data.length > 0) {
@@ -48,8 +54,15 @@ export class HomePage implements OnInit {
         console.log('Playlist cargada desde formato alternativo:', this.playlist);
         this.processPlaylistTracks();
       }
+      this.checkDataLoaded(); // Verificar si todos los datos están cargados
     });
   }
+  checkDataLoaded() {
+    if (this.tracks.length > 0 && this.playlistTracks.length > 0) {
+      // Ocultar el splash screen
+      SplashScreen.hide();
+    }
+  }  
 
   processPlaylistTracks() {
     if (!this.playlist || !this.playlist.playlist_contents) {
@@ -93,10 +106,8 @@ export class HomePage implements OnInit {
   }
 
   findTrackById(trackId: string): any {
-    // Buscar primero en tracks individuales
     let track = this.tracks.find(t => t.id === trackId);
     
-    // Si no lo encontramos, buscar en la playlist
     if (!track && this.playlistTracks) {
       track = this.playlistTracks.find(t => t.id === trackId);
     }
