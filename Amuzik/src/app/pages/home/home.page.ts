@@ -40,12 +40,10 @@ export class HomePage implements OnInit {
     // Cargar playlists
     this.audiusFacade.playlists().subscribe((response) => {
       if (response && response.data && response.data.length > 0) {
-        // Tomamos la primera playlist como ejemplo
-        this.playlist = response.data[0];
+        this.playlist = response.data[Math.floor(Math.random() * response.data.length)];
         console.log('Playlist cargada:', this.playlist);
         this.processPlaylistTracks();
       } else if (response && Object.keys(response).length > 0 && response['0']) {
-        // Usa el formato del ejemplo que diste
         this.playlist = response['0'];
         console.log('Playlist cargada desde formato alternativo:', this.playlist);
         this.processPlaylistTracks();
