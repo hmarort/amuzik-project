@@ -1,342 +1,249 @@
-/* Estilos generales */
-ion-content {
-  --background: #121212;
-}
-
-ion-list {
-  margin-top: 10px;
-  background: transparent;
-}
-
-ion-item {
-  --background: #232323;
-  --border-radius: 10px;
-  margin-bottom: 12px;
-  --padding-start: 10px;
-  --padding-end: 10px;
-  --padding-top: 10px;
-  --padding-bottom: 10px;
-  --inner-padding-end: 0;
-}
-
-/* Estilos para la información de la pista */
-.track-info {
-  overflow: hidden;
-  padding-left: 10px;
-  flex: 1;
-  min-width: 0;
-}
-
-.track-title {
-  font-size: 1rem;
-  font-weight: bold;
-  color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 4px;
-}
-
-.track-artist {
-  font-size: 0.8rem;
-  color: #bbb;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Estilos para botones */
-.button-group {
-  display: flex;
-  gap: 5px;
-  flex-shrink: 0;
-  min-width: 80px;
-  justify-content: flex-end;
-  margin-left: auto;
-  position: relative;
-  z-index: 5;
-}
-
-ion-button {
-  --color: #ffffff;
-  --background: rgba(255, 255, 255, 0.2);
-  --background-activated: rgba(255, 255, 255, 0.3);
-  --background-hover: rgba(255, 255, 255, 0.25);
-  z-index: 10;
-  min-width: 35px;
-  height: 35px;
-}
-
-ion-button::part(native) {
-  padding: 0 8px;
-}
-
-ion-icon {
-  font-size: 20px;
-}
-
-/* Estilos para las miniaturas */
-ion-thumbnail {
-  --size: 60px;
-  --border-radius: 8px;
-  margin-right: 12px;
-  overflow: hidden;
-}
-
-ion-thumbnail img {
-  object-fit: cover;
+// Estilos para el carrusel de tracks
+.tracks-carousel {
   width: 100%;
-  height: 100%;
-}
-
-/* Estilos de la barra de herramientas */
-ion-toolbar {
-  --background: #1e1e1e;
-  --color: #fff;
-  --border-style: none;
-}
-
-ion-title {
-  font-weight: 600;
-}
-
-/* Media queries para diferentes tamaños de pantalla */
-/* Móviles pequeños */
-@media (max-width: 320px) {
-  ion-thumbnail {
-    --size: 50px;
-  }
+  margin-bottom: 16px;
   
-  .track-title {
-    font-size: 0.85rem;
-  }
-  
-  .track-artist {
-    font-size: 0.7rem;
-  }
-  
-  ion-button {
-    --padding-start: 4px;
-    --padding-end: 4px;
-    min-width: 30px;
-    height: 30px;
-  }
-  
-  ion-item {
-    --padding-start: 5px;
-    --padding-end: 5px;
-    --padding-top: 5px;
-    --padding-bottom: 5px;
-  }
-}
-
-/* Móviles medianos */
-@media (min-width: 321px) and (max-width: 576px) {
-  ion-item {
-    --padding-start: 8px;
-    --padding-end: 8px;
-  }
-  
-  .button-group {
-    min-width: 70px;
-  }
-}
-
-/* Tablets */
-@media (min-width: 577px) and (max-width: 991px) {
-  ion-thumbnail {
-    --size: 70px;
-  }
-  
-  .track-title {
-    font-size: 1rem;
-  }
-  
-  .track-artist {
-    font-size: 0.8rem;
-  }
-  
-  ion-button {
-    --padding-start: 10px;
-    --padding-end: 10px;
-    min-width: 40px;
-    height: 40px;
-  }
-}
-
-/* Escritorio */
-@media (min-width: 992px) {
-  ion-thumbnail {
-    --size: 80px;
-  }
-  
-  .track-title {
-    font-size: 1.1rem;
-  }
-  
-  .track-artist {
-    font-size: 0.9rem;
-  }
-  
-  ion-button {
-    --padding-start: 12px;
-    --padding-end: 12px;
-    min-width: 45px;
-    height: 45px;
-  }
-  
-  ion-icon {
-    font-size: 24px;
-  }
-}
-
-/* Corrección para evitar problemas con los botones en móviles */
-@supports (-webkit-touch-callout: none) {
-  /* CSS específico para iOS */
-  .button-group {
-    margin-right: 5px;
-  }
-  
-  ion-button {
-    opacity: 1 !important;
-    visibility: visible !important;
-  }
-}
-
-/* Fix para dispositivos Android */
-@supports not (-webkit-touch-callout: none) {
-  /* CSS específico para Android y otros dispositivos */
-  .button-group {
-    margin-right: 2px;
-  }
-}
-
-/* Asegura que los botones sean siempre clickeables */
-ion-button {
-  pointer-events: auto !important;
-}
-
-/* Quita cualquier elemento que pueda estar encima de los botones */
-ion-label, ion-thumbnail {
-  z-index: 1;
-}
-
-/* Ajustes para la vista de lista completa */
-ion-list {
-  padding: 8px;
-}
-
-/* Estilos para la página de inicio */
-.playlist-card {
-  margin-bottom: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.playlist-header {
-  display: flex;
-  align-items: flex-start;
-}
-
-.playlist-thumbnail {
-  width: 100px;
-  height: 100px;
-  margin-right: 16px;
-  
-  img {
-    border-radius: 4px;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-}
-
-.playlist-info {
-  flex: 1;
-  
-  ion-card-title {
-    margin-bottom: 8px;
-  }
-  
-  p {
-    margin: 4px 0;
-    opacity: 0.8;
-  }
-}
-
-.track-item {
-  margin-bottom: 8px;
-  border-radius: 8px;
-  
-  ion-thumbnail {
-    width: 50px;
-    height: 50px;
+  .scroll-container {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none; // Firefox
+    -ms-overflow-style: none; // IE & Edge
+    padding: 10px 0;
     
-    img {
-      border-radius: 4px;
+    &::-webkit-scrollbar {
+      display: none; // Chrome, Safari
     }
   }
   
-  &:hover {
-    background-color: rgba(var(--ion-color-primary-rgb), 0.1);
+  .track-card {
+    scroll-snap-align: start;
+    flex: 0 0 auto;
+    width: 150px;
+    margin-right: 12px;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.2s;
+    position: relative;
+    
+    &.active {
+      transform: scale(1.03);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    &:active {
+      transform: scale(0.98);
+    }
+    
+    .track-artwork {
+      position: relative;
+      width: 100%;
+      height: 150px;
+      
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      
+      .play-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.3);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+        
+        ion-icon {
+          font-size: 32px;
+          color: white;
+        }
+      }
+      
+      &:hover .play-overlay {
+        opacity: 1;
+      }
+    }
+    
+    .track-info {
+      padding: 8px;
+      background: var(--ion-color-medium);
+      
+      h4 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+      }
+      
+      p {
+        margin: 4px 0 0;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
   }
 }
 
-.track-info {
-  .track-title {
-    font-weight: 500;
-    margin-bottom: 4px;
+// Estilos para las playlists
+.playlist-container {
+  .playlist-header {
+    display: flex;
+    align-items: flex-start;
+    position: relative;
+    
+    .playlist-artwork {
+      width: 100px;
+      height: 100px;
+      flex-shrink: 0;
+      margin-right: 12px;
+      border-radius: 6px;
+      overflow: hidden;
+      
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+    
+    .playlist-info {
+      flex: 1;
+      
+      h3 {
+        margin: 0 0 4px;
+        font-size: 18px;
+        font-weight: 700;
+      }
+      
+      p {
+        margin: 2px 0;
+        
+        &.description {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+      }
+    }
+    
+    .expand-icon {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      
+      ion-icon {
+        font-size: 24px;
+        transition: transform 0.3s ease;
+        
+        &.rotated {
+          transform: rotate(180deg);
+        }
+      }
+    }
   }
   
-  .track-artist {
-    opacity: 0.7;
-    font-size: 0.9em;
+  .playlist-tracks {
+    border-radius: 0 0 16px 16px;
+    overflow: hidden;
+    margin-top: -16px;
+    
+    .track-item {
+      --padding-start: 8px;
+      --padding-end: 8px;
+      --inner-padding-end: 8px;
+      margin-bottom: 2px;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+      
+      ion-thumbnail {
+        width: 50px;
+        height: 50px;
+        --border-radius: 4px;
+      }
+      
+      .track-status {
+        display: flex;
+        align-items: center;
+        
+        ion-icon {
+          font-size: 24px;
+          animation: pulse 1.5s infinite;
+        }
+      }
+    }
   }
 }
 
-.button-group {
-  display: flex;
-  align-items: center;
-}
-
-/* Reproductor actual */
-.current-track-player {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 999;
-  background-color: var(--ion-background-color);
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-  padding: 8px 16px;
-  
-  ion-thumbnail {
-    width: 40px;
-    height: 40px;
+// Animación para el icono de reproducción
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.9);
   }
-  
-  h3 {
-    margin: 0;
-    font-weight: 500;
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
   }
-  
-  p {
-    margin: 0;
-    font-size: 0.9em;
-    opacity: 0.8;
+  100% {
+    opacity: 0.6;
+    transform: scale(0.9);
   }
 }
 
-.player-controls {
-  display: flex;
-  align-items: center;
-  
-  ion-button {
-    --padding-start: 4px;
-    --padding-end: 4px;
-  }
-}
-
-/* Estilo para que el contenido no quede debajo del reproductor fijo */
+// Ajustes generales
 ion-content {
-  --padding-bottom: 70px;
+  --padding-bottom: 72px; // Espacio para el reproductor
+}
+
+// Estilo para las cards expandibles
+ion-card {
+  margin: 8px 0;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s;
+  
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+// Eliminar bordes de las listas
+ion-list {
+  background: transparent;
+  padding: 0;
+}
+
+// Estilo para el reproductor
+ion-footer {
+  ion-toolbar {
+    --border-width: 0;
+    --background: var(--ion-color-medium);
+    
+    ion-item {
+      --padding-start: 8px;
+      --padding-end: 8px;
+      --min-height: 64px;
+      
+      ion-buttons {
+        margin-right: 0;
+      }
+    }
+  }
 }
