@@ -1,95 +1,94 @@
 <ion-header>
-  <ion-toolbar class="bg-gray-900 text-white border-none">
-    <ion-title class="font-semibold">Audius Music</ion-title>
+  <ion-toolbar color="dark">
+    <ion-title class="ion-text-center">Audius Music</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="bg-gray-950 p-4 pb-20">
-  <!-- Sección de Playlist -->
-  <ion-card *ngIf="playlist" class="mb-6 bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-    <ion-card-header class="p-4">
-      <div class="flex items-start">
-        <div class="w-24 h-24 mr-4 flex-shrink-0">
-          <img class="w-full h-full object-cover rounded" [src]="playlist.artwork?.['480x480'] || 'assets/default.jpg'" alt="Playlist artwork"/>
-        </div>
-        <div class="flex-1 min-w-0">
-          <h2 class="text-xl font-bold text-white mb-2">{{ playlist.playlist_name }}</h2>
-          <p class="text-gray-300 text-sm">Por: {{ playlist.user?.name || 'Usuario desconocido' }}</p>
-          <p *ngIf="playlist.description" class="text-gray-300 text-sm">{{ playlist.description }}</p>
-          <p class="text-gray-300 text-sm">{{ playlist.track_count || playlist.playlist_contents?.length || 0 }} canciones</p>
+<ion-content color="dark" class="ion-padding-bottom">
+
+  <!-- Playlist Card -->
+  <ion-card *ngIf="playlist" class="ion-margin-bottom" color="medium">
+    <ion-card-header>
+      <div class="ion-padding-horizontal ion-padding-top ion-padding-bottom">
+        <div class="ion-text-start">
+          <div class="ion-padding-bottom">
+            <img [src]="playlist.artwork?.['480x480'] || 'assets/default.jpg'" class="rounded">
+          </div>
+          <h2 class="ion-text-wrap ion-text-uppercase ion-text-white">{{ playlist.playlist_name }}</h2>
+          <p class="ion-text-sm ion-text-color-light">Por: {{ playlist.user?.name || 'Usuario desconocido' }}</p>
+          <p *ngIf="playlist.description" class="ion-text-sm ion-text-color-light">{{ playlist.description }}</p>
+          <p class="ion-text-sm ion-text-color-light">{{ playlist.track_count || playlist.playlist_contents?.length || 0 }} canciones</p>
         </div>
       </div>
     </ion-card-header>
-    <ion-card-content class="p-0">
-      <!-- Lista de canciones de la playlist -->
-      <div class="px-2 py-1">
-        <ion-item *ngFor="let track of playlistTracks" lines="none" class="bg-gray-700 rounded-lg mb-3 px-2 py-2">
-          <div class="flex items-center w-full">
-            <ion-thumbnail slot="start" class="w-14 h-14 mr-3 flex-shrink-0 rounded-lg overflow-hidden">
-              <img class="w-full h-full object-cover" [src]="track.artwork?.['150x150'] || playlist.artwork?.['150x150'] || 'assets/default.jpg'" alt="Track artwork"/>
-            </ion-thumbnail>
-            <div class="flex-1 min-w-0 pl-2">
-              <h2 class="text-base font-medium text-white truncate">{{ track.title || 'Canción ' + track.id }}</h2>
-              <p class="text-sm text-gray-400 truncate">{{ track.user?.name || 'Artista desconocido' }}</p>
-            </div>
-            <div class="flex gap-1 ml-auto z-10">
-              <ion-button mode="md" fill="clear" size="small" class="bg-opacity-20 bg-white hover:bg-opacity-25 active:bg-opacity-30 rounded-full h-9 w-9 flex items-center justify-center" (click)="playTrack(track.id)" *ngIf="!(isPlaying && currentTrack?.id === track.id)">
-                <ion-icon name="play-outline" class="text-white text-lg"></ion-icon>
-              </ion-button>
-              <ion-button mode="md" fill="clear" size="small" class="bg-opacity-20 bg-white hover:bg-opacity-25 active:bg-opacity-30 rounded-full h-9 w-9 flex items-center justify-center" (click)="pauseTrack()" *ngIf="isPlaying && currentTrack?.id === track.id">
-                <ion-icon name="pause-outline" class="text-white text-lg"></ion-icon>
-              </ion-button>
-            </div>
-          </div>
+
+    <ion-card-content>
+      <ion-list>
+        <ion-item *ngFor="let track of playlistTracks" lines="none" class="ion-padding-vertical" color="dark">
+          <ion-thumbnail slot="start">
+            <img [src]="track.artwork?.['150x150'] || playlist.artwork?.['150x150'] || 'assets/default.jpg'">
+          </ion-thumbnail>
+          <ion-label>
+            <h3 class="ion-text-wrap ion-text-white">{{ track.title || 'Canción ' + track.id }}</h3>
+            <p class="ion-text-sm ion-text-color-medium">{{ track.user?.name || 'Artista desconocido' }}</p>
+          </ion-label>
+          <ion-buttons slot="end">
+            <ion-button fill="clear" color="light" size="small" (click)="playTrack(track.id)" *ngIf="!(isPlaying && currentTrack?.id === track.id)">
+              <ion-icon name="play-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+            <ion-button fill="clear" color="light" size="small" (click)="pauseTrack()" *ngIf="isPlaying && currentTrack?.id === track.id">
+              <ion-icon name="pause-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ion-buttons>
         </ion-item>
-      </div>
+      </ion-list>
     </ion-card-content>
   </ion-card>
 
-  <!-- Tracks individuales -->
-  <div *ngIf="tracks.length > 0" class="mt-6">
-    <h2 class="text-xl font-bold text-white mb-4">Trending Tracks</h2>
-    <div class="px-2">
-      <ion-item *ngFor="let track of tracks" lines="none" class="bg-gray-700 rounded-lg mb-3 px-2 py-2">
-        <div class="flex items-center w-full">
-          <ion-thumbnail slot="start" class="w-14 h-14 mr-3 flex-shrink-0 rounded-lg overflow-hidden">
-            <img class="w-full h-full object-cover" [src]="track.artwork?.['150x150'] || 'assets/default.jpg'" alt="Album artwork"/>
-          </ion-thumbnail>
-          <div class="flex-1 min-w-0 pl-2">
-            <h2 class="text-base font-medium text-white truncate">{{ track.title }}</h2>
-            <p class="text-sm text-gray-400 truncate">{{ track.user?.name || 'Artista Desconocido' }}</p>
-          </div>
-          <div class="flex gap-1 ml-auto z-10">
-            <ion-button mode="md" fill="clear" size="small" class="bg-opacity-20 bg-white hover:bg-opacity-25 active:bg-opacity-30 rounded-full h-9 w-9 flex items-center justify-center" (click)="playTrack(track.id)" *ngIf="!(isPlaying && currentTrack?.id === track.id)">
-              <ion-icon name="play-outline" class="text-white text-lg"></ion-icon>
-            </ion-button>
-            <ion-button mode="md" fill="clear" size="small" class="bg-opacity-20 bg-white hover:bg-opacity-25 active:bg-opacity-30 rounded-full h-9 w-9 flex items-center justify-center" (click)="pauseTrack()" *ngIf="isPlaying && currentTrack?.id === track.id">
-              <ion-icon name="pause-outline" class="text-white text-lg"></ion-icon>
-            </ion-button>
-          </div>
-        </div>
+  <!-- Trending Tracks -->
+  <div *ngIf="tracks.length > 0">
+    <h2 class="ion-text-start ion-padding-horizontal ion-padding-top ion-text-white">Trending Tracks</h2>
+    <ion-list class="ion-padding-horizontal">
+      <ion-item *ngFor="let track of tracks" lines="none" color="dark">
+        <ion-thumbnail slot="start">
+          <img [src]="track.artwork?.['150x150'] || 'assets/default.jpg'">
+        </ion-thumbnail>
+        <ion-label>
+          <h3 class="ion-text-wrap ion-text-white">{{ track.title }}</h3>
+          <p class="ion-text-sm ion-text-color-medium">{{ track.user?.name || 'Artista Desconocido' }}</p>
+        </ion-label>
+        <ion-buttons slot="end">
+          <ion-button fill="clear" color="light" size="small" (click)="playTrack(track.id)" *ngIf="!(isPlaying && currentTrack?.id === track.id)">
+            <ion-icon name="play-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button fill="clear" color="light" size="small" (click)="pauseTrack()" *ngIf="isPlaying && currentTrack?.id === track.id">
+            <ion-icon name="pause-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+        </ion-buttons>
       </ion-item>
-    </div>
+    </ion-list>
   </div>
 
-  <!-- Reproductor actual (fijo en la parte inferior) -->
-  <div *ngIf="currentTrack" class="fixed bottom-0 left-0 right-0 z-50 bg-gray-800 shadow-lg p-3">
-    <div class="flex items-center">
-      <ion-thumbnail class="w-10 h-10 mr-3 flex-shrink-0 rounded overflow-hidden">
-        <img class="w-full h-full object-cover" [src]="currentTrack.artwork?.['150x150'] || playlist?.artwork?.['150x150'] || 'assets/default.jpg'" alt="Now playing"/>
-      </ion-thumbnail>
-      <div class="flex-1 min-w-0">
-        <h3 class="text-white font-medium text-base truncate">{{ currentTrack.title || 'Canción ' + currentTrack.id }}</h3>
-        <p class="text-gray-400 text-sm truncate">{{ currentTrack.user?.name || 'Artista desconocido' }}</p>
-      </div>
-      <div class="flex items-center">
-        <button class="p-2 text-white" (click)="isPlaying ? pauseTrack() : playTrack(currentTrack.id)">
-          <ion-icon class="text-2xl" [name]="isPlaying ? 'pause-outline' : 'play-outline'"></ion-icon>
-        </button>
-        <button class="p-2 text-white" (click)="stopTrack()">
-          <ion-icon class="text-2xl" name="stop-outline"></ion-icon>
-        </button>
-      </div>
-    </div>
-  </div>
+  <!-- Player Bar -->
+  <ion-footer *ngIf="currentTrack" class="ion-no-border">
+    <ion-toolbar color="medium">
+      <ion-item lines="none" color="medium">
+        <ion-thumbnail slot="start">
+          <img [src]="currentTrack.artwork?.['150x150'] || playlist?.artwork?.['150x150'] || 'assets/default.jpg'">
+        </ion-thumbnail>
+        <ion-label>
+          <h3 class="ion-text-wrap ion-text-white">{{ currentTrack.title || 'Canción ' + currentTrack.id }}</h3>
+          <p class="ion-text-sm ion-text-color-light">{{ currentTrack.user?.name || 'Artista desconocido' }}</p>
+        </ion-label>
+        <ion-buttons slot="end">
+          <ion-button fill="clear" color="light" (click)="isPlaying ? pauseTrack() : playTrack(currentTrack.id)">
+            <ion-icon [name]="isPlaying ? 'pause-outline' : 'play-outline'" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button fill="clear" color="danger" (click)="stopTrack()">
+            <ion-icon name="stop-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-item>
+    </ion-toolbar>
+  </ion-footer>
 </ion-content>
