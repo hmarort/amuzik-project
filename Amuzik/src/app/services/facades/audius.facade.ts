@@ -40,8 +40,12 @@ export class AudiusFacade {
     return this.request.pauseTrack();
   }
   
-  public isPlaying(): boolean {
-    return this.request.isPlaying();
+  public isPlaying(): Observable<boolean> {
+    return this.request.isPlaying$;
+  }
+  
+  public getCurrentTrackId(): Observable<string | null> {
+    return this.request.currentTrackId$;
   }
   
   public getCurrentTime(): number {
@@ -50,5 +54,9 @@ export class AudiusFacade {
   
   public getDuration(): number {
     return this.request.getDuration();
+  }
+  
+  public seekTo(position: number) {
+    return this.request.seekTo(position);
   }
 }

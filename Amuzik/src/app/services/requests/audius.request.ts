@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { catchError, Observable, of, tap } from 'rxjs';
+import { catchError, Observable, of, tap, BehaviorSubject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -9,6 +9,14 @@ export class AudiusRequest {
   private readonly API_URL = 'https://discoveryprovider.audius.co/v1';
   private readonly APP_NAME = 'amuzik';
   private currentAudio: HTMLAudioElement | null = null;
+  private trackPositions: Map<string, number> = new Map();
+  
+  // To track current playback state
+  private currentTrackIdSubject = new BehaviorSubject<string | null>(null);
+  public currentTrackId$ = this.currentTrackIdSubject.asObservable();
+  
+  private isPlayingSubject = new BehaviorSubject<boolean>(false);
+  public isPlaying$ = this.isPlayingSubject.asObservable();
   
   constructor(private http: HttpClient) { }
   
@@ -36,7 +44,6 @@ export class AudiusRequest {
     );
   }
   
-  // Nuevo método para obtener una playlist específica por ID
   getPlaylistById(playlistId: string): Observable<any> {
     return this.http.get(`${this.API_URL}/playlists/${playlistId}?app_name=${this.APP_NAME}`).pipe(
       tap(response => {
@@ -49,7 +56,6 @@ export class AudiusRequest {
     );
   }
   
-  // Nuevo método para obtener detalles de un track específico
   getTrackById(trackId: string): Observable<any> {
     return this.http.get(`${this.API_URL}/tracks/${trackId}?app_name=${this.APP_NAME}`).pipe(
       tap(response => {
@@ -83,30 +89,86 @@ export class AudiusRequest {
       return;
     }
     
-    this.stopCurrentTrack();
-    const streamUrl = await this.getTrackStreamUrl(trackId);
-    if (!streamUrl) {
-      console.error(`No se pudo obtener la URL de streaming para el track ID: ${trackId}`);
+    // If it's the same track that was previously playing/paused
+    const isCurrentTrack = this.currentTrackIdSubject.value === trackId;
+    
+    if (isCurrentTrack && this.currentAudio) {
+      // Resume playback from the stored position
+      this.currentAudio.play().catch(error => {
+        console.error('Error al reanudar reproducción:', error);
+      });
+      this.isPlayingSubject.next(true);
       return;
     }
     
-    this.currentAudio = new Audio();
-    this.currentAudio.src = streamUrl;
-    // Agregar evento para actualizar la UI cuando termine la canción
-    this.currentAudio.onended = () => {
-      // Aquí puedes emitir un evento o manejar la finalización
-      console.log('Track finalizado');
-      // También podrías implementar un sistema de cola para reproducir la siguiente canción
-    };
+    // If it's a new track, prepare to play it
+    if (!isCurrentTrack) {
+      this.stopCurrentTrack();
+      
+      const streamUrl = await this.getTrackStreamUrl(trackId);
+      if (!streamUrl) {
+        console.error(`No se pudo obtener la URL de streaming para el track ID: ${trackId}`);
+        return;
+      }
+      
+      this.currentAudio = new Audio();
+      this.currentAudio.src = streamUrl;
+      
+      // If we previously had a stored position for this track, restore it
+      const savedPosition = this.trackPositions.get(trackId);
+      if (savedPosition !== undefined) {
+        this.currentAudio.currentTime = savedPosition;
+      }
+      
+      // Set up event handlers
+      this.setupAudioEventHandlers(trackId);
+    }
     
-    this.currentAudio.play().catch(error => {
+    // Start playing and update state
+    this.currentAudio?.play().catch(error => {
       console.error('Error al intentar reproducir:', error);
     });
+    
+    this.currentTrackIdSubject.next(trackId);
+    this.isPlayingSubject.next(true);
+  }
+  
+  private setupAudioEventHandlers(trackId: string) {
+    if (!this.currentAudio) return;
+    
+    // Store the current position periodically
+    const updateInterval = setInterval(() => {
+      if (this.currentAudio && !this.currentAudio.paused) {
+        this.trackPositions.set(trackId, this.currentAudio.currentTime);
+      }
+    }, 5000);
+    
+    this.currentAudio.onended = () => {
+      console.log('Track finalizado');
+      this.isPlayingSubject.next(false);
+      this.trackPositions.delete(trackId); // Clear saved position when track ends
+      clearInterval(updateInterval);
+      // You could add autoplay next track logic here
+    };
+    
+    this.currentAudio.onerror = () => {
+      console.error('Error durante reproducción de audio');
+      this.isPlayingSubject.next(false);
+      clearInterval(updateInterval);
+    };
   }
   
   pauseTrack() {
     if (this.currentAudio) {
       this.currentAudio.pause();
+      
+      // Store current position
+      const currentTrackId = this.currentTrackIdSubject.value;
+      if (currentTrackId) {
+        this.trackPositions.set(currentTrackId, this.currentAudio.currentTime);
+      }
+      
+      this.isPlayingSubject.next(false);
     }
   }
   
@@ -114,22 +176,40 @@ export class AudiusRequest {
     if (this.currentAudio) {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
+      this.currentAudio = null;
     }
+    
+    // Clear current track state
+    this.currentTrackIdSubject.next(null);
+    this.isPlayingSubject.next(false);
   }
   
-  // Método para obtener el estado actual de reproducción
   isPlaying(): boolean {
-    return this.currentAudio !== null && !this.currentAudio.paused;
+    return this.isPlayingSubject.value;
   }
   
-  // Método para obtener la posición actual de reproducción
+  getCurrentTrackId(): string | null {
+    return this.currentTrackIdSubject.value;
+  }
+  
   getCurrentTime(): number {
     return this.currentAudio ? this.currentAudio.currentTime : 0;
   }
   
-  // Método para obtener la duración total
   getDuration(): number {
-    console.log('Duración total:', this.currentAudio ? this.currentAudio.duration : 0);
     return this.currentAudio ? this.currentAudio.duration : 0;
+  }
+  
+  // New method to let components seek to a position
+  seekTo(position: number) {
+    if (this.currentAudio) {
+      this.currentAudio.currentTime = position;
+      
+      // Update stored position
+      const currentTrackId = this.currentTrackIdSubject.value;
+      if (currentTrackId) {
+        this.trackPositions.set(currentTrackId, position);
+      }
+    }
   }
 }
