@@ -17,8 +17,24 @@ export class AudiusRequest {
   
   private isPlayingSubject = new BehaviorSubject<boolean>(false);
   public isPlaying$ = this.isPlayingSubject.asObservable();
-  
+  private cache = new Map<string, any>();
+
   constructor(private http: HttpClient) { }
+
+  searchMusic(query: string): Observable<any> {
+    if (this.cache.has(query)) {
+      return of(this.cache.get(query)); // Devuelve los resultados almacenados en cache
+    }
+
+    // Realizamos la búsqueda en Audius
+    const params = {
+      q: query,  // La consulta de búsqueda
+    };
+
+    return this.http.get(this.API_URL+'/tracks', { params }).pipe(
+      tap(response => this.cache.set(query, response)) // Guardamos la respuesta en cache
+    );
+  }
   
   getTrendingTracks(): Observable<any> {
     return this.http.get(`${this.API_URL}/tracks/trending?app_name=${this.APP_NAME}`).pipe(

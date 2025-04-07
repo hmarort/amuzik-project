@@ -22,7 +22,7 @@ import {
 } from '@ionic/angular/standalone';
 import { AudiusFacade } from 'src/app/services/facades/audius.facade';
 import { addIcons } from 'ionicons';
-import { playOutline, pauseOutline, musicalNotesOutline, stopOutline, chevronDownOutline } from 'ionicons/icons';
+import { playOutline, pauseOutline, musicalNotesOutline, stopOutline, chevronDownOutline, personCircleOutline } from 'ionicons/icons';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Subject, takeUntil } from 'rxjs';
 
@@ -61,7 +61,6 @@ interface Playlist {
     FormsModule,
     IonContent,
     IonHeader,
-    IonTitle,
     IonToolbar,
     IonItem,
     IonButton,
@@ -75,7 +74,7 @@ interface Playlist {
     IonSpinner,
     IonInfiniteScroll,
     IonInfiniteScrollContent
-  ],
+],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './home.page.html',
   styleUrls: ['./home.page.scss'],
@@ -83,7 +82,7 @@ interface Playlist {
 export class HomePage implements OnInit, OnDestroy {
   @ViewChild(IonInfiniteScroll) infiniteScroll!: IonInfiniteScroll;
   
-  private destroy$ = new Subject<void>();
+  private destroy = new Subject<void>();
   
   trendingTracks: Track[] = [];
   playlists: Playlist[] = [];
@@ -101,13 +100,7 @@ export class HomePage implements OnInit, OnDestroy {
   hasMorePlaylists: boolean = true;
 
   constructor(private audiusFacade: AudiusFacade) {
-    addIcons({
-      playOutline, 
-      pauseOutline, 
-      musicalNotesOutline, 
-      stopOutline,
-      chevronDownOutline
-    });
+    addIcons({personCircleOutline,chevronDownOutline,musicalNotesOutline,stopOutline,playOutline,pauseOutline});
   }
 
   ngOnInit() {
@@ -117,13 +110,13 @@ export class HomePage implements OnInit, OnDestroy {
   
     // Suscribirse a cambios en el estado de reproducción
     this.audiusFacade.isPlaying()
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntil(this.destroy))
       .subscribe(isPlaying => {
         this.isPlaying = isPlaying;
       });
       
     this.audiusFacade.getCurrentTrackId()
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntil(this.destroy))
       .subscribe(trackId => {
         if (trackId) {
           // Intentar encontrar el track en los ya cargados
@@ -157,8 +150,8 @@ export class HomePage implements OnInit, OnDestroy {
   }
   
   ngOnDestroy() {
-    this.destroy$.next();
-    this.destroy$.complete();
+    this.destroy.next();
+    this.destroy.complete();
   }
   
   private findTrackInData(trackId: string): Track | null {

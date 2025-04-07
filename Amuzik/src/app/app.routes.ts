@@ -32,7 +32,7 @@ export const routes: Routes = [
       },
       {
         path: 'search',
-        loadComponent: () => import('./pages/search/search.page').then(m => m.SearchPage)
+        loadComponent: () => import('./pages/friends/friends.page').then(m => m.SearchPage)
       },
       {
         path: '',

@@ -11,7 +11,9 @@ export class AudiusFacade {
   public tracks(): Observable<any> {
     return this.request.getTrendingTracks();
   }
-  
+  searchMusic(query: string): Observable<any> {
+    return this.request.searchMusic(query);
+  }
   public playlists(): Observable<any> {
     return this.request.getPlaylists();
   }
