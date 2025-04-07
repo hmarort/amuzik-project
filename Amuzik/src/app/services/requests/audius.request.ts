@@ -31,7 +31,7 @@ export class AudiusRequest {
       q: query,  // La consulta de búsqueda
     };
 
-    return this.http.get(this.API_URL+'/tracks', { params }).pipe(
+    return this.http.get(this.API_URL+'/tracks/search', { params }).pipe(
       tap(response => this.cache.set(query, response)) // Guardamos la respuesta en cache
     );
   }

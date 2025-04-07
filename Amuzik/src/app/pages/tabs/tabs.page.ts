@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel, IonHeader, IonToolbar, IonTitle, IonContent } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { homeOutline, searchOutline } from 'ionicons/icons';
+import { homeOutline, searchOutline, peopleOutline } from 'ionicons/icons';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 @Component({
@@ -13,6 +13,6 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 })
 export class TabsPage {
   constructor() {
-    addIcons({ homeOutline, searchOutline });
+    addIcons({homeOutline,peopleOutline,searchOutline});
   }
 }

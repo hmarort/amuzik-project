@@ -31,7 +31,7 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/home/home.page').then(m => m.HomePage)
       },
       {
-        path: 'search',
+        path: 'friends',
         loadComponent: () => import('./pages/friends/friends.page').then(m => m.FriendsPage)
       },
       {
