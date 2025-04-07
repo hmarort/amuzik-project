@@ -2,22 +2,14 @@
   <ion-toolbar color="light">
     <div class="flex items-center justify-between w-full px-4 py-2">
       <!-- Foto de perfil -->
-      <ion-button
-      fill="clear"
-      class="w-10 h-10 rounded-full object-cover p-0 mr-4"
-      name="conf"
-      alt="Perfil"
-    >
-      <ion-icon name="person-circle-outline" slot="icon-only"></ion-icon>
-    </ion-button>
+      <ion-button fill="clear" class="w-10 h-10 rounded-full object-cover p-0 mr-4" name="conf" alt="Perfil">
+        <ion-icon name="person-circle-outline" slot="icon-only"></ion-icon>
+      </ion-button>
 
       <!-- Barra de búsqueda -->
       <div class="flex-1 mx-4">
-        <input
-          type="text"
-          placeholder="Buscar música..."
-          class="w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500"
-        />
+        <input type="text" placeholder="Buscar música..."
+          class="w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500" />
       </div>
     </div>
   </ion-toolbar>
@@ -34,17 +26,16 @@
   <!-- Trending Tracks Carousel -->
   <div *ngIf="trendingTracks.length > 0" class="ion-padding-horizontal ion-padding-top">
     <h2 class="ion-text-white">Top 10 Trending</h2>
-    
+
     <div class="tracks-carousel">
       <div class="scroll-container">
-        <div *ngFor="let track of trendingTracks" 
-             class="track-card" 
-             [class.active]="currentTrack?.id === track.id"
-             (click)="togglePlayPause(track)">
+        <div *ngFor="let track of trendingTracks" class="track-card" [class.active]="currentTrack?.id === track.id"
+          (click)="togglePlayPause(track)">
           <div class="track-artwork">
             <img [src]="track.artwork?.['480x480'] || 'assets/default.jpg'" alt="{{ track.title }}">
             <div class="play-overlay">
-              <ion-icon [name]="(currentTrack?.id === track.id && isPlaying) ? 'pause-outline' : 'play-outline'"></ion-icon>
+              <ion-icon
+                [name]="(currentTrack?.id === track.id && isPlaying) ? 'pause-outline' : 'play-outline'"></ion-icon>
             </div>
           </div>
           <div class="track-info">
@@ -59,7 +50,7 @@
   <!-- Playlists Section -->
   <div class="ion-padding-horizontal ion-padding-top">
     <h2 class="ion-text-white">Playlists destacadas</h2>
-    
+
     <!-- Playlists List -->
     <div *ngFor="let playlist of playlists" class="playlist-container ion-margin-bottom">
       <ion-card color="medium" (click)="togglePlaylistExpansion(playlist)">
@@ -70,9 +61,11 @@
           <div class="playlist-info">
             <h3 class="ion-text-wrap ion-text-uppercase ion-text-white">{{ playlist.playlist_name }}</h3>
             <p class="ion-text-sm ion-text-color-light">Por: {{ playlist.user.name || 'Usuario desconocido' }}</p>
-            <p *ngIf="playlist.description" class="ion-text-sm ion-text-color-light description">{{ playlist.description }}</p>
+            <p *ngIf="playlist.description" class="ion-text-sm ion-text-color-light description">{{ playlist.description
+              }}</p>
             <p class="ion-text-sm ion-text-color-light">
-              {{ playlist.track_count || (playlist.playlist_contents ? playlist.playlist_contents.length : 0) }} canciones
+              {{ playlist.track_count || (playlist.playlist_contents ? playlist.playlist_contents.length : 0) }}
+              canciones
             </p>
           </div>
           <div class="expand-icon">
@@ -80,15 +73,12 @@
           </div>
         </div>
       </ion-card>
-      
+
       <!-- Playlist Tracks (Expandible) -->
       <div *ngIf="playlist.expanded" class="playlist-tracks">
         <ion-list>
-          <ion-item *ngFor="let item of playlist.playlist_contents" 
-                   lines="none" 
-                   class="track-item" 
-                   color="light"
-                   (click)="playTrack(getPlaylistTrackById(playlist, item.track_id || item.id) || item)">
+          <ion-item *ngFor="let item of playlist.playlist_contents" lines="none" class="track-item" color="light"
+            (click)="playTrack(getPlaylistTrackById(playlist, item.track_id || item.id) || item)">
             <ion-thumbnail slot="start">
               <img [src]="item.artwork?.['150x150'] || playlist.artwork?.['150x150'] || 'assets/default.jpg'">
             </ion-thumbnail>
@@ -97,9 +87,8 @@
               <p class="ion-text-sm ion-text-color-medium">{{ item.user?.name || 'Artista desconocido' }}</p>
             </ion-label>
             <div slot="end" class="track-status">
-              <ion-icon *ngIf="currentTrack?.id === (item.track_id || item.id) && isPlaying" 
-                       name="musical-notes-outline" 
-                       color="primary"></ion-icon>
+              <ion-icon *ngIf="currentTrack?.id === (item.track_id || item.id) && isPlaying"
+                name="musical-notes-outline" color="primary"></ion-icon>
             </div>
           </ion-item>
         </ion-list>
@@ -109,9 +98,7 @@
 
   <!-- Infinite Scroll -->
   <ion-infinite-scroll (ionInfinite)="loadMore($event)">
-    <ion-infinite-scroll-content
-      loadingSpinner="bubbles"
-      loadingText="Cargando más música...">
+    <ion-infinite-scroll-content loadingSpinner="bubbles" loadingText="Cargando más música...">
     </ion-infinite-scroll-content>
   </ion-infinite-scroll>
 </ion-content>
