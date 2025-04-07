@@ -86,9 +86,8 @@ interface Playlist {
     IonButtons,
     IonSpinner,
     IonInfiniteScroll,
-    IonInfiniteScrollContent,
-    IonSearchbar,
-  ],
+    IonInfiniteScrollContent
+],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './home.page.html',
   styleUrls: ['./home.page.scss'],
