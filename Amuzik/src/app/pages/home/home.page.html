@@ -8,13 +8,13 @@
 
       <!-- Barra de búsqueda -->
       <div class="flex-1 mx-4">
-        <input type="text" placeholder="Buscar música..."
+        <input type="text" placeholder="Buscar música..." (input)="searchMusic($event)" [(ngModel)]="searchTerm"
           class="w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500" />
       </div>
     </div>
   </ion-toolbar>
 </ion-header>
-
+<!-- class="w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500" -->
 
 <ion-content color="light" class="ion-padding-bottom">
   <!-- Loading Indicator -->
@@ -103,6 +103,32 @@
   </ion-infinite-scroll>
 </ion-content>
 
+<!-- Search Results -->
+<div *ngIf="showSearchResults" class="search-results">
+  <ion-list *ngIf="searchResults.length > 0; else noResults">
+    <ion-item *ngFor="let item of searchResults" (click)="playSearchResult(item)">
+      <ion-thumbnail slot="start">
+        <img [src]="item.artwork?.['150x150'] || 'assets/default.jpg'" alt="Artwork">
+      </ion-thumbnail>
+      <ion-label>
+        <h2>{{ item.title }}</h2>
+        <p>{{ item.user?.name || 'Artista Desconocido' }}</p>
+        <p *ngIf="item.type === 'track'">Track · {{ item.playCount || 0 }} plays</p>
+        <p *ngIf="item.type === 'playlist'">Playlist · {{ item.trackCount || 0 }} tracks</p>
+      </ion-label>
+      <ion-icon slot="end" name="play-outline"></ion-icon>
+    </ion-item>
+  </ion-list>
+  <ng-template #noResults>
+    <div class="no-results" *ngIf="!isSearching">
+      <p>No se encontraron resultados para "{{ searchTerm }}"</p>
+    </div>
+    <div class="loading-results" *ngIf="isSearching">
+      <ion-spinner></ion-spinner>
+      <p>Buscando...</p>
+    </div>
+  </ng-template>
+</div>
 <!-- Player Bar -->
 <ion-footer *ngIf="currentTrack" class="ion-no-border">
   <ion-toolbar color="medium">
