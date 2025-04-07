@@ -247,3 +247,39 @@ ion-footer {
     }
   }
 }
+
+.search-results-container {
+  position: fixed;
+  top: 56px; // Ajusta esto a la altura exacta de tu header
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--ion-color-light);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: var(--ion-color-medium);
+  border-bottom: 1px solid var(--ion-color-medium-shade);
+}
+
+.search-results-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch; // Mejora el desplazamiento en iOS
+}
+
+ion-list {
+  padding-bottom: 70px; // Espacio adicional para evitar que el reproductor oculte contenido
+}
+
+// Si tienes un reproductor en la parte inferior
+.search-results-container.with-player {
+  bottom: 56px; // Ajusta según la altura de tu player bar
+}

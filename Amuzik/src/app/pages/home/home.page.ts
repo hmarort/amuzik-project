@@ -34,10 +34,10 @@ import {
   musicalNotesOutline,
   stopOutline,
   chevronDownOutline,
-  personCircleOutline,
-} from 'ionicons/icons';
+  personCircleOutline, closeOutline, searchOutline } from 'ionicons/icons';
 import { SplashScreen } from '@capacitor/splash-screen';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, finalize, forkJoin, of, Observable } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 
 interface Track {
   id: string;
@@ -86,8 +86,9 @@ interface Playlist {
     IonButtons,
     IonSpinner,
     IonInfiniteScroll,
-    IonInfiniteScrollContent
-],
+    IonInfiniteScrollContent,
+    IonSearchbar,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './home.page.html',
   styleUrls: ['./home.page.scss'],
@@ -95,7 +96,7 @@ interface Playlist {
 export class HomePage implements OnInit, OnDestroy {
   @ViewChild(IonInfiniteScroll) infiniteScroll!: IonInfiniteScroll;
 
-  private destroy = new Subject<void>();
+  private destroy$ = new Subject<void>();
   searchTerm: string = '';
   searchResults: any[] = [];
   isSearching: boolean = false;
@@ -106,26 +107,17 @@ export class HomePage implements OnInit, OnDestroy {
   isPlaying: boolean = false;
   isLoading: boolean = true;
 
-  // Cache para evitar peticiones duplicadas
+  // Caché mejorado para tracks
   private tracksCache: Map<string, any> = new Map();
 
   // Parámetros para paginación
-  // Add this to your class
-  Math = Math; // Make Math available in template
   playlistsOffset: number = 0;
-  tracksOffset: number = 0;
   limit: number = 10;
   hasMorePlaylists: boolean = true;
+  allPlaylists: Playlist[] = []; // Almacenamos todas las playlists para simular paginación local
 
   constructor(private audiusFacade: AudiusFacade) {
-    addIcons({
-      personCircleOutline,
-      chevronDownOutline,
-      musicalNotesOutline,
-      stopOutline,
-      playOutline,
-      pauseOutline,
-    });
+    addIcons({personCircleOutline,chevronDownOutline,musicalNotesOutline,closeOutline,playOutline,searchOutline,stopOutline,pauseOutline,});
   }
 
   ngOnInit() {
@@ -136,69 +128,117 @@ export class HomePage implements OnInit, OnDestroy {
     // Suscribirse a cambios en el estado de reproducción
     this.audiusFacade
       .isPlaying()
-      .pipe(takeUntil(this.destroy))
+      .pipe(takeUntil(this.destroy$))
       .subscribe((isPlaying) => {
         this.isPlaying = isPlaying;
       });
 
     this.audiusFacade
       .getCurrentTrackId()
-      .pipe(takeUntil(this.destroy))
+      .pipe(takeUntil(this.destroy$))
       .subscribe((trackId) => {
-        if (trackId) {
-          // Intentar encontrar el track en los ya cargados
-          let track = this.findTrackInData(trackId);
-
-          if (!track) {
-            // Si no lo encontramos, cargar desde la API
-            this.audiusFacade.getTrackById(trackId).subscribe((response) => {
-              if (response && response.data) {
-                this.currentTrack = {
-                  id: response.data.id,
-                  title: response.data.title,
-                  user: {
-                    name: response.data.user?.name || 'Artista Desconocido',
-                  },
-                  artwork: response.data.artwork,
-                };
-              }
-            });
-          } else {
-            this.currentTrack = track;
-          }
-        } else {
+        if (!trackId) {
           this.currentTrack = null;
+          return;
         }
+        
+        // Intentar encontrar el track en los ya cargados
+        const track = this.findTrackInData(trackId);
+
+        if (track) {
+          this.currentTrack = track;
+          this.updateMediaSession();
+          return;
+        }
+        
+        // Si no lo encontramos, cargar desde la API
+        this.audiusFacade.getTrackById(trackId)
+          .pipe(
+            catchError(() => of(null)),
+            takeUntil(this.destroy$)
+          )
+          .subscribe((response) => {
+            if (response?.data) {
+              const trackData = response.data;
+              
+              // Guardar en caché para futuros usos
+              this.tracksCache.set(trackId, trackData);
+              
+              this.currentTrack = {
+                id: trackData.id,
+                title: trackData.title,
+                user: {
+                  name: trackData.user?.name || 'Artista Desconocido',
+                },
+                artwork: trackData.artwork,
+              };
+              
+              this.updateMediaSession();
+            }
+          });
       });
 
-    // Cargar tracks iniciales
-    this.loadInitialTracks();
-
-    // Cargar playlists iniciales
-    this.loadInitialPlaylists();
+    // Cargar datos iniciales en paralelo para mejorar rendimiento
+    forkJoin({
+      tracks: this.audiusFacade.tracks(),
+      playlists: this.audiusFacade.playlists()
+    })
+    .pipe(
+      takeUntil(this.destroy$),
+      finalize(() => {
+        this.isLoading = false;
+        SplashScreen.hide();
+      })
+    )
+    .subscribe({
+      next: (results) => {
+        // Procesar tracks
+        if (results.tracks?.data) {
+          this.trendingTracks = results.tracks.data.slice(0, 10);
+          
+          // Almacenar en cache de manera eficiente
+          results.tracks.data.forEach((track: any) => {
+            this.tracksCache.set(track.id, track);
+          });
+        }
+        
+        // Procesar playlists
+        if (results.playlists?.data) {
+          this.allPlaylists = results.playlists.data.map((playlist: Playlist) => ({
+            ...playlist,
+            expanded: false,
+            isLoading: false,
+          }));
+          
+          // Aplicar paginación local inicial
+          this.playlists = this.allPlaylists.slice(0, this.limit);
+          
+          // Determinar si hay más playlists disponibles
+          this.hasMorePlaylists = this.allPlaylists.length > this.limit;
+          
+          // Cargar tracks de la primera playlist por defecto
+          if (this.playlists.length > 0) {
+            this.togglePlaylistExpansion(this.playlists[0]);
+          }
+        }
+      },
+      error: () => {
+        // Manejo de error
+        this.isLoading = false;
+        SplashScreen.hide();
+      }
+    });
   }
 
   ngOnDestroy() {
-    this.destroy.next();
-    this.destroy.complete();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   private findTrackInData(trackId: string): Track | null {
-    // Buscar en trending tracks
-    const trendingTrack = this.trendingTracks.find((t) => t.id === trackId);
-    if (trendingTrack) return trendingTrack;
-
-    // Buscar en playlists
-    for (const playlist of this.playlists) {
-      if (playlist.playlist_contents) {
-        const track = this.getPlaylistTrackById(playlist, trackId);
-        if (track) return track;
-      }
-    }
-
-    // Buscar en cache
-    const cachedTrack = this.tracksCache.get(trackId);
-    if (cachedTrack) {
+    // Primero verificar en la caché para optimizar búsqueda
+    if (this.tracksCache.has(trackId)) {
+      const cachedTrack = this.tracksCache.get(trackId);
       return {
         id: cachedTrack.id,
         title: cachedTrack.title,
@@ -207,54 +247,33 @@ export class HomePage implements OnInit, OnDestroy {
       };
     }
 
-    return null;
-  }
+    // Buscar en trending tracks
+    const trendingTrack = this.trendingTracks.find((t) => t.id === trackId);
+    if (trendingTrack) return trendingTrack;
 
-  loadInitialTracks() {
-    this.audiusFacade.tracks().subscribe((response) => {
-      if (response && response.data) {
-        // Tomar solo los primeros 10 para el carrusel
-        this.trendingTracks = response.data.slice(0, 10);
-        console.log('Trending tracks cargados:', this.trendingTracks.length);
-
-        // Almacenar en cache
-        response.data.forEach((track: any) => {
-          this.tracksCache.set(track.id, track);
-        });
+    // Buscar en playlists - OPTIMIZADO
+    for (const playlist of this.playlists) {
+      if (!playlist.playlist_contents) continue;
+      
+      const playlistTrack = playlist.playlist_contents.find((item: any) => 
+        (item.track_id === trackId || item.id === trackId) && (item.title || item.id)
+      );
+      
+      if (playlistTrack) {
+        const track = {
+          id: playlistTrack.track_id || playlistTrack.id,
+          title: playlistTrack.title || `Track ${playlistTrack.track_id || playlistTrack.id}`,
+          user: { name: playlistTrack.user?.name || 'Artista Desconocido' },
+          artwork: playlistTrack.artwork || playlist.artwork,
+        };
+        
+        // Guardar en caché para futuras búsquedas rápidas
+        this.tracksCache.set(trackId, track);
+        return track;
       }
-      this.checkDataLoaded();
-    });
-  }
-
-  loadInitialPlaylists() {
-    this.audiusFacade.playlists().subscribe((response) => {
-      if (response && response.data) {
-        this.playlists = response.data.map((playlist: Playlist) => {
-          return {
-            ...playlist,
-            expanded: false,
-            isLoading: false,
-          };
-        });
-        console.log('Playlists cargadas:', this.playlists.length);
-
-        // Cargamos los tracks de la primera playlist por defecto
-        if (this.playlists.length > 0) {
-          this.togglePlaylistExpansion(this.playlists[0]);
-        }
-
-        // Determinar si hay más playlists disponibles
-        this.hasMorePlaylists = response.data.length >= this.limit;
-      }
-      this.checkDataLoaded();
-    });
-  }
-
-  checkDataLoaded() {
-    if (this.trendingTracks.length > 0 && this.playlists.length > 0) {
-      this.isLoading = false;
-      SplashScreen.hide();
     }
+
+    return null;
   }
 
   togglePlaylistExpansion(playlist: Playlist) {
@@ -267,84 +286,91 @@ export class HomePage implements OnInit, OnDestroy {
     // Si no está expandido y no tiene tracks cargados, los cargamos
     playlist.expanded = true;
 
-    if (
-      !playlist.playlist_contents ||
-      playlist.playlist_contents.length === 0
-    ) {
+    if (!playlist.playlist_contents || playlist.playlist_contents.length === 0) {
       playlist.isLoading = true;
 
-      this.audiusFacade.getPlaylistById(playlist.id).subscribe((response) => {
-        playlist.isLoading = false;
-
-        if (response && response.data) {
-          playlist.playlist_contents = response.data.playlist_contents || [];
-          playlist.track_count =
-            response.data.track_count || playlist.playlist_contents.length;
-          console.log(
-            `Tracks de playlist ${playlist.playlist_name} cargados:`,
-            playlist.playlist_contents.length
-          );
-
-          // Procesar tracks en lotes para mejorar el rendimiento
-          this.processPlaylistTracks(playlist);
-        }
-      });
+      this.audiusFacade.getPlaylistById(playlist.id)
+        .pipe(
+          finalize(() => {
+            playlist.isLoading = false;
+          }),
+          catchError(() => {
+            playlist.expanded = false;
+            return of(null);
+          }),
+          takeUntil(this.destroy$)
+        )
+        .subscribe((response) => {
+          if (response?.data) {
+            playlist.playlist_contents = response.data.playlist_contents || [];
+            playlist.track_count = response.data.track_count || playlist.playlist_contents.length;
+            
+            if (playlist.playlist_contents.length > 0) {
+              // Procesar tracks de manera más eficiente
+              this.loadPlaylistTracksEfficiently(playlist);
+            }
+          }
+        });
     }
   }
 
-  // Procesar tracklist en lotes para evitar bloquear UI
-  private processPlaylistTracks(playlist: Playlist, batchSize: number = 5) {
-    if (!playlist.playlist_contents) return;
-
-    const processTracksBatch = (startIndex: number) => {
-      const endIndex = Math.min(
-        startIndex + batchSize,
-        playlist.playlist_contents.length
-      );
-
-      for (let i = startIndex; i < endIndex; i++) {
-        const item = playlist.playlist_contents[i];
-
-        if (!item.title && item.track_id) {
-          // Verificar si ya está en cache
-          const cachedTrack = this.tracksCache.get(item.track_id);
-
-          if (cachedTrack) {
-            // Usar cache
-            Object.assign(item, cachedTrack);
-          } else {
-            // Cargar desde API
-            this.audiusFacade
-              .getTrackById(item.track_id)
-              .subscribe((trackData) => {
-                if (trackData && trackData.data) {
-                  Object.assign(item, trackData.data);
-                  // Guardar en cache
-                  this.tracksCache.set(item.track_id, trackData.data);
+  // Carga eficiente de tracks de playlist
+  private loadPlaylistTracksEfficiently(playlist: Playlist) {
+    if (!playlist.playlist_contents?.length) return;
+    
+    // Agrupar IDs de tracks que necesitan ser cargados
+    const tracksToLoad: string[] = [];
+    
+    playlist.playlist_contents.forEach(item => {
+      const trackId = item.track_id || item.id;
+      
+      // Si no tiene título y no está en caché, lo agregamos para cargar
+      if (trackId && !item.title && !this.tracksCache.has(trackId)) {
+        tracksToLoad.push(trackId);
+      } else if (trackId && this.tracksCache.has(trackId)) {
+        // Si está en caché, aplicamos los datos de caché directamente
+        const cachedData = this.tracksCache.get(trackId);
+        Object.assign(item, cachedData);
+      }
+    });
+    
+    // Cargamos en lotes de 5 para no sobrecargar
+    const batchSize = 5;
+    for (let i = 0; i < tracksToLoad.length; i += batchSize) {
+      const batch = tracksToLoad.slice(i, i + batchSize);
+      
+      // Programar el lote para ejecución secuencial pero no bloqueante
+      setTimeout(() => {
+        batch.forEach(trackId => {
+          this.audiusFacade.getTrackById(trackId)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(response => {
+              if (response?.data) {
+                // Guardar en caché
+                this.tracksCache.set(trackId, response.data);
+                
+                // Actualizar en playlist
+                const playlistItem = playlist.playlist_contents.find(
+                  item => (item.track_id === trackId || item.id === trackId)
+                );
+                
+                if (playlistItem) {
+                  Object.assign(playlistItem, response.data);
                 }
-              });
-          }
-        }
-      }
-
-      // Procesar siguiente lote si quedan tracks
-      if (endIndex < playlist.playlist_contents.length) {
-        setTimeout(() => processTracksBatch(endIndex), 300);
-      }
-    };
-
-    // Iniciar procesamiento por lotes
-    processTracksBatch(0);
+              }
+            });
+        });
+      }, i * 50); // Intervalo entre lotes
+    }
   }
 
   playTrack(track: Track) {
-    if (!track || !track.id) {
+    if (!track?.id) {
       console.error('Error: track es inválido. No se puede reproducir.');
       return;
     }
 
     this.audiusFacade.play(track.id);
-    this.updateMediaSession();
   }
 
   pauseTrack() {
@@ -356,53 +382,40 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   togglePlayPause(track: Track) {
-    if (
-      this.currentTrack &&
-      this.currentTrack.id === track.id &&
-      this.isPlaying
-    ) {
-      this.pauseTrack();
-    } else if (
-      this.currentTrack &&
-      this.currentTrack.id === track.id &&
-      !this.isPlaying
-    ) {
-      // Resume the same track
-      this.audiusFacade.play(track.id);
+    if (this.currentTrack?.id === track.id) {
+      this.isPlaying ? this.pauseTrack() : this.audiusFacade.play(track.id);
     } else {
-      // Play a new track
       this.playTrack(track);
     }
   }
 
   updateMediaSession() {
-    if ('mediaSession' in navigator && this.currentTrack) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: this.currentTrack.title || 'Unknown Title',
-        artist: this.currentTrack.user?.name || 'Unknown Artist',
-        album: 'Audius',
-        artwork: [
-          {
-            src:
-              this.currentTrack.artwork?.['1000x1000'] || 'assets/default.jpg',
-            sizes: '1000x1000',
-            type: 'image/jpeg',
-          },
-        ],
-      });
+    if (!('mediaSession' in navigator) || !this.currentTrack) return;
+    
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: this.currentTrack.title || 'Unknown Title',
+      artist: this.currentTrack.user?.name || 'Unknown Artist',
+      album: 'Audius',
+      artwork: [
+        {
+          src: this.currentTrack.artwork?.['1000x1000'] || 'assets/default.jpg',
+          sizes: '1000x1000',
+          type: 'image/jpeg',
+        },
+      ],
+    });
 
-      navigator.mediaSession.setActionHandler('play', () => {
-        this.audiusFacade.play(this.currentTrack!.id);
-      });
+    navigator.mediaSession.setActionHandler('play', () => {
+      this.audiusFacade.play(this.currentTrack!.id);
+    });
 
-      navigator.mediaSession.setActionHandler('pause', () => {
-        this.pauseTrack();
-      });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      this.pauseTrack();
+    });
 
-      navigator.mediaSession.setActionHandler('stop', () => {
-        this.stopTrack();
-      });
-    }
+    navigator.mediaSession.setActionHandler('stop', () => {
+      this.stopTrack();
+    });
   }
 
   loadMore(event: any) {
@@ -414,70 +427,36 @@ export class HomePage implements OnInit, OnDestroy {
 
     // Incrementamos el offset para la siguiente carga
     this.playlistsOffset += this.limit;
-
+    
     setTimeout(() => {
-      this.audiusFacade.playlists().subscribe((response) => {
-        if (response && response.data && response.data.length > 0) {
-          // Como la API no tiene paginación directa, aplicamos una simulación de paginación
-          const newPlaylists = response.data.slice(
-            this.playlistsOffset,
-            this.playlistsOffset + this.limit
-          );
-
-          if (newPlaylists.length > 0) {
-            const formattedPlaylists = newPlaylists.map(
-              (playlist: Playlist) => ({
-                ...playlist,
-                expanded: false,
-                isLoading: false,
-              })
-            );
-
-            this.playlists = [...this.playlists, ...formattedPlaylists];
-            (event as InfiniteScrollCustomEvent).target.complete();
-
-            // Determinar si hay más playlists disponibles
-            this.hasMorePlaylists =
-              this.playlistsOffset + this.limit < response.data.length;
-            if (!this.hasMorePlaylists) {
-              (event as InfiniteScrollCustomEvent).target.disabled = true;
-            }
-          } else {
-            // No hay más playlists para cargar
-            this.hasMorePlaylists = false;
-            (event as InfiniteScrollCustomEvent).target.disabled = true;
-          }
-        } else {
-          // No hay datos o hay un error
-          this.hasMorePlaylists = false;
-          (event as InfiniteScrollCustomEvent).target.disabled = true;
-        }
-      });
-    }, 500);
-  }
-
-  getPlaylistTrackById(playlist: Playlist, trackId: string): Track | null {
-    if (!playlist.playlist_contents) return null;
-
-    const track = playlist.playlist_contents.find((item: any) => {
-      return item.track_id === trackId || item.id === trackId;
-    });
-
-    if (!track) return null;
-
-    return {
-      id: track.track_id || track.id,
-      title: track.title || `Track ${track.track_id || track.id}`,
-      user: { name: track.user?.name || 'Artista Desconocido' },
-      artwork: track.artwork || playlist.artwork,
-    };
+      // Simulamos paginación local para mejorar rendimiento
+      const newPlaylists = this.allPlaylists.slice(
+        this.playlistsOffset,
+        this.playlistsOffset + this.limit
+      );
+      
+      if (newPlaylists.length) {
+        this.playlists = [...this.playlists, ...newPlaylists];
+        
+        // Revisar si hay más playlists disponibles
+        this.hasMorePlaylists = this.playlistsOffset + this.limit < this.allPlaylists.length;
+      } else {
+        this.hasMorePlaylists = false;
+      }
+      
+      (event as InfiniteScrollCustomEvent).target.complete();
+      
+      if (!this.hasMorePlaylists) {
+        (event as InfiniteScrollCustomEvent).target.disabled = true;
+      }
+    }, 300);
   }
 
   searchMusic(event: any) {
     const query = event.target.value.trim();
     this.searchTerm = query;
 
-    if (!query || query.length < 2) {
+    if (!query || query.length < 1) {
       this.searchResults = [];
       this.showSearchResults = false;
       return;
@@ -486,61 +465,40 @@ export class HomePage implements OnInit, OnDestroy {
     this.isSearching = true;
     this.showSearchResults = true;
 
-    this.audiusFacade.search(query).subscribe((response) => {
-      this.isSearching = false;
-      if (response && response.data) {
-        // Process track search results
-        this.searchResults = response.data.map((track: any) => ({
-          type: 'track',
-          id: track.id,
-          title: track.title,
-          user: track.user,
-          artwork: track.artwork,
-          playCount: track.play_count,
-          duration: track.duration,
-        }));
-      } else {
-        this.searchResults = [];
-      }
-    });
-  }
-
-  processSearchResults(data: any): any[] {
-    // Combine tracks, users, playlists, etc. and format them
-    const results: any[] = [];
-
-    // Process tracks
-    if (data.tracks) {
-      data.tracks.forEach((track: any) => {
-        results.push({
-          type: 'track',
-          id: track.id,
-          title: track.title,
-          user: track.user,
-          artwork: track.artwork,
-          playCount: track.play_count,
-          duration: track.duration,
+    // Agregamos un debounce básico para evitar múltiples peticiones
+    clearTimeout(this._searchTimeout);
+    this._searchTimeout = setTimeout(() => {
+      this.audiusFacade.search(query)
+        .pipe(
+          finalize(() => {
+            this.isSearching = false;
+          }),
+          takeUntil(this.destroy$)
+        )
+        .subscribe((response) => {
+          if (response?.data) {
+            // Procesar resultados y guardar en caché
+            this.searchResults = response.data.map((track: any) => {
+              // Guardar en caché para futuras búsquedas
+              this.tracksCache.set(track.id, track);
+              
+              return {
+                type: 'track',
+                id: track.id,
+                title: track.title,
+                user: track.user,
+                artwork: track.artwork,
+                playCount: track.play_count,
+                duration: track.duration,
+              };
+            });
+          } else {
+            this.searchResults = [];
+          }
         });
-      });
-    }
-
-    // Process playlists
-    if (data.playlists) {
-      data.playlists.forEach((playlist: any) => {
-        results.push({
-          type: 'playlist',
-          id: playlist.id,
-          title: playlist.playlist_name,
-          user: playlist.user,
-          artwork: playlist.artwork,
-          trackCount: playlist.track_count,
-          description: playlist.description,
-        });
-      });
-    }
-
-    return results;
+    }, 300);
   }
+  private _searchTimeout: any;
 
   clearSearch() {
     this.searchTerm = '';
@@ -557,20 +515,31 @@ export class HomePage implements OnInit, OnDestroy {
         artwork: item.artwork,
       });
     } else if (item.type === 'playlist') {
-      // Load playlist and play first track
-      this.audiusFacade.getPlaylistById(item.id).subscribe((response) => {
-        if (
-          response &&
-          response.data &&
-          response.data.playlist_contents &&
-          response.data.playlist_contents.length > 0
-        ) {
-          const firstTrackId = response.data.playlist_contents[0].track_id;
-          if (firstTrackId) {
-            this.audiusFacade.play(firstTrackId);
-          }
+      // Optimización: Verificar si ya tenemos la playlist en cache
+      const playlistInState = this.allPlaylists.find(p => p.id === item.id);
+      
+      if (playlistInState?.playlist_contents?.length) {
+        // Usar la playlist ya cargada
+        const firstTrack = playlistInState.playlist_contents[0];
+        const trackId = firstTrack.track_id || firstTrack.id;
+        if (trackId) {
+          this.audiusFacade.play(trackId);
         }
-      });
+        return;
+      }
+      
+      // Si no está cargada, hacer la petición
+      this.audiusFacade.getPlaylistById(item.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((response) => {
+          const contents = response?.data?.playlist_contents;
+          if (contents?.length) {
+            const firstTrackId = contents[0].track_id;
+            if (firstTrackId) {
+              this.audiusFacade.play(firstTrackId);
+            }
+          }
+        });
     }
   }
 }
