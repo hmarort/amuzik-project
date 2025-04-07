@@ -8,7 +8,7 @@ import { IonContent, IonHeader, IonTitle, IonToolbar, IonButtons, IonButton, Ion
   templateUrl: './friends.page.html',
   styleUrls: ['./friends.page.scss'],
   standalone: true,
-  imports: [IonIcon, IonButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar, CommonModule, FormsModule]
+  imports: [IonContent, IonHeader, IonTitle, IonToolbar, CommonModule, FormsModule]
 })
 export class FriendsPage implements OnInit {
 
