@@ -48,7 +48,6 @@ export class ChatComponent implements AfterViewInit {
       console.log('Mensaje enviado:', this.newMessage);
       this.newMessage = '';
       
-      // Hacer scroll al último mensaje después de enviar
       setTimeout(() => {
         this.scrollToBottom();
       }, 100);
