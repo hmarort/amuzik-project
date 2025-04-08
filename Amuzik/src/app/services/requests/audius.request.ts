@@ -128,11 +128,9 @@ export class AudiusRequest {
       return;
     }
 
-    // If it's the same track that was previously playing/paused
     const isCurrentTrack = this.currentTrackIdSubject.value === trackId;
 
     if (isCurrentTrack && this.currentAudio) {
-      // Resume playback from the stored position
       this.currentAudio.play().catch((error) => {
         console.error('Error al reanudar reproducción:', error);
       });
@@ -140,7 +138,6 @@ export class AudiusRequest {
       return;
     }
 
-    // If it's a new track, prepare to play it
     if (!isCurrentTrack) {
       this.stopCurrentTrack();
 
@@ -155,17 +152,14 @@ export class AudiusRequest {
       this.currentAudio = new Audio();
       this.currentAudio.src = streamUrl;
 
-      // If we previously had a stored position for this track, restore it
       const savedPosition = this.trackPositions.get(trackId);
       if (savedPosition !== undefined) {
         this.currentAudio.currentTime = savedPosition;
       }
 
-      // Set up event handlers
       this.setupAudioEventHandlers(trackId);
     }
 
-    // Start playing and update state
     this.currentAudio?.play().catch((error) => {
       console.error('Error al intentar reproducir:', error);
     });
@@ -177,7 +171,7 @@ export class AudiusRequest {
   private setupAudioEventHandlers(trackId: string) {
     if (!this.currentAudio) return;
 
-    // Store the current position periodically
+    // Almacenar la posición actual del track cada 5 segundos
     const updateInterval = setInterval(() => {
       if (this.currentAudio && !this.currentAudio.paused) {
         this.trackPositions.set(trackId, this.currentAudio.currentTime);
@@ -187,9 +181,8 @@ export class AudiusRequest {
     this.currentAudio.onended = () => {
       console.log('Track finalizado');
       this.isPlayingSubject.next(false);
-      this.trackPositions.delete(trackId); // Clear saved position when track ends
+      this.trackPositions.delete(trackId);
       clearInterval(updateInterval);
-      // You could add autoplay next track logic here
     };
 
     this.currentAudio.onerror = () => {
@@ -203,7 +196,7 @@ export class AudiusRequest {
     if (this.currentAudio) {
       this.currentAudio.pause();
 
-      // Store current position
+      // Mantener la posición actual del track
       const currentTrackId = this.currentTrackIdSubject.value;
       if (currentTrackId) {
         this.trackPositions.set(currentTrackId, this.currentAudio.currentTime);
@@ -220,7 +213,6 @@ export class AudiusRequest {
       this.currentAudio = null;
     }
 
-    // Clear current track state
     this.currentTrackIdSubject.next(null);
     this.isPlayingSubject.next(false);
   }
@@ -245,7 +237,6 @@ export class AudiusRequest {
     if (this.currentAudio) {
       this.currentAudio.currentTime = position;
 
-      // Update stored position
       const currentTrackId = this.currentTrackIdSubject.value;
       if (currentTrackId) {
         this.trackPositions.set(currentTrackId, position);
