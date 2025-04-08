@@ -30,6 +30,24 @@ export class AudiusRequest {
       })
     );
   }
+  getPlaylistTracks(playlistId: string): Observable<any> {
+    const cacheKey = `playlist_${playlistId}`;
+    if (this.cache.has(cacheKey)) {
+      return of(this.cache.get(cacheKey));
+    }
+    return this.http
+      .get(`${this.API_URL}/playlists/${playlistId}/tracks?app_name=${this.APP_NAME}`)
+      .pipe(
+        tap((response) => {
+          console.log('Tracks de la playlist recibidos:', response);
+          this.cache.set(cacheKey, response);
+        }),
+        catchError((error) => {
+          console.error('Error al obtener tracks de la playlist:', error);
+          return of({ data: [] });
+        })
+      );
+  }
   getTrendingTracks(): Observable<any> {
     return this.http
       .get(`${this.API_URL}/tracks/trending?app_name=${this.APP_NAME}`)

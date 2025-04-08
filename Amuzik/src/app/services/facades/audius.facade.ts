@@ -14,7 +14,9 @@ export class AudiusFacade {
   public playlists(): Observable<any> {
     return this.request.getPlaylists();
   }
-  // Add this method to AudiusFacade class
+  playlistTracks(playlistId: string): Observable<any> {
+    return this.request.getPlaylistTracks(playlistId);
+  }
   public search(query: string): Observable<any> {
     return this.request.searchContent(query);
   }

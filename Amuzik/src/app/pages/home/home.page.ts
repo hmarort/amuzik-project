@@ -106,6 +106,7 @@ export class HomePage implements OnInit, OnDestroy {
   currentTrack: Track | null = null;
   isPlaying: boolean = false;
   isLoading: boolean = true;
+  private _searchTimeout: any;
 
   // Caché para tracks
   private tracksCache: Map<string, any> = new Map();
@@ -221,7 +222,7 @@ export class HomePage implements OnInit, OnDestroy {
       }
     });
   }
-
+  
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
@@ -243,7 +244,7 @@ export class HomePage implements OnInit, OnDestroy {
     const trendingTrack = this.trendingTracks.find((t) => t.id === trackId);
     if (trendingTrack) return trendingTrack;
 
-    
+
     for (const playlist of this.playlists) {
       if (!playlist.playlist_contents) continue;
       
@@ -297,8 +298,7 @@ export class HomePage implements OnInit, OnDestroy {
             playlist.playlist_contents = response.data.playlist_contents || [];
             playlist.track_count = response.data.track_count || playlist.playlist_contents.length;
             
-            if (playlist.playlist_contents.length > 0) {
-              // Procesar tracks de manera más eficiente
+            if (playlist.id) {
               this.loadPlaylistTracksEfficiently(playlist);
             }
           }
@@ -306,55 +306,42 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
-  // Carga eficiente de tracks de playlist
   private loadPlaylistTracksEfficiently(playlist: Playlist) {
-    if (!playlist.playlist_contents?.length) return;
-    
-    // Agrupar IDs de tracks que necesitan ser cargados
-    const tracksToLoad: string[] = [];
-    
-    playlist.playlist_contents.forEach(item => {
-      const trackId = item.track_id || item.id;
-      
-      // Si no tiene título y no está en caché, lo agregamos para cargar
-      if (trackId && !item.title && !this.tracksCache.has(trackId)) {
-        tracksToLoad.push(trackId);
-      } else if (trackId && this.tracksCache.has(trackId)) {
-        // Si está en caché, aplicamos los datos de caché directamente
-        const cachedData = this.tracksCache.get(trackId);
-        Object.assign(item, cachedData);
-      }
-    });
-    
-    // Cargamos en lotes de 5 para no sobrecargar
-    const batchSize = 5;
-    for (let i = 0; i < tracksToLoad.length; i += batchSize) {
-      const batch = tracksToLoad.slice(i, i + batchSize);
-      
-      // Programar el lote para ejecución secuencial pero no bloqueante
-      setTimeout(() => {
-        batch.forEach(trackId => {
-          this.audiusFacade.getTrackById(trackId)
-            .pipe(takeUntil(this.destroy$))
-            .subscribe(response => {
-              if (response?.data) {
-                // Guardar en caché
-                this.tracksCache.set(trackId, response.data);
-                
-                // Actualizar en playlist
-                const playlistItem = playlist.playlist_contents.find(
-                  item => (item.track_id === trackId || item.id === trackId)
-                );
-                
-                if (playlistItem) {
-                  Object.assign(playlistItem, response.data);
-                }
-              }
-            });
-        });
-      }, i * 50); // Intervalo entre lotes
+    if (!playlist.id) return;  // Verificar que tenemos un ID de playlist válido
+  
+    // Si ya tenemos los tracks en caché, no hacer la petición
+    if (playlist.playlist_contents?.length && !playlist.isLoading) {
+      return;
     }
-  }
+  
+    // Marcar que estamos cargando los tracks de la playlist
+    playlist.isLoading = true;
+  
+    // Obtener todos los tracks de la playlist utilizando getPlaylistTracks
+    this.audiusFacade.playlistTracks(playlist.id)
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          playlist.isLoading = false;
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          if (response?.data) {
+            playlist.playlist_contents = response.data;
+            playlist.track_count = response.data.length;
+  
+            // Actualizar la caché de los tracks
+            response.data.forEach((track: any) => {
+              this.tracksCache.set(track.id, track);
+            });
+          }
+        },
+        error: () => {
+          playlist.isLoading = false;
+        }
+      });
+  }  
 
   playTrack(track: Track) {
     if (!track?.id) {
@@ -490,7 +477,6 @@ export class HomePage implements OnInit, OnDestroy {
         });
     }, 300);
   }
-  private _searchTimeout: any;
 
   clearSearch() {
     this.searchTerm = '';
