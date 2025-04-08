@@ -10,4 +10,15 @@
       <ion-title size="large">Friends</ion-title>
     </ion-toolbar>
   </ion-header>
+
+  <ion-list>
+    <ion-item *ngFor="let friend of friends" (click)="openChat(friend.id)">
+      <ion-avatar slot="start">
+        <img [src]="friend.avatar" />
+      </ion-avatar>
+      <ion-label>
+        <h2>{{ friend.name }}</h2>
+      </ion-label>
+    </ion-item>
+  </ion-list>
 </ion-content>

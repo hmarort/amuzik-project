@@ -1,0 +1,23 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Chat con Amigo {{ friendId }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">Cerrar</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="messages">
+    <div *ngFor="let message of messages">{{ message }}</div>
+  </div>
+
+  <ion-item>
+    <ion-input 
+      placeholder="Escribe un mensaje..." 
+      [(ngModel)]="newMessage">
+    </ion-input>
+  </ion-item>
+
+  <ion-button expand="full" (click)="sendMessage()">Enviar</ion-button>
+</ion-content>
