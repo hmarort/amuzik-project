@@ -107,7 +107,7 @@ export class HomePage implements OnInit, OnDestroy {
   isPlaying: boolean = false;
   isLoading: boolean = true;
 
-  // Caché mejorado para tracks
+  // Caché para tracks
   private tracksCache: Map<string, any> = new Map();
 
   // Parámetros para paginación
@@ -161,7 +161,6 @@ export class HomePage implements OnInit, OnDestroy {
             if (response?.data) {
               const trackData = response.data;
               
-              // Guardar en caché para futuros usos
               this.tracksCache.set(trackId, trackData);
               
               this.currentTrack = {
@@ -195,8 +194,6 @@ export class HomePage implements OnInit, OnDestroy {
         // Procesar tracks
         if (results.tracks?.data) {
           this.trendingTracks = results.tracks.data.slice(0, 10);
-          
-          // Almacenar en cache de manera eficiente
           results.tracks.data.forEach((track: any) => {
             this.tracksCache.set(track.id, track);
           });
@@ -212,18 +209,13 @@ export class HomePage implements OnInit, OnDestroy {
           
           // Aplicar paginación local inicial
           this.playlists = this.allPlaylists.slice(0, this.limit);
-          
-          // Determinar si hay más playlists disponibles
           this.hasMorePlaylists = this.allPlaylists.length > this.limit;
-          
-          // Cargar tracks de la primera playlist por defecto
           if (this.playlists.length > 0) {
             this.togglePlaylistExpansion(this.playlists[0]);
           }
         }
       },
       error: () => {
-        // Manejo de error
         this.isLoading = false;
         SplashScreen.hide();
       }
@@ -251,7 +243,7 @@ export class HomePage implements OnInit, OnDestroy {
     const trendingTrack = this.trendingTracks.find((t) => t.id === trackId);
     if (trendingTrack) return trendingTrack;
 
-    // Buscar en playlists - OPTIMIZADO
+    
     for (const playlist of this.playlists) {
       if (!playlist.playlist_contents) continue;
       
