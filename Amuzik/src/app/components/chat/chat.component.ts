@@ -1,34 +1,63 @@
-import { Component, Input } from '@angular/core';
-import { ModalController } from '@ionic/angular';
-import { FormsModule } from '@angular/forms';
-import { IonHeader, IonButton, IonToolbar, IonTitle, IonButtons, IonContent, IonItem, IonInput } from "@ionic/angular/standalone";
+import { Component, Input, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { IonicModule, ModalController, IonContent, AnimationController } from '@ionic/angular';
 
 @Component({
   selector: 'app-chat',
   templateUrl: './chat.component.html',
   styleUrls: ['./chat.component.scss'],
   standalone: true,
-  imports: [IonInput, IonItem, IonContent, IonButtons, IonTitle, IonToolbar, IonButton, IonHeader,FormsModule, CommonModule ]  // Este componente no necesita ningún módulo extra, ya que el ModalController se provee por Ionic
+  imports: [CommonModule, FormsModule, IonicModule]
 })
-export class ChatComponent {
-  @Input()
-  friendId!: number;  // Recibimos el ID del amigo
-
-  newMessage: string = '';     // Para el nuevo mensaje
-  messages: string[] = [];     // Array para simular los mensajes de la conversación
+export class ChatComponent implements AfterViewInit {
+  @Input() friendId!: number;
+  @ViewChild(IonContent) content!: IonContent;
   
-  constructor(private modalController: ModalController) {}
+  newMessage: string = '';
+  messages: string[] = [];
+  friend: string = '';
+
+  constructor(
+    private modalController: ModalController,
+    private animationCtrl: AnimationController
+  ) {}
+
+  ngAfterViewInit() {
+    // Simulamos obtener el nombre del amigo basado en el ID
+    setTimeout(() => {
+      this.friend = `Amigo ${this.friendId}`;
+      // Añadimos algunos mensajes de ejemplo
+      this.messages = [
+        `Hola, soy el ${this.friend}!`,
+        `¿Cómo estás hoy?`
+      ];
+      this.scrollToBottom();
+    }, 300);
+  }
 
   dismiss() {
-    this.modalController.dismiss();  // Cerramos el modal cuando el usuario lo desee
+    this.modalController.dismiss({
+      'dismissed': true
+    });
   }
 
   sendMessage() {
     if (this.newMessage.trim() !== '') {
-      this.messages.push(this.newMessage);  // Añadimos el mensaje al array de mensajes
+      this.messages.push(this.newMessage);
       console.log('Mensaje enviado:', this.newMessage);
-      this.newMessage = '';  // Limpiamos el input
+      this.newMessage = '';
+      
+      // Hacer scroll al último mensaje después de enviar
+      setTimeout(() => {
+        this.scrollToBottom();
+      }, 100);
+    }
+  }
+
+  scrollToBottom() {
+    if (this.content) {
+      this.content.scrollToBottom(300);
     }
   }
 }

@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonicModule, ModalController } from '@ionic/angular';  // Import IonicModule for Ionic components
-import { ChatComponent } from '../../components/chat/chat.component';  // Asegúrate de importar el componente del chat
+import { IonicModule } from '@ionic/angular';
+import {  ModalController } from '@ionic/angular/standalone';
+import { ChatComponent } from '../../components/chat/chat.component';
 
 @Component({
   selector: 'app-friends',
@@ -13,7 +14,7 @@ import { ChatComponent } from '../../components/chat/chat.component';  // Asegú
     CommonModule,
     FormsModule,
     IonicModule
-  ]
+]
 })
 export class FriendsPage implements OnInit {
   friends: { id: number, name: string, avatar: string }[] = [
@@ -28,12 +29,24 @@ export class FriendsPage implements OnInit {
   ngOnInit() {}
 
   async openChat(friendId: number) {
-    const modal = await this.modalController.create({
-      component: ChatComponent,
-      componentProps: {
-        friendId: friendId
-      }
-    });
-    return await modal.present();
+    try {
+      const modal = await this.modalController.create({
+        component: ChatComponent,
+        componentProps: {
+          friendId: friendId
+        },
+        backdropDismiss: false,
+        initialBreakpoint: 1.0,
+        breakpoints: [0, 0.5, 1.0]
+      });
+      
+      await modal.present();
+      
+      // Manejar el resultado del modal cuando se cierre
+      const { data } = await modal.onWillDismiss();
+      console.log('Chat cerrado', data);
+    } catch (error) {
+      console.error('Error al abrir el chat:', error);
+    }
   }
 }
