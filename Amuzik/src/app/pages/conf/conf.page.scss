@@ -1,0 +1,54 @@
+// Estilos para la página de configuración
+.perfil-container {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+  
+    ion-avatar {
+      width: 70px;
+      height: 70px;
+      margin-right: 20px;
+    }
+  
+    .perfil-info {
+      h2 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+      }
+  
+      p {
+        margin: 5px 0 10px;
+        color: var(--ion-color-medium);
+        font-size: 14px;
+      }
+    }
+  }
+  
+  ion-item-divider {
+    --background: var(--ion-color-light);
+    --padding-top: 10px;
+    --padding-bottom: 10px;
+    margin-top: 15px;
+  }
+  
+  .seccion-titulo {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+  
+    ion-icon {
+      margin-right: 10px;
+      font-size: 20px;
+    }
+  }
+  
+  .accion-container {
+    margin-top: 20px;
+  }
+  
+  // Ajuste para alinear los iconos en los ítems
+  ion-item ion-icon[slot="start"] {
+    margin-right: 16px;
+    color: var(--ion-color-primary);
+  }

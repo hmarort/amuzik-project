@@ -1,13 +1,133 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-title>conf</ion-title>
+    <ion-title>Configuración</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">conf</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content [fullscreen]="true" class="ion-padding">
+  <!-- Tarjeta de perfil de usuario -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Perfil</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="perfil-container">
+        <ion-avatar>
+          <img [src]="usuario.foto" alt="Foto de perfil">
+        </ion-avatar>
+        <div class="perfil-info">
+          <h2>{{ usuario.nombre }}</h2>
+          <p>{{ usuario.email }}</p>
+          <ion-button size="small" fill="outline">Editar perfil</ion-button>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Sección de Configuración de Cuenta -->
+  <ion-list>
+    <ion-item-divider>
+      <ion-label>
+        <span class="seccion-titulo">
+          <ion-icon name="person-outline"></ion-icon>
+          Ajustes de Cuenta
+        </span>
+      </ion-label>
+    </ion-item-divider>
+
+    <ion-item>
+      <ion-icon slot="start" name="language-outline"></ion-icon>
+      <ion-label>Idioma</ion-label>
+      <ion-select [(ngModel)]="configuraciones.cuenta.idioma" interface="popover">
+        <ion-select-option *ngFor="let idioma of idiomas" [value]="idioma.valor">{{idioma.texto}}</ion-select-option>
+      </ion-select>
+    </ion-item>
+
+    <ion-item>
+      <ion-icon slot="start" name="moon-outline"></ion-icon>
+      <ion-label>Tema Oscuro</ion-label>
+      <ion-toggle [(ngModel)]="configuraciones.cuenta.tema" (ionChange)="cambiarTema()"></ion-toggle>
+    </ion-item>
+  </ion-list>
+
+  <!-- Sección de Notificaciones -->
+  <ion-list>
+    <ion-item-divider>
+      <ion-label>
+        <span class="seccion-titulo">
+          <ion-icon name="notifications-outline"></ion-icon>
+          Notificaciones
+        </span>
+      </ion-label>
+    </ion-item-divider>
+
+    <ion-item>
+      <ion-label>Notificaciones push</ion-label>
+      <ion-toggle [(ngModel)]="configuraciones.notificaciones.push"></ion-toggle>
+    </ion-item>
+
+    <ion-item>
+      <ion-label>Notificaciones por email</ion-label>
+      <ion-toggle [(ngModel)]="configuraciones.notificaciones.email"></ion-toggle>
+    </ion-item>
+
+    <ion-item>
+      <ion-icon slot="start" name="volume-high-outline"></ion-icon>
+      <ion-label>Sonido</ion-label>
+      <ion-toggle [(ngModel)]="configuraciones.notificaciones.sonido"></ion-toggle>
+    </ion-item>
+
+    <ion-item>
+      <ion-label>Vibración</ion-label>
+      <ion-toggle [(ngModel)]="configuraciones.notificaciones.vibracion"></ion-toggle>
+    </ion-item>
+  </ion-list>
+
+  <!-- Sección de Configuración General -->
+  <ion-list>
+    <ion-item-divider>
+      <ion-label>
+        <span class="seccion-titulo">
+          <ion-icon name="settings-outline"></ion-icon>
+          Configuración General
+        </span>
+      </ion-label>
+    </ion-item-divider>
+
+    <ion-item>
+      <ion-label>Auto-guardado</ion-label>
+      <ion-toggle [(ngModel)]="configuraciones.general.autoGuardado"></ion-toggle>
+    </ion-item>
+
+    <ion-item>
+      <ion-label>Sincronizar datos</ion-label>
+      <ion-toggle [(ngModel)]="configuraciones.general.sincronizarDatos"></ion-toggle>
+    </ion-item>
+
+    <ion-item>
+      <ion-label>Compartir estadísticas de uso</ion-label>
+      <ion-toggle [(ngModel)]="configuraciones.general.compartirEstadisticas"></ion-toggle>
+    </ion-item>
+
+    <ion-item button detail="true">
+      <ion-icon slot="start" name="help-circle-outline"></ion-icon>
+      <ion-label>Ayuda y soporte</ion-label>
+      <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
+    </ion-item>
+  </ion-list>
+
+  <!-- Botón de cerrar sesión -->
+  <div class="accion-container">
+    <ion-button expand="block" color="danger" (click)="cerrarSesion()">
+      <ion-icon slot="start" name="log-out-outline"></ion-icon>
+      Cerrar sesión
+    </ion-button>
+  </div>
+
+  <!-- Botón guardar cambios -->
+  <div class="accion-container">
+    <ion-button expand="block" (click)="guardarCambios()">
+      Guardar cambios
+    </ion-button>
+  </div>
 </ion-content>

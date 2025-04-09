@@ -1,0 +1,149 @@
+// Estilos para la página de apariencia
+ion-card-title {
+    display: flex;
+    align-items: center;
+    
+    ion-icon {
+      margin-right: 10px;
+      font-size: 20px;
+    }
+  }
+  
+  .tema-descripcion {
+    margin-bottom: 20px;
+    color: var(--ion-color-medium);
+  }
+  
+  .tema-preview {
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    position: relative;
+    border: 2px solid transparent;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: all 0.3s ease;
+    
+    &.activo {
+      border-color: var(--ion-color-primary);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .tema-color-preview {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
+      
+      .color-muestra {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        transition: transform 0.2s ease;
+      }
+    }
+    
+    .tema-nombre {
+      font-weight: 500;
+      font-size: 14px;
+    }
+    
+    .tema-seleccionado {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      color: var(--ion-color-primary);
+      font-size: 20px;
+    }
+    
+    &:active {
+      transform: scale(0.98);
+      
+      .color-muestra {
+        transform: scale(0.9);
+      }
+    }
+  }
+  
+  // Clases para el preview de temas
+  .theme-pastel-green-light {
+    background-color: #f0f8f0;
+    color: #2a3a2a;
+  }
+  
+  .theme-pastel-green-dark {
+    background-color: #1e2a1e;
+    color: #d8e8d8;
+  }
+  
+  .theme-pastel-blue-light {
+    background-color: #f0f5fa;
+    color: #2a3545;
+  }
+  
+  .theme-pastel-blue-dark {
+    background-color: #1e2834;
+    color: #d8e5f0;
+  }
+  
+  .theme-pastel-purple-light {
+    background-color: #f8f0fa;
+    color: #3a2a45;
+  }
+  
+  .theme-pastel-purple-dark {
+    background-color: #2a1e34;
+    color: #e8d8f0;
+  }
+  
+  .theme-pastel-red-light {
+    background-color: #faf0f0;
+    color: #452a2a;
+  }
+  
+  .theme-pastel-red-dark {
+    background-color: #341e1e;
+    color: #f0d8d8;
+  }
+  
+  .theme-pastel-orange-light {
+    background-color: #faf5f0;
+    color: #45352a;
+  }
+  
+  .theme-pastel-orange-dark {
+    background-color: #342a1e;
+    color: #f0e5d8;
+  }
+  
+  // Estilo para el preview de tamaño de texto
+  .font-size-preview {
+    padding: 15px;
+    margin-top: 10px;
+    border-radius: 8px;
+    background-color: var(--ion-color-light);
+    text-align: center;
+    
+    p {
+      margin: 0;
+      padding: 0;
+    }
+  }
+  
+  // Estilo para el contenedor de botones de acción
+  .accion-container {
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+  
+  // Hacer los toggles más grandes y vistosos
+  ion-toggle {
+    --handle-width: 22px;
+    --handle-height: 22px;
+    padding: 12px;
+  }
+  
+  // Efectos adicionales al seleccionar un tema
+  .tema-preview:hover:not(.activo) {
+    border-color: var(--ion-color-medium);
+    cursor: pointer;
+  }

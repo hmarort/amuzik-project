@@ -18,8 +18,7 @@ import {
   settingsOutline, 
   brushOutline,
   moonOutline, 
-  sunnyOutline 
-} from 'ionicons/icons';
+  sunnyOutline, homeOutline } from 'ionicons/icons';
 import { Router } from '@angular/router';
 
 @Component({
@@ -47,12 +46,7 @@ export class SidemenuComponent implements OnInit {
 
   constructor(private router: Router) {
     // Registrar iconos
-    addIcons({
-      settingsOutline,
-      brushOutline,
-      moonOutline,
-      sunnyOutline
-    });
+    addIcons({settingsOutline,brushOutline,homeOutline,moonOutline,sunnyOutline});
     
     // Cargar preferencia de tema
     const savedTheme = localStorage.getItem('darkMode');
@@ -81,6 +75,10 @@ export class SidemenuComponent implements OnInit {
 
   // Navegar a apariencia
   goToAppearance() {
-    this.router.navigate(['/appearance']);
+    this.router.navigate(['/apariencia']);
+  }
+
+  goToHome() {
+    this.router.navigate(['/home']);
   }
 }
