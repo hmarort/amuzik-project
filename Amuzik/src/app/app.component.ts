@@ -5,7 +5,7 @@ import {
   IonApp, 
   IonRouterOutlet} from '@ionic/angular/standalone';
 import { SidemenuComponent } from './components/sidemenu/sidemenu.component';
-
+import { TemaService } from './services/tema.service';
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -21,5 +21,5 @@ import { SidemenuComponent } from './components/sidemenu/sidemenu.component';
 })
 export class AppComponent {
   
-  constructor() {}
+  constructor(private temaService: TemaService) {}
 }
