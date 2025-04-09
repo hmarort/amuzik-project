@@ -7,6 +7,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { SidemenuComponent } from 'src/app/components/sidemenu/sidemenu.component';
 import {
   IonContent,
   IonHeader,
@@ -19,12 +20,13 @@ import {
   IonList,
   IonLabel,
   IonFooter,
-  IonButtons,
   IonSpinner,
   IonInfiniteScroll,
   IonInfiniteScrollContent,
   InfiniteScrollCustomEvent,
   IonSearchbar,
+  IonButtons,
+  IonMenuButton,
 } from '@ionic/angular/standalone';
 import { AudiusFacade } from 'src/app/services/facades/audius.facade';
 import { addIcons } from 'ionicons';
@@ -41,7 +43,7 @@ import {
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Subject, takeUntil, finalize, forkJoin, of, Observable } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-
+import { menuOutline } from 'ionicons/icons';
 interface Track {
   id: string;
   title: string;
@@ -86,11 +88,13 @@ interface Playlist {
     IonList,
     IonLabel,
     IonFooter,
-    IonButtons,
     IonSpinner,
     IonInfiniteScroll,
     IonInfiniteScrollContent,
     IonSearchbar,
+    IonButtons,
+    IonMenuButton,
+    SidemenuComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './home.page.html',
@@ -118,7 +122,7 @@ export class HomePage implements OnInit, OnDestroy {
   playlistsOffset: number = 0;
   limit: number = 10;
   hasMorePlaylists: boolean = true;
-  allPlaylists: Playlist[] = []; // Almacenamos todas las playlists para simular paginación local
+  allPlaylists: Playlist[] = [];
 
   constructor(private audiusFacade: AudiusFacade) {
     addIcons({
@@ -130,6 +134,7 @@ export class HomePage implements OnInit, OnDestroy {
       searchOutline,
       stopOutline,
       pauseOutline,
+      menuOutline
     });
   }
 
@@ -519,11 +524,9 @@ export class HomePage implements OnInit, OnDestroy {
         artwork: item.artwork,
       });
     } else if (item.type === 'playlist') {
-      // Optimización: Verificar si ya tenemos la playlist en cache
       const playlistInState = this.allPlaylists.find((p) => p.id === item.id);
 
       if (playlistInState?.playlist_contents?.length) {
-        // Usar la playlist ya cargada
         const firstTrack = playlistInState.playlist_contents[0];
         const trackId = firstTrack.track_id || firstTrack.id;
         if (trackId) {
@@ -532,7 +535,6 @@ export class HomePage implements OnInit, OnDestroy {
         return;
       }
 
-      // Si no está cargada, hacer la petición
       this.audiusFacade
         .getPlaylistById(item.id)
         .pipe(takeUntil(this.destroy$))
