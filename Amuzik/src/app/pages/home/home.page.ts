@@ -7,7 +7,6 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SidemenuComponent } from 'src/app/components/sidemenu/sidemenu.component';
 import {
   IonContent,
   IonHeader,
@@ -41,8 +40,8 @@ import {
   searchOutline,
 } from 'ionicons/icons';
 import { SplashScreen } from '@capacitor/splash-screen';
-import { Subject, takeUntil, finalize, forkJoin, of, Observable } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { Subject, takeUntil, finalize, forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { menuOutline } from 'ionicons/icons';
 interface Track {
   id: string;
@@ -93,9 +92,8 @@ interface Playlist {
     IonInfiniteScrollContent,
     IonSearchbar,
     IonButtons,
-    IonMenuButton,
-    SidemenuComponent,
-  ],
+    IonMenuButton
+],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './home.page.html',
   styleUrls: ['./home.page.scss'],

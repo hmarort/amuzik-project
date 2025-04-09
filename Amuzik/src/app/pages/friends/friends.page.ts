@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalController } from '@ionic/angular/standalone';
 import { ChatComponent } from '../../components/chat/chat.component';
-import { SidemenuComponent } from '../../components/sidemenu/sidemenu.component';
 import {
   IonHeader,
   IonToolbar,
@@ -36,9 +35,8 @@ import { menuOutline } from 'ionicons/icons';
     IonAvatar,
     IonLabel,
     IonButtons,
-    IonMenuButton,
-    SidemenuComponent,
-  ],
+    IonMenuButton
+],
 })
 export class FriendsPage implements OnInit {
   friends: { id: number; name: string; avatar: string }[] = [

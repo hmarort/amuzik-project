@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import {
   IonApp, 
   IonRouterOutlet} from '@ionic/angular/standalone';
+import { SidemenuComponent } from './components/sidemenu/sidemenu.component';
 
 @Component({
   selector: 'app-root',
@@ -12,7 +13,8 @@ import {
     CommonModule,
     FormsModule,
     IonApp,
-    IonRouterOutlet
+    IonRouterOutlet,
+    SidemenuComponent
 ],
   templateUrl: 'app.component.html',
   styleUrls: ['app.component.scss'],
