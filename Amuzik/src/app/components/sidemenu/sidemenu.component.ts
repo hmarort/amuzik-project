@@ -76,7 +76,7 @@ export class SidemenuComponent implements OnInit {
 
   // Navegar a configuración
   goToSettings() {
-    this.router.navigate(['/settings']);
+    this.router.navigate(['/conf']);
   }
 
   // Navegar a apariencia
