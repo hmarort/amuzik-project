@@ -34,7 +34,10 @@ import {
   musicalNotesOutline,
   stopOutline,
   chevronDownOutline,
-  personCircleOutline, closeOutline, searchOutline } from 'ionicons/icons';
+  personCircleOutline,
+  closeOutline,
+  searchOutline,
+} from 'ionicons/icons';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Subject, takeUntil, finalize, forkJoin, of, Observable } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
@@ -118,7 +121,16 @@ export class HomePage implements OnInit, OnDestroy {
   allPlaylists: Playlist[] = []; // Almacenamos todas las playlists para simular paginación local
 
   constructor(private audiusFacade: AudiusFacade) {
-    addIcons({personCircleOutline,chevronDownOutline,musicalNotesOutline,closeOutline,playOutline,searchOutline,stopOutline,pauseOutline,});
+    addIcons({
+      personCircleOutline,
+      chevronDownOutline,
+      musicalNotesOutline,
+      closeOutline,
+      playOutline,
+      searchOutline,
+      stopOutline,
+      pauseOutline,
+    });
   }
 
   ngOnInit() {
@@ -142,7 +154,7 @@ export class HomePage implements OnInit, OnDestroy {
           this.currentTrack = null;
           return;
         }
-        
+
         // Intentar encontrar el track en los ya cargados
         const track = this.findTrackInData(trackId);
 
@@ -151,9 +163,10 @@ export class HomePage implements OnInit, OnDestroy {
           this.updateMediaSession();
           return;
         }
-        
+
         // Si no lo encontramos, cargar desde la API
-        this.audiusFacade.getTrackById(trackId)
+        this.audiusFacade
+          .getTrackById(trackId)
           .pipe(
             catchError(() => of(null)),
             takeUntil(this.destroy$)
@@ -161,9 +174,9 @@ export class HomePage implements OnInit, OnDestroy {
           .subscribe((response) => {
             if (response?.data) {
               const trackData = response.data;
-              
+
               this.tracksCache.set(trackId, trackData);
-              
+
               this.currentTrack = {
                 id: trackData.id,
                 title: trackData.title,
@@ -172,7 +185,7 @@ export class HomePage implements OnInit, OnDestroy {
                 },
                 artwork: trackData.artwork,
               };
-              
+
               this.updateMediaSession();
             }
           });
@@ -181,48 +194,50 @@ export class HomePage implements OnInit, OnDestroy {
     // Cargar datos iniciales en paralelo para mejorar rendimiento
     forkJoin({
       tracks: this.audiusFacade.tracks(),
-      playlists: this.audiusFacade.playlists()
+      playlists: this.audiusFacade.playlists(),
     })
-    .pipe(
-      takeUntil(this.destroy$),
-      finalize(() => {
-        this.isLoading = false;
-        SplashScreen.hide();
-      })
-    )
-    .subscribe({
-      next: (results) => {
-        // Procesar tracks
-        if (results.tracks?.data) {
-          this.trendingTracks = results.tracks.data.slice(0, 10);
-          results.tracks.data.forEach((track: any) => {
-            this.tracksCache.set(track.id, track);
-          });
-        }
-        
-        // Procesar playlists
-        if (results.playlists?.data) {
-          this.allPlaylists = results.playlists.data.map((playlist: Playlist) => ({
-            ...playlist,
-            expanded: false,
-            isLoading: false,
-          }));
-          
-          // Aplicar paginación local inicial
-          this.playlists = this.allPlaylists.slice(0, this.limit);
-          this.hasMorePlaylists = this.allPlaylists.length > this.limit;
-          if (this.playlists.length > 0) {
-            this.togglePlaylistExpansion(this.playlists[0]);
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.isLoading = false;
+          SplashScreen.hide();
+        })
+      )
+      .subscribe({
+        next: (results) => {
+          // Procesar tracks
+          if (results.tracks?.data) {
+            this.trendingTracks = results.tracks.data.slice(0, 10);
+            results.tracks.data.forEach((track: any) => {
+              this.tracksCache.set(track.id, track);
+            });
           }
-        }
-      },
-      error: () => {
-        this.isLoading = false;
-        SplashScreen.hide();
-      }
-    });
+
+          // Procesar playlists
+          if (results.playlists?.data) {
+            this.allPlaylists = results.playlists.data.map(
+              (playlist: Playlist) => ({
+                ...playlist,
+                expanded: false,
+                isLoading: false,
+              })
+            );
+
+            // Aplicar paginación local inicial
+            this.playlists = this.allPlaylists.slice(0, this.limit);
+            this.hasMorePlaylists = this.allPlaylists.length > this.limit;
+            if (this.playlists.length > 0) {
+              this.togglePlaylistExpansion(this.playlists[0]);
+            }
+          }
+        },
+        error: () => {
+          this.isLoading = false;
+          SplashScreen.hide();
+        },
+      });
   }
-  
+
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
@@ -244,22 +259,25 @@ export class HomePage implements OnInit, OnDestroy {
     const trendingTrack = this.trendingTracks.find((t) => t.id === trackId);
     if (trendingTrack) return trendingTrack;
 
-
     for (const playlist of this.playlists) {
       if (!playlist.playlist_contents) continue;
-      
-      const playlistTrack = playlist.playlist_contents.find((item: any) => 
-        (item.track_id === trackId || item.id === trackId) && (item.title || item.id)
+
+      const playlistTrack = playlist.playlist_contents.find(
+        (item: any) =>
+          (item.track_id === trackId || item.id === trackId) &&
+          (item.title || item.id)
       );
-      
+
       if (playlistTrack) {
         const track = {
           id: playlistTrack.track_id || playlistTrack.id,
-          title: playlistTrack.title || `Track ${playlistTrack.track_id || playlistTrack.id}`,
+          title:
+            playlistTrack.title ||
+            `Track ${playlistTrack.track_id || playlistTrack.id}`,
           user: { name: playlistTrack.user?.name || 'Artista Desconocido' },
           artwork: playlistTrack.artwork || playlist.artwork,
         };
-        
+
         // Guardar en caché para futuras búsquedas rápidas
         this.tracksCache.set(trackId, track);
         return track;
@@ -279,10 +297,14 @@ export class HomePage implements OnInit, OnDestroy {
     // Si no está expandido y no tiene tracks cargados, los cargamos
     playlist.expanded = true;
 
-    if (!playlist.playlist_contents || playlist.playlist_contents.length === 0) {
+    if (
+      !playlist.playlist_contents ||
+      playlist.playlist_contents.length === 0
+    ) {
       playlist.isLoading = true;
 
-      this.audiusFacade.getPlaylistById(playlist.id)
+      this.audiusFacade
+        .getPlaylistById(playlist.id)
         .pipe(
           finalize(() => {
             playlist.isLoading = false;
@@ -296,8 +318,9 @@ export class HomePage implements OnInit, OnDestroy {
         .subscribe((response) => {
           if (response?.data) {
             playlist.playlist_contents = response.data.playlist_contents || [];
-            playlist.track_count = response.data.track_count || playlist.playlist_contents.length;
-            
+            playlist.track_count =
+              response.data.track_count || playlist.playlist_contents.length;
+
             if (playlist.id) {
               this.loadPlaylistTracksEfficiently(playlist);
             }
@@ -307,18 +330,19 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   private loadPlaylistTracksEfficiently(playlist: Playlist) {
-    if (!playlist.id) return;  // Verificar que tenemos un ID de playlist válido
-  
+    if (!playlist.id) return; // Verificar que tenemos un ID de playlist válido
+
     // Si ya tenemos los tracks en caché, no hacer la petición
     if (playlist.playlist_contents?.length && !playlist.isLoading) {
       return;
     }
-  
+
     // Marcar que estamos cargando los tracks de la playlist
     playlist.isLoading = true;
-  
+
     // Obtener todos los tracks de la playlist utilizando getPlaylistTracks
-    this.audiusFacade.playlistTracks(playlist.id)
+    this.audiusFacade
+      .playlistTracks(playlist.id)
       .pipe(
         takeUntil(this.destroy$),
         finalize(() => {
@@ -330,7 +354,7 @@ export class HomePage implements OnInit, OnDestroy {
           if (response?.data) {
             playlist.playlist_contents = response.data;
             playlist.track_count = response.data.length;
-  
+
             // Actualizar la caché de los tracks
             response.data.forEach((track: any) => {
               this.tracksCache.set(track.id, track);
@@ -339,9 +363,9 @@ export class HomePage implements OnInit, OnDestroy {
         },
         error: () => {
           playlist.isLoading = false;
-        }
+        },
       });
-  }  
+  }
 
   playTrack(track: Track) {
     if (!track?.id) {
@@ -370,7 +394,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   updateMediaSession() {
     if (!('mediaSession' in navigator) || !this.currentTrack) return;
-    
+
     navigator.mediaSession.metadata = new MediaMetadata({
       title: this.currentTrack.title || 'Unknown Title',
       artist: this.currentTrack.user?.name || 'Unknown Artist',
@@ -406,25 +430,26 @@ export class HomePage implements OnInit, OnDestroy {
 
     // Incrementamos el offset para la siguiente carga
     this.playlistsOffset += this.limit;
-    
+
     setTimeout(() => {
       // Simulamos paginación local para mejorar rendimiento
       const newPlaylists = this.allPlaylists.slice(
         this.playlistsOffset,
         this.playlistsOffset + this.limit
       );
-      
+
       if (newPlaylists.length) {
         this.playlists = [...this.playlists, ...newPlaylists];
-        
+
         // Revisar si hay más playlists disponibles
-        this.hasMorePlaylists = this.playlistsOffset + this.limit < this.allPlaylists.length;
+        this.hasMorePlaylists =
+          this.playlistsOffset + this.limit < this.allPlaylists.length;
       } else {
         this.hasMorePlaylists = false;
       }
-      
+
       (event as InfiniteScrollCustomEvent).target.complete();
-      
+
       if (!this.hasMorePlaylists) {
         (event as InfiniteScrollCustomEvent).target.disabled = true;
       }
@@ -447,7 +472,8 @@ export class HomePage implements OnInit, OnDestroy {
     // Agregamos un debounce básico para evitar múltiples peticiones
     clearTimeout(this._searchTimeout);
     this._searchTimeout = setTimeout(() => {
-      this.audiusFacade.search(query)
+      this.audiusFacade
+        .search(query)
         .pipe(
           finalize(() => {
             this.isSearching = false;
@@ -460,7 +486,7 @@ export class HomePage implements OnInit, OnDestroy {
             this.searchResults = response.data.map((track: any) => {
               // Guardar en caché para futuras búsquedas
               this.tracksCache.set(track.id, track);
-              
+
               return {
                 type: 'track',
                 id: track.id,
@@ -494,8 +520,8 @@ export class HomePage implements OnInit, OnDestroy {
       });
     } else if (item.type === 'playlist') {
       // Optimización: Verificar si ya tenemos la playlist en cache
-      const playlistInState = this.allPlaylists.find(p => p.id === item.id);
-      
+      const playlistInState = this.allPlaylists.find((p) => p.id === item.id);
+
       if (playlistInState?.playlist_contents?.length) {
         // Usar la playlist ya cargada
         const firstTrack = playlistInState.playlist_contents[0];
@@ -505,9 +531,10 @@ export class HomePage implements OnInit, OnDestroy {
         }
         return;
       }
-      
+
       // Si no está cargada, hacer la petición
-      this.audiusFacade.getPlaylistById(item.id)
+      this.audiusFacade
+        .getPlaylistById(item.id)
         .pipe(takeUntil(this.destroy$))
         .subscribe((response) => {
           const contents = response?.data?.playlist_contents;
