@@ -51,22 +51,9 @@ export class SidemenuComponent implements OnInit {
     // Cargar preferencia de tema
     const savedTheme = localStorage.getItem('darkMode');
     this.darkMode = savedTheme === 'true';
-    this.setTheme(this.darkMode);
   }
 
   ngOnInit() {}
-
-  // Método para cambiar entre modo oscuro y claro
-  toggleDarkMode() {
-    this.darkMode = !this.darkMode;
-    this.setTheme(this.darkMode);
-    localStorage.setItem('darkMode', this.darkMode.toString());
-  }
-
-  // Método para aplicar el tema
-  setTheme(dark: boolean) {
-    document.body.classList.toggle('dark', dark);
-  }
 
   // Navegar a configuración
   goToSettings() {

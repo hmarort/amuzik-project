@@ -42,12 +42,6 @@
         <ion-select-option *ngFor="let idioma of idiomas" [value]="idioma.valor">{{idioma.texto}}</ion-select-option>
       </ion-select>
     </ion-item>
-
-    <ion-item>
-      <ion-icon slot="start" name="moon-outline"></ion-icon>
-      <ion-label>Tema Oscuro</ion-label>
-      <ion-toggle [(ngModel)]="configuraciones.cuenta.tema" (ionChange)="cambiarTema()"></ion-toggle>
-    </ion-item>
   </ion-list>
 
   <!-- Sección de Notificaciones -->

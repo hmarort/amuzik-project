@@ -74,7 +74,7 @@ interface Tema {
 })
 export class AparienciaPage implements OnInit {
   // Tema actual
-  temaActual: string = 'theme-pastel-green-light';
+  temaActual: string = 'light';
   modoOscuro: boolean = false;
 
   // Temas disponibles
@@ -117,7 +117,6 @@ export class AparienciaPage implements OnInit {
   ];
 
   constructor(private renderer: Renderer2) {
-    // Registrar iconos
     addIcons({contrastOutline,colorPaletteOutline,checkmarkCircleOutline,textOutline,moonOutline,sunnyOutline});
   }
 
@@ -213,4 +212,9 @@ export class AparienciaPage implements OnInit {
     const sufijo = this.modoOscuro ? '-dark' : '-light';
     return `${tema.colorClase}${sufijo}`;
   }
+  updateFontSize(event: CustomEvent) {
+    const percentage = event.detail.value;
+    document.documentElement.style.fontSize = `${percentage}%`;
+  }
+  
 }

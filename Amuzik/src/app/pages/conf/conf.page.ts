@@ -119,13 +119,6 @@ export class ConfPage implements OnInit {
   ngOnInit() {
     // Inicialización de la página
   }
-
-  // Función para cambiar el tema
-  cambiarTema() {
-    // Aquí iría el código para cambiar entre tema claro y oscuro
-    console.log('Tema cambiado a:', this.configuraciones.cuenta.tema ? 'oscuro' : 'claro');
-  }
-
   guardarCambios() {
     // Aquí iría el código para guardar los cambios en el almacenamiento
     console.log('Configuraciones guardadas:', this.configuraciones);

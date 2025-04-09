@@ -97,7 +97,7 @@
     </ion-card-header>
     <ion-card-content>
       <ion-item>
-        <ion-range min="80" max="120" step="10" value="100">
+        <ion-range min="80" max="240" step="10" value="100" (ionChange)="updateFontSize($event)">
           <ion-icon size="small" slot="start" name="text-outline"></ion-icon>
           <ion-icon slot="end" name="text-outline"></ion-icon>
         </ion-range>
