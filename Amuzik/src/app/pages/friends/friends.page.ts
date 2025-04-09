@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalController } from '@ionic/angular/standalone';
 import { ChatComponent } from '../../components/chat/chat.component';
+import { SidemenuComponent } from '../../components/sidemenu/sidemenu.component';
 import {
   IonHeader,
   IonToolbar,
@@ -15,6 +16,8 @@ import {
   IonButtons,
   IonMenuButton,
 } from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import { menuOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'app-friends',
@@ -32,6 +35,9 @@ import {
     IonItem,
     IonAvatar,
     IonLabel,
+    IonButtons,
+    IonMenuButton,
+    SidemenuComponent,
   ],
 })
 export class FriendsPage implements OnInit {
@@ -58,7 +64,12 @@ export class FriendsPage implements OnInit {
     },
   ];
 
-  constructor(private modalController: ModalController) {}
+  constructor(private modalController: ModalController) {
+    // Registrar el icono del menú
+    addIcons({
+      menuOutline
+    });
+  }
 
   ngOnInit() {}
 
@@ -74,7 +85,6 @@ export class FriendsPage implements OnInit {
         breakpoints: [0, 0.5, 1.0],
       });
       await modal.present();
-      // Manejar el resultado del modal cuando se cierre
       const { data } = await modal.onWillDismiss();
       console.log('Chat cerrado', data);
     } catch (error) {

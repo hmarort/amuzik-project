@@ -1,0 +1,13 @@
+/* src/app/components/side-menu/side-menu.component.scss */
+ion-menu {
+    --width: 280px;
+    
+    ion-footer {
+      ion-item {
+        margin-bottom: 8px;
+        --border-radius: 4px;
+        margin-left: 8px;
+        margin-right: 8px;
+      }
+    }
+  }

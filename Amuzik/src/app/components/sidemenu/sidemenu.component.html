@@ -1,0 +1,32 @@
+<ion-menu side="start" menuId="main-menu" contentId="main-content" type="push">
+  <ion-header>
+    <ion-toolbar>
+      <ion-title>Menú</ion-title>
+    </ion-toolbar>
+  </ion-header>
+  
+  <ion-content>
+    <ion-list>
+      <ion-menu-toggle auto-hide="false">
+        <ion-item button (click)="goToSettings()">
+          <ion-icon slot="start" name="settings-outline"></ion-icon>
+          <ion-label>Configuración</ion-label>
+        </ion-item>
+      </ion-menu-toggle>
+      
+      <ion-menu-toggle auto-hide="false">
+        <ion-item button (click)="goToAppearance()">
+          <ion-icon slot="start" name="brush-outline"></ion-icon>
+          <ion-label>Apariencia</ion-label>
+        </ion-item>
+      </ion-menu-toggle>
+    </ion-list>
+  </ion-content>
+  
+  <ion-footer>
+    <ion-item button (click)="toggleDarkMode()">
+      <ion-icon slot="start" [name]="darkMode ? 'sunny-outline' : 'moon-outline'"></ion-icon>
+      <ion-label>{{ darkMode ? 'Modo Claro' : 'Modo Oscuro' }}</ion-label>
+    </ion-item>
+  </ion-footer>
+</ion-menu>
