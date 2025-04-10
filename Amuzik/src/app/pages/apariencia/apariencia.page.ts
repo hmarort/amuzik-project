@@ -24,7 +24,11 @@ import {
   IonGrid,
   IonRow,
   IonCol, 
-  IonRange, IonBackButton, IonButtons } from '@ionic/angular/standalone';
+  IonRange, 
+  IonBackButton, 
+  IonButtons,
+  IonSegment,
+  IonSegmentButton } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { 
   contrastOutline, 
@@ -32,8 +36,10 @@ import {
   moonOutline, 
   sunnyOutline, 
   checkmarkCircleOutline, 
-  textOutline, closeOutline } from 'ionicons/icons';
-import { TemaService, TemaConfig } from 'src/app/services/tema.service';
+  textOutline, 
+  closeOutline,
+  desktopOutline } from 'ionicons/icons';
+import { TemaService, TemaConfig, ModoTema } from 'src/app/services/tema.service';
 import { Subscription } from 'rxjs';
 
 interface Tema {
@@ -49,7 +55,9 @@ interface Tema {
   templateUrl: './apariencia.page.html',
   styleUrls: ['./apariencia.page.scss'],
   standalone: true,
-  imports: [IonButtons, IonBackButton, 
+  imports: [
+    IonButtons, 
+    IonBackButton, 
     IonRange,
     IonContent,
     IonHeader,
@@ -68,13 +76,18 @@ interface Tema {
     IonButton,
     IonGrid,
     IonRow,
-    IonCol
-]
+    IonCol,
+    IonSegment,
+    IonSegmentButton
+  ]
 })
 export class AparienciaPage implements OnInit, OnDestroy {
   // Tema actual
   temaActual: string = '';
   modoOscuro: boolean = false;
+  
+  // Modo de brillo preferido
+  modoPreferido: ModoTema = 'sistema';
 
   // Temas disponibles (utilizando la interfaz local para mantener compatibilidad con el HTML)
   temas: Tema[] = [];
@@ -82,9 +95,19 @@ export class AparienciaPage implements OnInit, OnDestroy {
   // Suscripciones
   private temaSubscription: Subscription = new Subscription;
   private modoOscuroSubscription: Subscription = new Subscription;
+  private preferenciaModoBrilloSubscription: Subscription = new Subscription;
 
   constructor(private temaService: TemaService) {
-    addIcons({closeOutline,contrastOutline,colorPaletteOutline,checkmarkCircleOutline,textOutline,moonOutline,sunnyOutline});
+    addIcons({
+      closeOutline,
+      contrastOutline,
+      colorPaletteOutline,
+      checkmarkCircleOutline,
+      textOutline,
+      moonOutline,
+      sunnyOutline,
+      desktopOutline
+    });
   }
 
   ngOnInit() {
@@ -113,6 +136,11 @@ export class AparienciaPage implements OnInit, OnDestroy {
         tema.modoOscuro = modo;
       });
     });
+    
+    // Suscribirse a la preferencia de modo brillo
+    this.preferenciaModoBrilloSubscription = this.temaService.preferenciaModoBrillo$.subscribe(modo => {
+      this.modoPreferido = modo;
+    });
   }
 
   ngOnDestroy() {
@@ -123,6 +151,9 @@ export class AparienciaPage implements OnInit, OnDestroy {
     if (this.modoOscuroSubscription) {
       this.modoOscuroSubscription.unsubscribe();
     }
+    if (this.preferenciaModoBrilloSubscription) {
+      this.preferenciaModoBrilloSubscription.unsubscribe();
+    }
   }
 
   // Método para seleccionar un tema (compatible con el HTML original)
@@ -130,9 +161,9 @@ export class AparienciaPage implements OnInit, OnDestroy {
     this.temaService.cambiarTema(tema.id);
   }
 
-  // Método para cambiar el modo oscuro (compatible con el HTML original)
-  cambiarModoOscuro() {
-    this.temaService.cambiarModoOscuro(!this.modoOscuro);
+  // Método para cambiar el modo oscuro o claro manualmente
+  cambiarModoManual(modo: ModoTema) {
+    this.temaService.cambiarPreferenciaModo(modo);
   }
 
   // Método para obtener la clase de vista previa (compatible con el HTML original)

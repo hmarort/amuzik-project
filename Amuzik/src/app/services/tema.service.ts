@@ -8,6 +8,8 @@ export interface TemaConfig {
   colorPrincipal: string;
 }
 
+export type ModoTema = 'claro' | 'oscuro' | 'sistema';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -18,7 +20,13 @@ export class TemaService {
   
   private modoOscuroSubject = new BehaviorSubject<boolean>(false);
   modoOscuro$ = this.modoOscuroSubject.asObservable();
+  
+  private preferenciaModoBrillo = new BehaviorSubject<ModoTema>('sistema');
+  preferenciaModoBrillo$ = this.preferenciaModoBrillo.asObservable();
 
+  // MediaQueryList para detectar el modo del sistema
+  private prefiereModoOscuro: MediaQueryList;
+  
   // Lista de temas disponibles
   temasDisponibles: TemaConfig[] = [
     { 
@@ -67,23 +75,53 @@ export class TemaService {
 
   constructor(rendererFactory: RendererFactory2) {
     this.renderer = rendererFactory.createRenderer(null, null);
+    
+    // Configurar la detección del modo del sistema
+    this.prefiereModoOscuro = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    // Listener para cambios en la preferencia del sistema
+    this.prefiereModoOscuro.addEventListener('change', (e) => {
+      if (this.preferenciaModoBrillo.value === 'sistema') {
+        this.cambiarModoOscuro(e.matches);
+      }
+    });
+    
     this.inicializarTema();
   }
 
   private inicializarTema() {
     // Cargar preferencias guardadas
     const temaGuardado = localStorage.getItem('tema-app') || 'theme-pastel-green-light';
-    const modoOscuroGuardado = localStorage.getItem('modo-oscuro-app') === 'true';
+    const modoPreferencia = localStorage.getItem('modo-preferencia') as ModoTema || 'sistema';
+    
+    // Establecer la preferencia de modo
+    this.preferenciaModoBrillo.next(modoPreferencia);
+    
+    // Determinar si debe estar en modo oscuro
+    let usarModoOscuro: boolean;
+    
+    if (modoPreferencia === 'sistema') {
+      // Usar la preferencia del sistema
+      usarModoOscuro = this.prefiereModoOscuro.matches;
+    } else {
+      // Usar la preferencia manual
+      usarModoOscuro = modoPreferencia === 'oscuro';
+    }
     
     // Establecer valores iniciales
-    this.temaActualSubject.next(temaGuardado);
-    this.modoOscuroSubject.next(modoOscuroGuardado);
+    this.modoOscuroSubject.next(usarModoOscuro);
+    
+    // Construir el nombre completo del tema con el modo correcto
+    const baseClase = temaGuardado.split('-light')[0].split('-dark')[0];
+    const nombreCompletoTema = `${baseClase}${usarModoOscuro ? '-dark' : '-light'}`;
+    
+    this.temaActualSubject.next(nombreCompletoTema);
     
     // Aplicar tema
-    this.aplicarTema(temaGuardado);
+    this.aplicarTema(nombreCompletoTema);
     
     // Aplicar modo oscuro si es necesario
-    if (modoOscuroGuardado) {
+    if (usarModoOscuro) {
       this.renderer.addClass(document.body, 'dark');
     }
   }
@@ -111,9 +149,6 @@ export class TemaService {
     // Actualizar el estado
     this.modoOscuroSubject.next(activar);
     
-    // Guardar en localStorage
-    localStorage.setItem('modo-oscuro-app', activar.toString());
-    
     // Modificar la clase dark del body
     if (activar) {
       this.renderer.addClass(document.body, 'dark');
@@ -135,6 +170,25 @@ export class TemaService {
     // Guardar en localStorage
     localStorage.setItem('tema-app', nuevoTema);
   }
+  
+  cambiarPreferenciaModo(modo: ModoTema) {
+    // Guardar la preferencia
+    this.preferenciaModoBrillo.next(modo);
+    localStorage.setItem('modo-preferencia', modo);
+    
+    // Aplicar el modo correspondiente
+    if (modo === 'sistema') {
+      // Usar la preferencia del sistema
+      this.cambiarModoOscuro(this.prefiereModoOscuro.matches);
+    } else {
+      // Establecer modo manual
+      this.cambiarModoOscuro(modo === 'oscuro');
+    }
+  }
+
+  obtenerPreferenciaModo(): ModoTema {
+    return this.preferenciaModoBrillo.value;
+  }
 
   private aplicarTema(nombreClase: string) {
     // Eliminar todas las clases de tema anteriores
@@ -151,7 +205,11 @@ export class TemaService {
     const metaThemeColor = document.querySelector('meta[name=theme-color]');
     if (metaThemeColor) {
       // Buscar el color principal del tema actual
-      const temaId = nombreClase.split('-')[2];
+      const temaIdParts = nombreClase.split('-');
+      let temaId = '';
+      if (temaIdParts.length >= 3) {
+        temaId = temaIdParts[2];
+      }
       const tema = this.temasDisponibles.find(t => t.id === temaId);
       if (tema) {
         metaThemeColor.setAttribute('content', tema.colorPrincipal);
@@ -160,8 +218,8 @@ export class TemaService {
   }
 
   restaurarConfiguracionPredeterminada() {
-    // Tema predeterminado y modo claro
-    this.cambiarModoOscuro(false);
+    // Tema predeterminado, modo automático (sistema)
+    this.cambiarPreferenciaModo('sistema');
     this.cambiarTema('standard');
   }
 }

@@ -1,92 +1,101 @@
-<ion-header [translucent]="true">
+<ion-header>
   <ion-toolbar>
-    <ion-title>Apariencia</ion-title>
-    <ion-buttons slot="end">
-      <ion-back-button defaultHref="/home"></ion-back-button>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/ajustes"></ion-back-button>
     </ion-buttons>
+    <ion-title>Apariencia</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true" class="ion-padding">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Apariencia</ion-title>
-    </ion-toolbar>
-  </ion-header>
-
-  <!-- Modo Oscuro Toggle -->
+<ion-content class="ion-padding">
   <ion-card>
     <ion-card-header>
       <ion-card-title>
         <ion-icon name="contrast-outline"></ion-icon>
-        Modo de visualización
+        Modo de Pantalla
       </ion-card-title>
     </ion-card-header>
     <ion-card-content>
-      <ion-item lines="none">
-        <ion-icon slot="start" [name]="modoOscuro ? 'moon-outline' : 'sunny-outline'"></ion-icon>
-        <ion-label>
-          <h2>{{ modoOscuro ? 'Modo oscuro' : 'Modo claro' }}</h2>
-          <p>Cambia entre tema claro y oscuro</p>
-        </ion-label>
-        <ion-toggle [(ngModel)]="modoOscuro" (ionChange)="cambiarModoOscuro()"></ion-toggle>
-      </ion-item>
+      <ion-segment [(ngModel)]="modoPreferido" (ionChange)="cambiarModoManual(modoPreferido)">
+        <ion-segment-button value="sistema">
+          <ion-icon name="desktop-outline"></ion-icon>
+          <ion-label>Automático</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="claro">
+          <ion-icon name="sunny-outline"></ion-icon>
+          <ion-label>Claro</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="oscuro">
+          <ion-icon name="moon-outline"></ion-icon>
+          <ion-label>Oscuro</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+      
+      <p class="ion-padding-top ion-text-center">
+        <ng-container *ngIf="modoPreferido === 'sistema'">
+          Usando la configuración del sistema (actualmente: {{ modoOscuro ? 'Oscuro' : 'Claro' }})
+        </ng-container>
+        <ng-container *ngIf="modoPreferido !== 'sistema'">
+          Usando el modo {{ modoPreferido }}
+        </ng-container>
+      </p>
     </ion-card-content>
   </ion-card>
 
-  <!-- Selector de Tema -->
   <ion-card>
     <ion-card-header>
       <ion-card-title>
         <ion-icon name="color-palette-outline"></ion-icon>
-        Tema de colores
+        Tema de Color
       </ion-card-title>
     </ion-card-header>
     <ion-card-content>
-      <p class="tema-descripcion">Elige el tema que más te guste para personalizar tu experiencia</p>
-
-      <!-- Grid de temas con vista previa -->
       <ion-grid>
         <ion-row>
-          <ion-col size="6" *ngFor="let tema of temas">
-            <div class="tema-preview" [class]="obtenerClasePrevia(tema)"
-              [class.activo]="obtenerTemaActualId() === tema.id" (click)="seleccionarTema(tema)">
-              <div class="tema-color-preview">
-                <div class="color-muestra" [style.background-color]="tema.colorPrincipal"></div>
+          <ng-container *ngFor="let tema of temas">
+            <ion-col size="4" class="ion-text-center">
+              <div 
+                class="tema-preview" 
+                [ngClass]="[obtenerClasePrevia(tema), obtenerTemaActualId() === tema.id ? 'selected' : '']"
+                (click)="seleccionarTema(tema)">
+                <div *ngIf="obtenerTemaActualId() === tema.id" class="check-icon">
+                  <ion-icon name="checkmark-circle-outline"></ion-icon>
+                </div>
               </div>
-              <div class="tema-nombre">{{tema.nombre}}</div>
-              <ion-icon name="checkmark-circle-outline" class="tema-seleccionado"
-                *ngIf="obtenerTemaActualId() === tema.id">
-              </ion-icon>
-            </div>
-          </ion-col>
+              <small>{{ tema.nombre }}</small>
+            </ion-col>
+          </ng-container>
         </ion-row>
       </ion-grid>
     </ion-card-content>
   </ion-card>
 
-  <!-- Tamaño de fuente -->
   <ion-card>
     <ion-card-header>
-      <ion-card-title>Tamaño de texto</ion-card-title>
+      <ion-card-title>
+        <ion-icon name="text-outline"></ion-icon>
+        Tamaño de Texto
+      </ion-card-title>
     </ion-card-header>
     <ion-card-content>
-      <ion-item>
-        <ion-range min="80" max="240" step="10" value="100" (ionChange)="updateFontSize($event)">
-          <ion-icon size="small" slot="start" name="text-outline"></ion-icon>
-          <ion-icon slot="end" name="text-outline"></ion-icon>
-        </ion-range>
-      </ion-item>
-      <div class="font-size-preview">
-        <p>Texto de ejemplo</p>
-      </div>
+      <ion-range 
+        min="80" 
+        max="140" 
+        step="5" 
+        snaps="true" 
+        (ionChange)="updateFontSize($event)"
+        [value]="100">
+        <ion-icon name="text-outline" slot="start" style="font-size: 14px;"></ion-icon>
+        <ion-icon name="text-outline" slot="end" style="font-size: 22px;"></ion-icon>
+      </ion-range>
     </ion-card-content>
   </ion-card>
 
-  <!-- Botón para restaurar configuración predeterminada -->
-  <div class="accion-container">
-    <ion-button expand="block" fill="outline" (click)="restaurarConfiguracion()">
-      Restaurar configuración predeterminada
+  <div class="ion-padding ion-text-center">
+    <ion-button color="medium" (click)="restaurarConfiguracion()">
+      <ion-icon name="close-outline" slot="start"></ion-icon>
+      Restaurar valores predeterminados
     </ion-button>
   </div>
+
 </ion-content>
