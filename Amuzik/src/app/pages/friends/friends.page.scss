@@ -46,3 +46,51 @@
       margin-top: 20px;
     }
   }
+  
+  .friends-container {
+    padding: 16px;
+    
+    .section-title {
+      margin-bottom: 16px;
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--ion-color-dark);
+      padding-left: 5px;
+    }
+  }
+  
+  .friend-list {
+    background: transparent;
+    
+    ion-item-sliding {
+      margin-bottom: 10px;
+      --border-radius: 10px;
+      overflow: hidden;
+    }
+    
+    .friend-item {
+      --padding-start: 12px;
+      --padding-end: 12px;
+      --padding-top: 8px;
+      --padding-bottom: 8px;
+      --border-radius: 10px;
+      --background: var(--ion-color-light);
+      
+      ion-avatar {
+        width: 50px;
+        height: 50px;
+        border: 2px solid var(--ion-color-primary);
+      }
+      
+      h2 {
+        font-size: 16px;
+        font-weight: 500;
+      }
+    }
+  }
+  
+  // Estilos para el botón flotante
+  ion-fab {
+    margin-bottom: 16px;
+    margin-right: 16px;
+  }
