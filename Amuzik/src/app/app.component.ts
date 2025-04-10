@@ -6,6 +6,7 @@ import {
   IonRouterOutlet} from '@ionic/angular/standalone';
 import { SidemenuComponent } from './components/sidemenu/sidemenu.component';
 import { TemaService } from './services/tema.service';
+import { Keyboard } from '@capacitor/keyboard';
 @Component({
   selector: 'app-root',
   standalone: true,
