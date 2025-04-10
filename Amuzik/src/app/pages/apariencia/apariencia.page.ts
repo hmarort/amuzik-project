@@ -52,32 +52,26 @@ interface Tema {
   styleUrls: ['./apariencia.page.scss'],
   standalone: true,
   imports: [
-    IonRange, 
-    IonContent, 
-    IonHeader, 
-    IonTitle, 
-    IonToolbar, 
-    CommonModule, 
+    IonRange,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    CommonModule,
     FormsModule,
-    IonList,
     IonItem,
     IonLabel,
     IonToggle,
     IonIcon,
-    IonSelect,
-    IonSelectOption,
-    IonRadioGroup,
-    IonRadio,
     IonCard,
     IonCardContent,
     IonCardHeader,
     IonCardTitle,
-    IonItemDivider,
     IonButton,
     IonGrid,
     IonRow,
     IonCol
-  ]
+]
 })
 export class AparienciaPage implements OnInit, OnDestroy {
   // Tema actual
