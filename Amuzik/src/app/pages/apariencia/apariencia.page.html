@@ -46,8 +46,8 @@
       <ion-grid>
         <ion-row>
           <ion-col size="6" *ngFor="let tema of temas">
-            <div 
-              class="tema-preview" 
+            <div
+              class="tema-preview"
               [class]="obtenerClasePrevia(tema)"
               [class.activo]="obtenerTemaActualId() === tema.id"
               (click)="seleccionarTema(tema)">
@@ -55,38 +55,15 @@
                 <div class="color-muestra" [style.background-color]="tema.colorPrincipal"></div>
               </div>
               <div class="tema-nombre">{{tema.nombre}}</div>
-              <ion-icon 
-                name="checkmark-circle-outline" 
-                class="tema-seleccionado" 
+              <ion-icon
+                name="checkmark-circle-outline"
+                class="tema-seleccionado"
                 *ngIf="obtenerTemaActualId() === tema.id">
               </ion-icon>
             </div>
           </ion-col>
         </ion-row>
       </ion-grid>
-    </ion-card-content>
-  </ion-card>
-
-  <!-- Efectos Visuales -->
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>Efectos visuales</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <ion-list>
-        <ion-item>
-          <ion-label>Animaciones</ion-label>
-          <ion-toggle checked></ion-toggle>
-        </ion-item>
-        <ion-item>
-          <ion-label>Reducir movimiento</ion-label>
-          <ion-toggle></ion-toggle>
-        </ion-item>
-        <ion-item>
-          <ion-label>Efectos de transparencia</ion-label>
-          <ion-toggle checked></ion-toggle>
-        </ion-item>
-      </ion-list>
     </ion-card-content>
   </ion-card>
 
@@ -110,7 +87,7 @@
 
   <!-- Botón para restaurar configuración predeterminada -->
   <div class="accion-container">
-    <ion-button expand="block" fill="outline">
+    <ion-button expand="block" fill="outline" (click)="restaurarConfiguracion()">
       Restaurar configuración predeterminada
     </ion-button>
   </div>

@@ -22,6 +22,18 @@ export class TemaService {
   // Lista de temas disponibles
   temasDisponibles: TemaConfig[] = [
     { 
+      id: 'neutral', 
+      nombre: 'Color Neutro', 
+      colorClase: 'theme-neutral', 
+      colorPrincipal: '#666666' 
+    },
+    { 
+      id: 'standard', 
+      nombre: 'Color Standard', 
+      colorClase: 'theme-standard', 
+      colorPrincipal: '#3880ff' 
+    },
+    { 
       id: 'green', 
       nombre: 'Verde Pastel', 
       colorClase: 'theme-pastel-green', 
@@ -150,6 +162,6 @@ export class TemaService {
   restaurarConfiguracionPredeterminada() {
     // Tema predeterminado y modo claro
     this.cambiarModoOscuro(false);
-    this.cambiarTema('green');
+    this.cambiarTema('standard');
   }
 }
