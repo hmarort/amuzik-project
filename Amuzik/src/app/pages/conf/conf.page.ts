@@ -40,12 +40,12 @@ import {
   templateUrl: './conf.page.html',
   styleUrls: ['./conf.page.scss'],
   standalone: true,
-  imports: [IonBackButton, IonButtons, 
-    IonContent, 
-    IonHeader, 
-    IonTitle, 
-    IonToolbar, 
-    CommonModule, 
+  imports: [IonBackButton, IonButtons,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    CommonModule,
     FormsModule,
     IonList,
     IonItem,
@@ -60,10 +60,7 @@ import {
     IonCardTitle,
     IonAvatar,
     IonButton,
-    IonInput,
-    IonText,
-    IonItemDivider
-  ]
+    IonItemDivider]
 })
 export class ConfPage implements OnInit {
   // Usuario de ejemplo
