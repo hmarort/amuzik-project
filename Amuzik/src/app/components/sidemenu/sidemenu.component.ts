@@ -37,9 +37,8 @@ import { Router } from '@angular/router';
     IonItem,
     IonIcon,
     IonLabel,
-    IonMenuToggle,
-    IonFooter,
-  ]
+    IonMenuToggle
+]
 })
 export class SidemenuComponent implements OnInit {
   darkMode = false;
