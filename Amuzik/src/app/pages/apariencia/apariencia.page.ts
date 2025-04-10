@@ -24,8 +24,7 @@ import {
   IonGrid,
   IonRow,
   IonCol, 
-  IonRange 
-} from '@ionic/angular/standalone';
+  IonRange, IonBackButton, IonButtons } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { 
   contrastOutline, 
@@ -33,8 +32,7 @@ import {
   moonOutline, 
   sunnyOutline, 
   checkmarkCircleOutline, 
-  textOutline 
-} from 'ionicons/icons';
+  textOutline, closeOutline } from 'ionicons/icons';
 import { TemaService, TemaConfig } from 'src/app/services/tema.service';
 import { Subscription } from 'rxjs';
 
@@ -51,7 +49,7 @@ interface Tema {
   templateUrl: './apariencia.page.html',
   styleUrls: ['./apariencia.page.scss'],
   standalone: true,
-  imports: [
+  imports: [IonButtons, IonBackButton, 
     IonRange,
     IonContent,
     IonHeader,
@@ -86,14 +84,7 @@ export class AparienciaPage implements OnInit, OnDestroy {
   private modoOscuroSubscription: Subscription = new Subscription;
 
   constructor(private temaService: TemaService) {
-    addIcons({
-      contrastOutline,
-      colorPaletteOutline,
-      checkmarkCircleOutline,
-      textOutline,
-      moonOutline,
-      sunnyOutline
-    });
+    addIcons({closeOutline,contrastOutline,colorPaletteOutline,checkmarkCircleOutline,textOutline,moonOutline,sunnyOutline});
   }
 
   ngOnInit() {

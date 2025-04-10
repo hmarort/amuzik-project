@@ -21,8 +21,7 @@ import {
   IonButton,
   IonInput,
   IonText,
-  IonItemDivider
-} from '@ionic/angular/standalone';
+  IonItemDivider, IonButtons, IonBackButton } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { 
   personOutline, 
@@ -41,7 +40,7 @@ import {
   templateUrl: './conf.page.html',
   styleUrls: ['./conf.page.scss'],
   standalone: true,
-  imports: [
+  imports: [IonBackButton, IonButtons, 
     IonContent, 
     IonHeader, 
     IonTitle, 
