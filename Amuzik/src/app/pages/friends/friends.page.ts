@@ -1,8 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ModalController } from '@ionic/angular/standalone';
-import { ChatComponent } from '../../components/chat/chat.component';
+import { Router } from '@angular/router';
 import {
   IonHeader,
   IonToolbar,
@@ -36,7 +35,7 @@ import { menuOutline } from 'ionicons/icons';
     IonLabel,
     IonButtons,
     IonMenuButton
-],
+  ],
 })
 export class FriendsPage implements OnInit {
   friends: { id: number; name: string; avatar: string }[] = [
@@ -62,7 +61,7 @@ export class FriendsPage implements OnInit {
     },
   ];
 
-  constructor(private modalController: ModalController) {
+  constructor(private router: Router) {
     // Registrar el icono del menú
     addIcons({
       menuOutline
@@ -71,22 +70,8 @@ export class FriendsPage implements OnInit {
 
   ngOnInit() {}
 
-  async openChat(friendId: number) {
-    try {
-      const modal = await this.modalController.create({
-        component: ChatComponent,
-        componentProps: {
-          friendId: friendId,
-        },
-        backdropDismiss: false,
-        initialBreakpoint: 1.0,
-        breakpoints: [0, 0.5, 1.0],
-      });
-      await modal.present();
-      const { data } = await modal.onWillDismiss();
-      console.log('Chat cerrado', data);
-    } catch (error) {
-      console.error('Error al abrir el chat:', error);
-    }
+  openChat(friendId: number) {
+    // Navegar a la página de chat con el ID del amigo
+    this.router.navigate(['/chat', friendId]);
   }
 }

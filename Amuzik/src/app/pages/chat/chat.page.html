@@ -1,0 +1,34 @@
+<div class="ion-page">
+  <ion-header [translucent]="true">
+    <ion-toolbar>
+      <ion-buttons slot="start">
+        <ion-back-button defaultHref="/friends"></ion-back-button>
+      </ion-buttons>
+      <ion-title>{{ friend?.name }}</ion-title>
+    </ion-toolbar>
+  </ion-header>
+  <ion-content [fullscreen]="true" #content>
+    <div class="chat-container">
+      <div *ngFor="let message of messages" [ngClass]="{'message-received': !message.isMe, 'message-sent': message.isMe}">
+        <div class="message-bubble">
+          <p>{{ message.text }}</p>
+          <span class="message-time">{{ message.time | date:'shortTime' }}</span>
+        </div>
+      </div>
+    </div>
+  </ion-content>
+  <ion-footer>
+    <ion-toolbar>
+      <div class="message-input-container">
+        <ion-input 
+          [(ngModel)]="newMessage" 
+          placeholder="Escribe un mensaje..." 
+          (keyup.enter)="sendMessage()"
+        ></ion-input>
+        <ion-button fill="clear" (click)="sendMessage()">
+          <ion-icon name="send"></ion-icon>
+        </ion-button>
+      </div>
+    </ion-toolbar>
+  </ion-footer>
+</div>
