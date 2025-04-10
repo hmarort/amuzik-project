@@ -5,6 +5,11 @@
         <ion-menu-button></ion-menu-button>
       </ion-buttons>
       <ion-title>Friends</ion-title>
+      <ion-buttons slot="end">
+        <ion-button (click)="showAddFriendForm = true">
+          <ion-icon name="person-add"></ion-icon>
+        </ion-button>
+      </ion-buttons>
     </ion-toolbar>
   </ion-header>
   <ion-content [fullscreen]="true">
@@ -13,7 +18,40 @@
         <ion-title size="large">Friends</ion-title>
       </ion-toolbar>
     </ion-header>
-    <ion-list>
+    
+    <!-- Formulario para añadir amigos -->
+    <div class="add-friend-form" *ngIf="showAddFriendForm">
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Añadir nuevo amigo</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <ion-item>
+            <ion-label position="floating">Nombre</ion-label>
+            <ion-input [(ngModel)]="newFriend.name" placeholder="Introduce el nombre"></ion-input>
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="floating">Avatar URL (opcional)</ion-label>
+            <ion-input [(ngModel)]="newFriend.avatar" placeholder="URL de la imagen"></ion-input>
+          </ion-item>
+          
+          <div class="avatar-preview" *ngIf="newFriend.avatar">
+            <ion-avatar>
+              <img [src]="newFriend.avatar" (error)="handleImageError()">
+            </ion-avatar>
+          </div>
+          
+          <div class="button-group">
+            <ion-button fill="outline" (click)="cancelAddFriend()">Cancelar</ion-button>
+            <ion-button (click)="addFriend()" [disabled]="!newFriend.name">Añadir</ion-button>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+    
+    <!-- Lista de amigos -->
+    <ion-list *ngIf="!showAddFriendForm">
       <ion-item *ngFor="let friend of friends" (click)="openChat(friend.id)">
         <ion-avatar slot="start">
           <img [src]="friend.avatar" />
@@ -23,5 +61,12 @@
         </ion-label>
       </ion-item>
     </ion-list>
+    
+    <!-- Mensaje cuando no hay amigos -->
+    <div class="empty-state" *ngIf="friends.length === 0 && !showAddFriendForm">
+      <ion-icon name="people-outline"></ion-icon>
+      <h3>No tienes amigos en tu lista</h3>
+      <p>Pulsa en el botón + para añadir amigos</p>
+    </div>
   </ion-content>
 </div>

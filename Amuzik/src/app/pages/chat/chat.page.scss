@@ -1,72 +1,92 @@
 .chat-container {
-    display: flex;
-    flex-direction: column;
-    padding: 10px;
-  }
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  padding-bottom: 60px; /* Espacio adicional para evitar que el teclado oculte mensajes */
+}
+
+.message-received,
+.message-sent {
+  display: flex;
+  margin-bottom: 10px;
+  max-width: 80%;
+}
+
+.message-received {
+  align-self: flex-start;
+}
+
+.message-sent {
+  align-self: flex-end;
+}
+
+.message-bubble {
+  padding: 10px 15px;
+  border-radius: 20px;
+  position: relative;
   
-  .message-received,
-  .message-sent {
-    display: flex;
-    margin-bottom: 10px;
-    max-width: 80%;
+  p {
+    margin: 0;
+    padding-right: 40px;
   }
+}
+
+.message-received .message-bubble {
+  background-color: #f1f0f0;
+  color: #000;
+}
+
+.message-sent .message-bubble {
+  background-color: #0084ff;
+  color: #fff;
+}
+
+.message-time {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  position: absolute;
+  bottom: 7px;
+  right: 10px;
+}
+
+.message-input-container {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  background-color: #fff;
   
-  .message-received {
-    align-self: flex-start;
-  }
-  
-  .message-sent {
-    align-self: flex-end;
-  }
-  
-  .message-bubble {
-    padding: 10px 15px;
+  ion-input {
+    --padding-start: 15px;
+    --padding-end: 15px;
+    --padding-top: 10px;
+    --padding-bottom: 10px;
+    --background: #f1f0f0;
     border-radius: 20px;
-    position: relative;
-    
-    p {
-      margin: 0;
-      padding-right: 40px;
-    }
+    margin-right: 10px;
   }
   
-  .message-received .message-bubble {
-    background-color: #f1f0f0;
-    color: #000;
+  ion-button {
+    --padding-start: 0;
+    --padding-end: 0;
+    height: 40px;
+    width: 40px;
   }
-  
-  .message-sent .message-bubble {
-    background-color: #0084ff;
-    color: #fff;
+}
+
+/* Estilos específicos para iOS */
+:host-context(.ios) ion-footer {
+  position: sticky;
+  bottom: 0;
+}
+
+/* Para ambas plataformas - cuando el teclado está abierto */
+ion-footer {
+  z-index: 11; /* Asegura que el footer esté por encima */
+}
+
+/* Ajuste para pantallas pequeñas */
+@media (max-height: 568px) {
+  .chat-container {
+    padding-bottom: 80px; /* Más espacio para dispositivos pequeños */
   }
-  
-  .message-time {
-    font-size: 0.7rem;
-    opacity: 0.7;
-    position: absolute;
-    bottom: 7px;
-    right: 10px;
-  }
-  
-  .message-input-container {
-    display: flex;
-    align-items: center;
-    padding: 0 10px;
-    
-    ion-input {
-      --padding-start: 15px;
-      --padding-end: 15px;
-      --padding-top: 10px;
-      --padding-bottom: 10px;
-      --background: #f1f0f0;
-      border-radius: 20px;
-      margin-right: 10px;
-    }
-    
-    ion-button {
-      --padding-start: 0;
-      --padding-end: 0;
-      height: 40px;
-      width: 40px;
-    }
-  }
+}

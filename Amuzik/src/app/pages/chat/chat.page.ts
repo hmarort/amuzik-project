@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, AfterViewChecked } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -36,6 +36,8 @@ interface Friend {
   styleUrls: ['./chat.page.scss'],
   standalone: true,
   imports: [
+    CommonModule, 
+    FormsModule,
     IonContent, 
     IonHeader, 
     IonTitle, 
@@ -45,12 +47,10 @@ interface Friend {
     IonFooter,
     IonInput,
     IonButton,
-    IonIcon,
-    CommonModule, 
-    FormsModule
+    IonIcon
   ]
 })
-export class ChatPage implements OnInit, AfterViewChecked {
+export class ChatPage implements OnInit {
   @ViewChild('content')
   content!: IonContent;
   
@@ -122,7 +122,7 @@ export class ChatPage implements OnInit, AfterViewChecked {
     });
   }
 
-  ngAfterViewChecked() {
+  ionViewDidEnter() {
     this.scrollToBottom();
   }
 
@@ -133,6 +133,25 @@ export class ChatPage implements OnInit, AfterViewChecked {
   loadMessages() {
     // Cargar mensajes simulados según el ID del amigo
     this.messages = this.mockMessages[this.friendId] || [];
+    
+    // Intentar cargar mensajes guardados en localStorage
+    const storageKey = `messages_${this.friendId}`;
+    const savedMessages = localStorage.getItem(storageKey);
+    
+    if (savedMessages) {
+      try {
+        const parsedMessages = JSON.parse(savedMessages);
+        
+        // Convertir strings de fecha a objetos Date
+        parsedMessages.forEach((msg: any) => {
+          msg.time = new Date(msg.time);
+        });
+        
+        this.messages = parsedMessages;
+      } catch (error) {
+        console.error('Error al cargar mensajes:', error);
+      }
+    }
   }
 
   sendMessage() {
@@ -148,6 +167,9 @@ export class ChatPage implements OnInit, AfterViewChecked {
     
     // Añadir mensaje a la lista
     this.messages.push(newMsg);
+    
+    // Guardar mensajes en localStorage
+    this.saveMessages();
     
     // Limpiar el campo de entrada
     this.newMessage = '';
@@ -185,14 +207,25 @@ export class ChatPage implements OnInit, AfterViewChecked {
       // Añadir a la lista de mensajes
       this.messages.push(responseMsg);
       
+      // Guardar mensajes en localStorage
+      this.saveMessages();
+      
       // Desplazar al fondo
       this.scrollToBottom();
     }, 1000);
   }
 
+  saveMessages() {
+    // Guardar mensajes en localStorage
+    const storageKey = `messages_${this.friendId}`;
+    localStorage.setItem(storageKey, JSON.stringify(this.messages));
+  }
+
   scrollToBottom() {
     if (this.content) {
-      this.content.scrollToBottom(300);
+      setTimeout(() => {
+        this.content.scrollToBottom(300);
+      }, 100);
     }
   }
 }
