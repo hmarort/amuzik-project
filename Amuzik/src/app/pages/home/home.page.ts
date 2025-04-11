@@ -41,7 +41,7 @@ import {
 } from 'ionicons/icons';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Subject, takeUntil, finalize, forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { menuOutline } from 'ionicons/icons';
 interface Track {
   id: string;
@@ -92,8 +92,8 @@ interface Playlist {
     IonInfiniteScrollContent,
     IonSearchbar,
     IonButtons,
-    IonMenuButton
-],
+    IonMenuButton,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './home.page.html',
   styleUrls: ['./home.page.scss'],
@@ -132,7 +132,7 @@ export class HomePage implements OnInit, OnDestroy {
       searchOutline,
       stopOutline,
       pauseOutline,
-      menuOutline
+      menuOutline,
     });
   }
 
@@ -296,78 +296,80 @@ export class HomePage implements OnInit, OnDestroy {
       playlist.expanded = false;
       return;
     }
-
-    // Si no está expandido y no tiene tracks cargados, los cargamos
-    playlist.expanded = true;
-
-    if (
-      !playlist.playlist_contents ||
-      playlist.playlist_contents.length === 0
-    ) {
-      playlist.isLoading = true;
-
-      this.audiusFacade
-        .getPlaylistById(playlist.id)
-        .pipe(
-          finalize(() => {
-            playlist.isLoading = false;
-          }),
-          catchError(() => {
-            playlist.expanded = false;
-            return of(null);
-          }),
-          takeUntil(this.destroy$)
-        )
-        .subscribe((response) => {
-          if (response?.data) {
-            playlist.playlist_contents = response.data.playlist_contents || [];
-            playlist.track_count =
-              response.data.track_count || playlist.playlist_contents.length;
-
-            if (playlist.id) {
-              this.loadPlaylistTracksEfficiently(playlist);
-            }
-          }
-        });
-    }
-  }
-
-  private loadPlaylistTracksEfficiently(playlist: Playlist) {
-    if (!playlist.id) return; // Verificar que tenemos un ID de playlist válido
-
-    // Si ya tenemos los tracks en caché, no hacer la petición
-    if (playlist.playlist_contents?.length && !playlist.isLoading) {
-      return;
-    }
-
-    // Marcar que estamos cargando los tracks de la playlist
+    
+    // Inicialmente no expandimos para evitar mostrar datos obsoletos
+    // playlist.expanded = true; - Quitamos esta línea
+    
+    // Marcamos como cargando antes de expandir
     playlist.isLoading = true;
-
-    // Obtener todos los tracks de la playlist utilizando getPlaylistTracks
-    this.audiusFacade
-      .playlistTracks(playlist.id)
-      .pipe(
-        takeUntil(this.destroy$),
-        finalize(() => {
-          playlist.isLoading = false;
-        })
-      )
-      .subscribe({
-        next: (response) => {
-          if (response?.data) {
-            playlist.playlist_contents = response.data;
-            playlist.track_count = response.data.length;
-
-            // Actualizar la caché de los tracks
-            response.data.forEach((track: any) => {
-              this.tracksCache.set(track.id, track);
-            });
+    
+    // Primero obtenemos los datos básicos de la playlist
+    this.audiusFacade.getPlaylistById(playlist.id).pipe(
+      switchMap(response => {
+        if (response?.data) {
+          // Limpiamos los contenidos para evitar mostrar datos obsoletos temporalmente
+          playlist.playlist_contents = [];
+          playlist.track_count = response.data.track_count || 0;
+          
+          // Siempre cargamos los tracks completos
+          if (playlist.id) {
+            return this.loadPlaylistTracksEfficiently(playlist, true);
           }
-        },
-        error: () => {
-          playlist.isLoading = false;
-        },
-      });
+        }
+        return of(null);
+      }),
+      finalize(() => {
+        playlist.isLoading = false;
+      }),
+      catchError(() => {
+        // No expandimos si hay error
+        playlist.expanded = false;
+        return of(null);
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe(tracks => {
+      // Solo expandimos cuando tengamos los tracks cargados correctamente
+      if (tracks && tracks.length > 0) {
+        playlist.expanded = true;
+        console.log('Tracks actualizados correctamente:', tracks);
+      } else {
+        // Si no hay tracks, no expandimos
+        playlist.expanded = false;
+      }
+    });
+  }
+  
+  private loadPlaylistTracksEfficiently(playlist: Playlist, forceReload: boolean = false) {
+    if (!playlist.id) return of(null);
+    
+    // Si forceReload es true, ignoramos la verificación de si ya hay tracks cargados
+    if (!forceReload && playlist.playlist_contents?.length && !playlist.isLoading) {
+      return of(playlist.playlist_contents);
+    }
+    
+    console.log('Cargando tracks de la playlist:', playlist.id);
+    
+    return this.audiusFacade.playlistTracks(playlist.id).pipe(
+      map(response => {
+        if (response?.data) {
+          // Siempre actualizamos los tracks
+          playlist.playlist_contents = response.data;
+          playlist.track_count = response.data.length;
+          
+          // Actualizar la caché de los tracks
+          response.data.forEach((track: any) => {
+            this.tracksCache.set(track.id, track);
+          });
+          
+          return response.data;
+        }
+        return [];
+      }),
+      catchError(error => {
+        console.error('Error al cargar los tracks:', error);
+        return of([]);
+      })
+    );
   }
 
   playTrack(track: Track) {
