@@ -137,8 +137,13 @@
 </div>
 
 <ion-footer *ngIf="currentTrack" class="ion-no-border">
+  <!-- Mini Reproductor (compacto) -->
+  <div class="progress-bar-container">
+    <ion-progress-bar [value]="getDurationPercentage() / 100"></ion-progress-bar>
+  </div>
+  
   <ion-toolbar color="medium">
-    <ion-item lines="none" color="medium">
+    <ion-item lines="none" color="medium" (click)="togglePlayer()">
       <ion-thumbnail slot="start">
         <img [src]="currentTrack.artwork?.['150x150'] || 'assets/default.jpg'">
       </ion-thumbnail>
@@ -147,13 +152,63 @@
         <p class="ion-text-sm ion-text-color-light">{{ currentTrack.user.name || 'Artista desconocido' }}</p>
       </ion-label>
       <ion-buttons slot="end">
-        <ion-button fill="clear" color="light" (click)="isPlaying ? pauseTrack() : playTrack(currentTrack)">
+        <ion-button fill="clear" color="light" (click)="previousTrack(); $event.stopPropagation()">
+          <ion-icon name="play-skip-back-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button fill="clear" color="light" (click)="isPlaying ? pauseTrack() : playTrack(currentTrack); $event.stopPropagation()">
           <ion-icon [name]="isPlaying ? 'pause-outline' : 'play-outline'" slot="icon-only"></ion-icon>
         </ion-button>
-        <ion-button fill="clear" color="danger" (click)="stopTrack()">
-          <ion-icon name="stop-outline" slot="icon-only"></ion-icon>
+        <ion-button fill="clear" color="light" (click)="nextTrack(); $event.stopPropagation()">
+          <ion-icon name="play-skip-forward-outline" slot="icon-only"></ion-icon>
         </ion-button>
       </ion-buttons>
     </ion-item>
   </ion-toolbar>
+  
+  <!-- Reproductor expandido -->
+  <div class="expanded-player" *ngIf="isPlayerExpanded" color="medium">
+    <div class="player-content ion-padding">
+      <div class="player-header">
+        <ion-button fill="clear" color="light" (click)="togglePlayer()">
+          <ion-icon name="chevron-down-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </div>
+      
+      <div class="artwork-container">
+        <img [src]="currentTrack.artwork?.['480x480'] || 'assets/default.jpg'" class="large-artwork">
+      </div>
+      
+      <div class="track-info ion-text-center ion-padding">
+        <h2 class="ion-text-white">{{ currentTrack.title }}</h2>
+        <p class="ion-text-color-light">{{ currentTrack.user.name }}</p>
+      </div>
+      
+      <div class="player-controls">
+        <div class="track-progress">
+          <span class="current-time">{{ getFormattedTime(currentTime) }}</span>
+          <ion-range #trackSeeker
+            [min]="0"
+            [max]="duration"
+            [value]="currentTime"
+            (ionChange)="onSeek($event)"
+            color="light"
+            class="track-seeker">
+          </ion-range>
+          <span class="total-time">{{ getFormattedTime(duration) }}</span>
+        </div>
+        
+        <div class="player-buttons ion-text-center">
+          <ion-button fill="clear" color="light" size="large" (click)="previousTrack()">
+            <ion-icon name="play-skip-back-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button fill="clear" color="light" size="large" (click)="isPlaying ? pauseTrack() : playTrack(currentTrack)">
+            <ion-icon [name]="isPlaying ? 'pause-outline' : 'play-outline'" slot="icon-only" class="play-button"></ion-icon>
+          </ion-button>
+          <ion-button fill="clear" color="light" size="large" (click)="nextTrack()">
+            <ion-icon name="play-skip-forward-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+        </div>
+      </div>
+    </div>
+  </div>
 </ion-footer>

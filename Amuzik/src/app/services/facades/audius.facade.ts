@@ -1,66 +1,89 @@
 import { Injectable } from '@angular/core';
 import { AudiusRequest } from '../requests/audius.request';
-import { map, Observable } from 'rxjs';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AudiusFacade {
-  constructor(private request: AudiusRequest) {}
+  constructor(private audiusRequest: AudiusRequest) {}
 
-  public tracks(): Observable<any> {
-    return this.request.getTrendingTracks();
+  search(query: string): Observable<any> {
+    return this.audiusRequest.searchContent(query);
   }
-  public playlists(): Observable<any> {
-    return this.request.getPlaylists();
+
+  tracks(): Observable<any> {
+    return this.audiusRequest.getTrendingTracks();
   }
+
+  playlists(): Observable<any> {
+    return this.audiusRequest.getPlaylists();
+  }
+
   playlistTracks(playlistId: string): Observable<any> {
-    return this.request.getPlaylistTracks(playlistId);
-  }
-  public search(query: string): Observable<any> {
-    return this.request.searchContent(query);
-  }
-  public getPlaylistById(playlistId: string): Observable<any> {
-    return this.request.getPlaylistById(playlistId);
+    return this.audiusRequest.getPlaylistTracks(playlistId);
   }
 
-  public getTrackById(trackId: string): Observable<any> {
-    return this.request.getTrackById(trackId);
+  getPlaylistById(playlistId: string): Observable<any> {
+    return this.audiusRequest.getPlaylistById(playlistId);
   }
 
-  public trackUrl(trackId: string): Promise<string> {
-    return this.request.getTrackStreamUrl(trackId);
+  getTrackById(trackId: string): Observable<any> {
+    return this.audiusRequest.getTrackById(trackId);
   }
 
-  public play(trackId: string | undefined) {
-    return this.request.playTrack(trackId);
+  async play(trackId: string, playlist?: any[]) {
+    if (playlist) {
+      this.audiusRequest.setCurrentPlaylist(playlist, trackId);
+    }
+    await this.audiusRequest.playTrack(trackId);
   }
 
-  public stop() {
-    return this.request.stopCurrentTrack();
+  pause(): void {
+    this.audiusRequest.pauseTrack();
   }
 
-  public pause() {
-    return this.request.pauseTrack();
+  stop(): void {
+    this.audiusRequest.stopCurrentTrack();
   }
 
-  public isPlaying(): Observable<boolean> {
-    return this.request.isPlaying$;
+  next(): void {
+    this.audiusRequest.playNextTrack();
   }
 
-  public getCurrentTrackId(): Observable<string | null> {
-    return this.request.currentTrackId$;
+  previous(): void {
+    this.audiusRequest.playPreviousTrack();
   }
 
-  public getCurrentTime(): number {
-    return this.request.getCurrentTime();
+  seekTo(position: number): void {
+    this.audiusRequest.seekTo(position);
   }
 
-  public getDuration(): number {
-    return this.request.getDuration();
+  isPlaying(): Observable<boolean> {
+    return this.audiusRequest.isPlaying$;
   }
 
-  public seekTo(position: number) {
-    return this.request.seekTo(position);
+  getCurrentTrackId(): Observable<string | null> {
+    return this.audiusRequest.currentTrackId$;
+  }
+
+  getCurrentTime(): Observable<number> {
+    return this.audiusRequest.currentTime$;
+  }
+
+  getDuration(): Observable<number> {
+    return this.audiusRequest.duration$;
+  }
+
+  getCurrentPlaylist(): Observable<any[] | null> {
+    return this.audiusRequest.currentPlaylist$;
+  }
+
+  getCurrentTrackIndex(): Observable<number> {
+    return this.audiusRequest.currentTrackIndex$;
+  }
+
+  formatTime(time: number): string {
+    return this.audiusRequest.formatTime(time);
   }
 }

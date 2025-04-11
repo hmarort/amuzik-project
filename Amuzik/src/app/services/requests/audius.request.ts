@@ -16,9 +16,30 @@ export class AudiusRequest {
 
   private isPlayingSubject = new BehaviorSubject<boolean>(false);
   public isPlaying$ = this.isPlayingSubject.asObservable();
+
+  private currentTimeSubject = new BehaviorSubject<number>(0);
+  public currentTime$ = this.currentTimeSubject.asObservable();
+
+  private durationSubject = new BehaviorSubject<number>(0);
+  public duration$ = this.durationSubject.asObservable();
+
+  private currentPlaylistSubject = new BehaviorSubject<any[] | null>(null);
+  public currentPlaylist$ = this.currentPlaylistSubject.asObservable();
+
+  private currentTrackIndexSubject = new BehaviorSubject<number>(-1);
+  public currentTrackIndex$ = this.currentTrackIndexSubject.asObservable();
+
   private cache = new Map<string, any>();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    // Actualizar el tiempo de reproducción cada segundo
+    setInterval(() => {
+      if (this.currentAudio && !this.currentAudio.paused) {
+        this.currentTimeSubject.next(this.currentAudio.currentTime);
+      }
+    }, 1000);
+  }
+
   searchContent(query: string): Observable<any> {
     return this.http.get(`${this.API_URL}/tracks/search?query=${encodeURIComponent(query)}&app_name=${this.APP_NAME}`).pipe(
       tap(response => {
@@ -30,6 +51,7 @@ export class AudiusRequest {
       })
     );
   }
+
   getPlaylistTracks(playlistId: string): Observable<any> {
     const cacheKey = `playlist_${playlistId}`;
     if (this.cache.has(cacheKey)) {
@@ -48,6 +70,7 @@ export class AudiusRequest {
         })
       );
   }
+
   getTrendingTracks(): Observable<any> {
     return this.http
       .get(`${this.API_URL}/tracks/trending?app_name=${this.APP_NAME}`)
@@ -122,6 +145,19 @@ export class AudiusRequest {
     }
   }
 
+  setCurrentPlaylist(playlist: any[] | null, initialTrackId?: string) {
+    this.currentPlaylistSubject.next(playlist);
+    
+    if (playlist && initialTrackId) {
+      const trackIndex = playlist.findIndex(track => 
+        (track.track_id || track.id) === initialTrackId
+      );
+      if (trackIndex !== -1) {
+        this.currentTrackIndexSubject.next(trackIndex);
+      }
+    }
+  }
+
   async playTrack(trackId: string | undefined) {
     if (!trackId) {
       console.error('Error: trackId es undefined. No se puede reproducir.');
@@ -166,23 +202,54 @@ export class AudiusRequest {
 
     this.currentTrackIdSubject.next(trackId);
     this.isPlayingSubject.next(true);
+    
+    // Actualizar índice en la playlist actual
+    const currentPlaylist = this.currentPlaylistSubject.value;
+    if (currentPlaylist) {
+      const trackIndex = currentPlaylist.findIndex(track => 
+        (track.track_id || track.id) === trackId
+      );
+      if (trackIndex !== -1) {
+        this.currentTrackIndexSubject.next(trackIndex);
+      }
+    }
   }
 
   private setupAudioEventHandlers(trackId: string) {
     if (!this.currentAudio) return;
 
+    // Restablecer la duración inicial
+    this.durationSubject.next(0);
+
+    // Cuando se carga los metadatos, actualizar la duración
+    this.currentAudio.onloadedmetadata = () => {
+      if (this.currentAudio) {
+        this.durationSubject.next(this.currentAudio.duration);
+      }
+    };
+
     // Almacenar la posición actual del track cada 5 segundos
     const updateInterval = setInterval(() => {
       if (this.currentAudio && !this.currentAudio.paused) {
         this.trackPositions.set(trackId, this.currentAudio.currentTime);
+        this.currentTimeSubject.next(this.currentAudio.currentTime);
       }
     }, 5000);
+
+    this.currentAudio.ontimeupdate = () => {
+      if (this.currentAudio) {
+        this.currentTimeSubject.next(this.currentAudio.currentTime);
+      }
+    };
 
     this.currentAudio.onended = () => {
       console.log('Track finalizado');
       this.isPlayingSubject.next(false);
       this.trackPositions.delete(trackId);
       clearInterval(updateInterval);
+      
+      // Reproducir siguiente track si está en una playlist
+      this.playNextTrack();
     };
 
     this.currentAudio.onerror = () => {
@@ -215,6 +282,8 @@ export class AudiusRequest {
 
     this.currentTrackIdSubject.next(null);
     this.isPlayingSubject.next(false);
+    this.currentTimeSubject.next(0);
+    this.durationSubject.next(0);
   }
 
   isPlaying(): boolean {
@@ -226,21 +295,63 @@ export class AudiusRequest {
   }
 
   getCurrentTime(): number {
-    return this.currentAudio ? this.currentAudio.currentTime : 0;
+    return this.currentTimeSubject.value;
   }
 
   getDuration(): number {
-    return this.currentAudio ? this.currentAudio.duration : 0;
+    return this.durationSubject.value;
   }
 
   seekTo(position: number) {
     if (this.currentAudio) {
       this.currentAudio.currentTime = position;
+      this.currentTimeSubject.next(position);
 
       const currentTrackId = this.currentTrackIdSubject.value;
       if (currentTrackId) {
         this.trackPositions.set(currentTrackId, position);
       }
     }
+  }
+
+  playNextTrack() {
+    const currentPlaylist = this.currentPlaylistSubject.value;
+    const currentIndex = this.currentTrackIndexSubject.value;
+    
+    if (currentPlaylist && currentIndex !== -1 && currentIndex < currentPlaylist.length - 1) {
+      const nextTrack = currentPlaylist[currentIndex + 1];
+      const nextTrackId = nextTrack.track_id || nextTrack.id;
+      if (nextTrackId) {
+        this.playTrack(nextTrackId);
+      }
+    }
+  }
+
+  playPreviousTrack() {
+    const currentPlaylist = this.currentPlaylistSubject.value;
+    const currentIndex = this.currentTrackIndexSubject.value;
+    
+    // Si la posición actual es mayor a 3 segundos, volver al inicio de la canción
+    if (this.currentAudio && this.currentAudio.currentTime > 3) {
+      this.seekTo(0);
+      return;
+    }
+    
+    // Si no, ir a la canción anterior
+    if (currentPlaylist && currentIndex > 0) {
+      const prevTrack = currentPlaylist[currentIndex - 1];
+      const prevTrackId = prevTrack.track_id || prevTrack.id;
+      if (prevTrackId) {
+        this.playTrack(prevTrackId);
+      }
+    }
+  }
+
+  formatTime(time: number): string {
+    if (isNaN(time)) return '0:00';
+    
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   }
 }

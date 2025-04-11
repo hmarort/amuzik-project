@@ -4,6 +4,7 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   ViewChild,
   OnDestroy,
+  ElementRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -26,6 +27,9 @@ import {
   IonSearchbar,
   IonButtons,
   IonMenuButton,
+  IonRange,
+  RangeCustomEvent,
+  IonProgressBar,
 } from '@ionic/angular/standalone';
 import { AudiusFacade } from 'src/app/services/facades/audius.facade';
 import { addIcons } from 'ionicons';
@@ -38,11 +42,15 @@ import {
   personCircleOutline,
   closeOutline,
   searchOutline,
+  playSkipForwardOutline,
+  playSkipBackOutline,
+  menuOutline,
+  volumeHighOutline,
 } from 'ionicons/icons';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Subject, takeUntil, finalize, forkJoin, of, from } from 'rxjs';
 import { catchError, map, switchMap, tap, toArray, concatMap, filter } from 'rxjs/operators';
-import { menuOutline } from 'ionicons/icons';
+
 interface Track {
   id: string;
   title: string;
@@ -93,6 +101,8 @@ interface Playlist {
     IonSearchbar,
     IonButtons,
     IonMenuButton,
+    IonRange,
+    IonProgressBar,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './home.page.html',
@@ -100,6 +110,7 @@ interface Playlist {
 })
 export class HomePage implements OnInit, OnDestroy {
   @ViewChild(IonInfiniteScroll) infiniteScroll!: IonInfiniteScroll;
+  @ViewChild('trackSeeker') trackSeeker?: ElementRef<HTMLIonRangeElement>;
 
   private destroy$ = new Subject<void>();
   searchTerm: string = '';
@@ -112,6 +123,13 @@ export class HomePage implements OnInit, OnDestroy {
   isPlaying: boolean = false;
   isLoading: boolean = true;
   private _searchTimeout: any;
+
+  // Nuevas propiedades para el reproductor
+  currentTime: number = 0;
+  duration: number = 0;
+  currentPlaylist: any[] | null = null;
+  currentTrackIndex: number = -1;
+  isPlayerExpanded: boolean = false;
 
   private tracksCache: Map<string, any> = new Map();
 
@@ -131,6 +149,9 @@ export class HomePage implements OnInit, OnDestroy {
       stopOutline,
       pauseOutline,
       menuOutline,
+      playSkipForwardOutline,
+      playSkipBackOutline,
+      volumeHighOutline,
     });
   }
 
@@ -144,6 +165,34 @@ export class HomePage implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((isPlaying) => {
         this.isPlaying = isPlaying;
+      });
+
+    this.audiusFacade
+      .getCurrentTime()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((time) => {
+        this.currentTime = time;
+      });
+
+    this.audiusFacade
+      .getDuration()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((duration) => {
+        this.duration = duration;
+      });
+
+    this.audiusFacade
+      .getCurrentPlaylist()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((playlist) => {
+        this.currentPlaylist = playlist;
+      });
+
+    this.audiusFacade
+      .getCurrentTrackIndex()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((index) => {
+        this.currentTrackIndex = index;
       });
 
     this.audiusFacade
@@ -345,7 +394,6 @@ export class HomePage implements OnInit, OnDestroy {
       return;
     }
     
-    // Si ya tenemos los tracks cargados, solo expandimos la playlist
     if (playlist.playlist_contents?.length > 0) {
       playlist.expanded = true;
       return;
@@ -397,13 +445,18 @@ export class HomePage implements OnInit, OnDestroy {
     );
   }
 
-  playTrack(track: Track) {
+  playTrack(track: Track, playlistTracks?: any[]) {
     if (!track?.id) {
       console.error('Error: track es inválido. No se puede reproducir.');
       return;
     }
 
-    this.audiusFacade.play(track.id);
+    // Si tenemos una playlist de donde viene el track, la establecemos como la playlist actual
+    if (playlistTracks) {
+      this.audiusFacade.play(track.id, playlistTracks);
+    } else {
+      this.audiusFacade.play(track.id);
+    }
   }
 
   pauseTrack() {
@@ -420,6 +473,35 @@ export class HomePage implements OnInit, OnDestroy {
     } else {
       this.playTrack(track);
     }
+  }
+
+  togglePlayer() {
+    this.isPlayerExpanded = !this.isPlayerExpanded;
+  }
+
+  nextTrack() {
+    if (this.currentPlaylist && this.currentTrackIndex < this.currentPlaylist.length - 1) {
+      this.audiusFacade.next();
+    }
+  }
+
+  previousTrack() {
+    if (this.currentPlaylist && this.currentTrackIndex > 0) {
+      this.audiusFacade.previous();
+    } else if (this.currentTime > 3) {
+      // Si la reproducción lleva más de 3 segundos, volver al inicio
+      this.seekTo(0);
+    }
+  }
+
+  seekTo(position: number) {
+    this.audiusFacade.seekTo(position);
+  }
+
+  onSeek(event: Event) {
+    const rangeEvent = event as RangeCustomEvent;
+    const position = rangeEvent.detail.value as number;
+    this.seekTo(position);
   }
 
   updateMediaSession() {
@@ -449,6 +531,23 @@ export class HomePage implements OnInit, OnDestroy {
     navigator.mediaSession.setActionHandler('stop', () => {
       this.stopTrack();
     });
+
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      this.previousTrack();
+    });
+
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      this.nextTrack();
+    });
+  }
+
+  getFormattedTime(time: number): string {
+    return this.audiusFacade.formatTime(time);
+  }
+
+  getDurationPercentage(): number {
+    if (!this.duration) return 0;
+    return (this.currentTime / this.duration) * 100;
   }
 
   loadMore(event: any) {
@@ -551,7 +650,7 @@ export class HomePage implements OnInit, OnDestroy {
         const firstTrack = playlistInState.playlist_contents[0];
         const trackId = firstTrack.track_id || firstTrack.id;
         if (trackId) {
-          this.audiusFacade.play(trackId);
+          this.audiusFacade.play(trackId, playlistInState.playlist_contents);
         }
         return;
       }
@@ -562,12 +661,58 @@ export class HomePage implements OnInit, OnDestroy {
         .subscribe((response) => {
           const contents = response?.data?.playlist_contents;
           if (contents?.length) {
-            const firstTrackId = contents[0].track_id;
+            const firstTrackId = contents[0].track_id || contents[0].id;
             if (firstTrackId) {
-              this.audiusFacade.play(firstTrackId);
+              this.audiusFacade.play(firstTrackId, contents);
             }
           }
         });
     }
+  }
+
+  playPlaylist(playlist: Playlist) {
+    if (!playlist.playlist_contents || playlist.playlist_contents.length === 0) {
+      this.loadPlaylistTracksEfficiently(playlist)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(tracks => {
+          if (tracks && tracks.length > 0) {
+            const firstTrack = tracks[0];
+            const trackId = firstTrack.track_id || firstTrack.id;
+            if (trackId) {
+              this.audiusFacade.play(trackId, tracks);
+            }
+          }
+        });
+    } else {
+      const firstTrack = playlist.playlist_contents[0];
+      const trackId = firstTrack.track_id || firstTrack.id;
+      if (trackId) {
+        this.audiusFacade.play(trackId, playlist.playlist_contents);
+      }
+    }
+  }
+
+  trackFromPlaylist(playlist: Playlist, trackIndex: number) {
+    if (!playlist.playlist_contents || trackIndex >= playlist.playlist_contents.length) {
+      return;
+    }
+    
+    const trackItem = playlist.playlist_contents[trackIndex];
+    const trackId = trackItem.track_id || trackItem.id;
+    
+    if (trackId) {
+      this.audiusFacade.play(trackId, playlist.playlist_contents);
+    }
+  }
+
+  isCurrentlyPlaying(trackId: string): boolean {
+    return this.currentTrack?.id === trackId && this.isPlaying;
+  }
+
+  getArtworkUrl(track: any, size: string = '480x480'): string {
+    if (track?.artwork && track.artwork[size]) {
+      return track.artwork[size];
+    }
+    return 'assets/default.jpg';
   }
 }
