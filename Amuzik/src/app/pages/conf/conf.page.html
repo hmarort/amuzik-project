@@ -67,17 +67,6 @@
       <ion-label>Notificaciones por email</ion-label>
       <ion-toggle [(ngModel)]="configuraciones.notificaciones.email"></ion-toggle>
     </ion-item>
-
-    <ion-item>
-      <ion-icon slot="start" name="volume-high-outline"></ion-icon>
-      <ion-label>Sonido</ion-label>
-      <ion-toggle [(ngModel)]="configuraciones.notificaciones.sonido"></ion-toggle>
-    </ion-item>
-
-    <ion-item>
-      <ion-label>Vibración</ion-label>
-      <ion-toggle [(ngModel)]="configuraciones.notificaciones.vibracion"></ion-toggle>
-    </ion-item>
   </ion-list>
 
   <!-- Sección de Configuración General -->
@@ -90,22 +79,6 @@
         </span>
       </ion-label>
     </ion-item-divider>
-
-    <ion-item>
-      <ion-label>Auto-guardado</ion-label>
-      <ion-toggle [(ngModel)]="configuraciones.general.autoGuardado"></ion-toggle>
-    </ion-item>
-
-    <ion-item>
-      <ion-label>Sincronizar datos</ion-label>
-      <ion-toggle [(ngModel)]="configuraciones.general.sincronizarDatos"></ion-toggle>
-    </ion-item>
-
-    <ion-item>
-      <ion-label>Compartir estadísticas de uso</ion-label>
-      <ion-toggle [(ngModel)]="configuraciones.general.compartirEstadisticas"></ion-toggle>
-    </ion-item>
-
     <ion-item button detail="true">
       <ion-icon slot="start" name="help-circle-outline"></ion-icon>
       <ion-label>Ayuda y soporte</ion-label>

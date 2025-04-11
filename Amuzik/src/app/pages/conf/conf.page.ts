@@ -34,6 +34,8 @@ import {
   logOutOutline,
   chevronForwardOutline
 } from 'ionicons/icons';
+import { routes } from 'src/app/app.routes';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-conf',
@@ -97,7 +99,7 @@ export class ConfPage implements OnInit {
     { valor: 'de', texto: 'Alemán' }
   ];
 
-  constructor() {
+  constructor(private router: Router) {
     // Registrar iconos
     addIcons({
       personOutline, 
@@ -112,9 +114,7 @@ export class ConfPage implements OnInit {
     });
   }
 
-  ngOnInit() {
-    // Inicialización de la página
-  }
+  ngOnInit() {}
   guardarCambios() {
     // Aquí iría el código para guardar los cambios en el almacenamiento
     console.log('Configuraciones guardadas:', this.configuraciones);
@@ -122,7 +122,6 @@ export class ConfPage implements OnInit {
 
   // Función para cerrar sesión
   cerrarSesion() {
-    console.log('Cerrando sesión...');
-    // Aquí iría la lógica para cerrar sesión
+    this.router.navigate(['/login']);
   }
 }
