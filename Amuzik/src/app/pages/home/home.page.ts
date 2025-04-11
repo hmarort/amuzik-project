@@ -49,7 +49,15 @@ import {
 } from 'ionicons/icons';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Subject, takeUntil, finalize, forkJoin, of, from } from 'rxjs';
-import { catchError, map, switchMap, tap, toArray, concatMap, filter } from 'rxjs/operators';
+import {
+  catchError,
+  map,
+  switchMap,
+  tap,
+  toArray,
+  concatMap,
+  filter,
+} from 'rxjs/operators';
 
 interface Track {
   id: string;
@@ -239,105 +247,112 @@ export class HomePage implements OnInit, OnDestroy {
       });
 
     forkJoin({
-      tracks: this.audiusFacade.tracks().pipe(
-        catchError(() => of({ data: [] }))
-      ),
-      playlists: this.audiusFacade.playlists().pipe(
-        catchError(() => of({ data: [] }))
-      )
+      tracks: this.audiusFacade
+        .tracks()
+        .pipe(catchError(() => of({ data: [] }))),
+      playlists: this.audiusFacade
+        .playlists()
+        .pipe(catchError(() => of({ data: [] }))),
     })
-    .pipe(
-      takeUntil(this.destroy$),
-      finalize(() => {
-        // La pantalla de splash se ocultará después de validar las playlists
-      })
-    )
-    .subscribe({
-      next: (results) => {
-        // Procesamos los tracks primero
-        if (results.tracks?.data) {
-          this.trendingTracks = results.tracks.data.slice(0, 10);
-          results.tracks.data.forEach((track: any) => {
-            this.tracksCache.set(track.id, track);
-          });
-        }
-        
-        // Ahora procesamos y validamos las playlists
-        if (results.playlists?.data) {
-          const rawPlaylists = results.playlists.data.map((playlist: Playlist) => ({
-            ...playlist,
-            expanded: false,
-            isLoading: false,
-          }));
-          
-          // Validamos las playlists (eliminando las inválidas)
-          this.validateAllPlaylists(rawPlaylists);
-        } else {
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          // La pantalla de splash se ocultará después de validar las playlists
+        })
+      )
+      .subscribe({
+        next: (results) => {
+          // Procesamos los tracks primero
+          if (results.tracks?.data) {
+            this.trendingTracks = results.tracks.data.slice(0, 10);
+            results.tracks.data.forEach((track: any) => {
+              this.tracksCache.set(track.id, track);
+            });
+          }
+
+          // Ahora procesamos y validamos las playlists
+          if (results.playlists?.data) {
+            const rawPlaylists = results.playlists.data.map(
+              (playlist: Playlist) => ({
+                ...playlist,
+                expanded: false,
+                isLoading: false,
+              })
+            );
+
+            // Validamos las playlists (eliminando las inválidas)
+            this.validateAllPlaylists(rawPlaylists);
+          } else {
+            this.isLoading = false;
+            SplashScreen.hide();
+          }
+        },
+        error: () => {
           this.isLoading = false;
           SplashScreen.hide();
-        }
-      },
-      error: () => {
-        this.isLoading = false;
-        SplashScreen.hide();
-      },
-    });
+        },
+      });
   }
 
   private validateAllPlaylists(playlists: Playlist[]) {
-    const validationTasks = playlists.map(playlist => 
-      this.validatePlaylist(playlist).pipe(
-        catchError(() => of(null))
-      )
+    const validationTasks = playlists.map((playlist) =>
+      this.validatePlaylist(playlist).pipe(catchError(() => of(null)))
     );
-    
+
     // Usamos forkJoin para procesar todas las validaciones en paralelo
     forkJoin(validationTasks)
       .pipe(
-        map(results => results.filter(p => p !== null) as Playlist[]),
+        map((results) => results.filter((p) => p !== null) as Playlist[]),
         finalize(() => {
           this.isLoading = false;
           SplashScreen.hide();
         }),
         takeUntil(this.destroy$)
       )
-      .subscribe(validPlaylists => {
+      .subscribe((validPlaylists) => {
         this.allPlaylists = validPlaylists;
         this.playlists = this.allPlaylists.slice(0, this.limit);
         this.hasMorePlaylists = this.allPlaylists.length > this.limit;
-        
+
         // Expandimos la primera playlist si existe
         if (this.playlists.length > 0) {
           this.togglePlaylistExpansion(this.playlists[0]);
         }
       });
   }
-  
+
   private validatePlaylist(playlist: Playlist) {
     if (!playlist.id) return of(null);
-    
+
     return this.audiusFacade.playlistTracks(playlist.id).pipe(
-      map(response => {
-        if (response?.data && Array.isArray(response.data) && response.data.length > 0) {
+      map((response) => {
+        if (
+          response?.data &&
+          Array.isArray(response.data) &&
+          response.data.length > 0
+        ) {
           // Guardamos los tracks en caché
           response.data.forEach((track: any) => {
             if (track.id) {
               this.tracksCache.set(track.id, track);
             }
           });
-          
+
           // Devolvemos la playlist con sus tracks
           return {
             ...playlist,
             playlist_contents: response.data,
-            track_count: response.data.length
+            track_count: response.data.length,
           };
         }
         // Si no hay tracks, retornamos null para filtrarla
         return null;
       }),
-      catchError(error => {
-        console.log(`Playlist ${playlist.id} - ${playlist.playlist_name} ignorada por error:`, error);
+      catchError((error) => {
+        console.log(
+          `Playlist ${playlist.id} - ${playlist.playlist_name} ignorada por error:`,
+          error
+        );
         return of(null);
       })
     );
@@ -393,14 +408,14 @@ export class HomePage implements OnInit, OnDestroy {
       playlist.expanded = false;
       return;
     }
-    
+
     if (playlist.playlist_contents?.length > 0) {
       playlist.expanded = true;
       return;
     }
-    
+
     playlist.isLoading = true;
-    
+
     this.loadPlaylistTracksEfficiently(playlist, true)
       .pipe(
         finalize(() => {
@@ -408,37 +423,44 @@ export class HomePage implements OnInit, OnDestroy {
         }),
         takeUntil(this.destroy$)
       )
-      .subscribe(tracks => {
+      .subscribe((tracks) => {
         playlist.expanded = tracks && tracks.length > 0;
       });
   }
-  
-  private loadPlaylistTracksEfficiently(playlist: Playlist, forceReload: boolean = false) {
+
+  private loadPlaylistTracksEfficiently(
+    playlist: Playlist,
+    forceReload: boolean = false
+  ) {
     if (!playlist.id) return of(null);
-    
-    if (!forceReload && playlist.playlist_contents?.length && !playlist.isLoading) {
+
+    if (
+      !forceReload &&
+      playlist.playlist_contents?.length &&
+      !playlist.isLoading
+    ) {
       return of(playlist.playlist_contents);
     }
-    
+
     console.log('Cargando tracks de la playlist:', playlist.id);
-    
+
     return this.audiusFacade.playlistTracks(playlist.id).pipe(
-      map(response => {
+      map((response) => {
         if (response?.data) {
           playlist.playlist_contents = response.data;
           playlist.track_count = response.data.length;
-          
+
           response.data.forEach((track: any) => {
             if (track.id) {
               this.tracksCache.set(track.id, track);
             }
           });
-          
+
           return response.data;
         }
         return [];
       }),
-      catchError(error => {
+      catchError((error) => {
         console.error('Error al cargar los tracks:', error);
         return of([]);
       })
@@ -450,13 +472,13 @@ export class HomePage implements OnInit, OnDestroy {
       console.error('Error: track es inválido. No se puede reproducir.');
       return;
     }
-  
+
     // Mejora: Asegurarse de que siempre pasamos la lista completa si existe
     if (playlistTracks) {
       // Normalizar IDs en la lista de reproducción
-      const normalizedPlaylist = playlistTracks.map(item => ({
+      const normalizedPlaylist = playlistTracks.map((item) => ({
         ...item,
-        id: item.track_id || item.id // Asegurar que siempre tenemos un ID consistente
+        id: item.track_id || item.id, // Asegurar que siempre tenemos un ID consistente
       }));
       this.audiusFacade.play(track.id, normalizedPlaylist);
     } else {
@@ -498,10 +520,10 @@ export class HomePage implements OnInit, OnDestroy {
         console.log('Ya estás en la última canción de la playlist');
       }
     } else {
-      console.log('No hay playlist activa para navegar');
+      console.log('No hay playlist activa para navegar',this.currentPlaylist);
     }
   }
-  
+
   previousTrack() {
     if (this.currentTime > 3) {
       // Si la reproducción lleva más de 3 segundos, volver al inicio
@@ -547,16 +569,15 @@ export class HomePage implements OnInit, OnDestroy {
       ],
     });
 
+    // Mejorar los handlers para que usen nuestras nuevas implementaciones
     navigator.mediaSession.setActionHandler('play', () => {
-      this.audiusFacade.play(this.currentTrack!.id);
+      if (this.currentTrack) {
+        this.audiusFacade.play(this.currentTrack.id);
+      }
     });
 
     navigator.mediaSession.setActionHandler('pause', () => {
       this.pauseTrack();
-    });
-
-    navigator.mediaSession.setActionHandler('stop', () => {
-      this.stopTrack();
     });
 
     navigator.mediaSession.setActionHandler('previoustrack', () => {
@@ -697,19 +718,26 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
   playPlaylist(playlist: Playlist) {
-    if (!playlist.playlist_contents || playlist.playlist_contents.length === 0) {
-      console.log(`Cargando tracks para la playlist ${playlist.id} antes de reproducir`);
+    if (
+      !playlist.playlist_contents ||
+      playlist.playlist_contents.length === 0
+    ) {
+      console.log(
+        `Cargando tracks para la playlist ${playlist.id} antes de reproducir`
+      );
       this.loadPlaylistTracksEfficiently(playlist)
         .pipe(takeUntil(this.destroy$))
-        .subscribe(tracks => {
+        .subscribe((tracks) => {
           if (tracks && tracks.length > 0) {
             console.log(`Tracks cargados: ${tracks.length}`);
             // Normalizar los tracks
-            const normalizedTracks = tracks.map((track: { track_id: any; id: any; }) => ({
-              ...track,
-              id: track.track_id || track.id
-            }));
-            
+            const normalizedTracks = tracks.map(
+              (track: { track_id: any; id: any }) => ({
+                ...track,
+                id: track.track_id || track.id,
+              })
+            );
+
             const firstTrack = normalizedTracks[0];
             const trackId = firstTrack.id;
             if (trackId) {
@@ -721,13 +749,15 @@ export class HomePage implements OnInit, OnDestroy {
           }
         });
     } else {
-      console.log(`Playlist ya cargada con ${playlist.playlist_contents.length} tracks`);
+      console.log(
+        `Playlist ya cargada con ${playlist.playlist_contents.length} tracks`
+      );
       // Normalizar los tracks
-      const normalizedTracks = playlist.playlist_contents.map(track => ({
+      const normalizedTracks = playlist.playlist_contents.map((track) => ({
         ...track,
-        id: track.track_id || track.id
+        id: track.track_id || track.id,
       }));
-      
+
       const firstTrack = normalizedTracks[0];
       const trackId = firstTrack.id;
       if (trackId) {
@@ -738,13 +768,16 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   trackFromPlaylist(playlist: Playlist, trackIndex: number) {
-    if (!playlist.playlist_contents || trackIndex >= playlist.playlist_contents.length) {
+    if (
+      !playlist.playlist_contents ||
+      trackIndex >= playlist.playlist_contents.length
+    ) {
       return;
     }
-    
+
     const trackItem = playlist.playlist_contents[trackIndex];
     const trackId = trackItem.track_id || trackItem.id;
-    
+
     if (trackId) {
       this.audiusFacade.play(trackId, playlist.playlist_contents);
     }
