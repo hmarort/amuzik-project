@@ -146,15 +146,30 @@ export class AudiusRequest {
   }
 
   setCurrentPlaylist(playlist: any[] | null, initialTrackId?: string) {
-    this.currentPlaylistSubject.next(playlist);
-    
-    if (playlist && initialTrackId) {
-      const trackIndex = playlist.findIndex(track => 
-        (track.track_id || track.id) === initialTrackId
-      );
-      if (trackIndex !== -1) {
-        this.currentTrackIndexSubject.next(trackIndex);
+    // Normalizar los IDs de las canciones en la playlist
+    if (playlist) {
+      const normalizedPlaylist = playlist.map(track => ({
+        ...track,
+        id: track.track_id || track.id // Asegurar consistencia en IDs
+      }));
+      
+      this.currentPlaylistSubject.next(normalizedPlaylist);
+      
+      if (initialTrackId) {
+        const trackIndex = normalizedPlaylist.findIndex(track => 
+          (track.id === initialTrackId)
+        );
+        
+        if (trackIndex !== -1) {
+          console.log(`Estableciendo índice inicial: ${trackIndex} para track: ${initialTrackId}`);
+          this.currentTrackIndexSubject.next(trackIndex);
+        } else {
+          console.warn(`No se encontró el track ${initialTrackId} en la playlist`);
+        }
       }
+    } else {
+      this.currentPlaylistSubject.next(null);
+      this.currentTrackIndexSubject.next(-1);
     }
   }
 
@@ -163,9 +178,10 @@ export class AudiusRequest {
       console.error('Error: trackId es undefined. No se puede reproducir.');
       return;
     }
-
+  
+    console.log(`Intentando reproducir track: ${trackId}`);
     const isCurrentTrack = this.currentTrackIdSubject.value === trackId;
-
+  
     if (isCurrentTrack && this.currentAudio) {
       this.currentAudio.play().catch((error) => {
         console.error('Error al reanudar reproducción:', error);
@@ -173,10 +189,18 @@ export class AudiusRequest {
       this.isPlayingSubject.next(true);
       return;
     }
-
+  
+    // Guardar el progreso del track actual antes de cambiarlo
+    if (this.currentAudio && this.currentTrackIdSubject.value) {
+      this.trackPositions.set(
+        this.currentTrackIdSubject.value, 
+        this.currentAudio.currentTime
+      );
+    }
+  
     if (!isCurrentTrack) {
       this.stopCurrentTrack();
-
+  
       const streamUrl = await this.getTrackStreamUrl(trackId);
       if (!streamUrl) {
         console.error(
@@ -184,22 +208,22 @@ export class AudiusRequest {
         );
         return;
       }
-
+  
       this.currentAudio = new Audio();
       this.currentAudio.src = streamUrl;
-
+  
       const savedPosition = this.trackPositions.get(trackId);
       if (savedPosition !== undefined) {
         this.currentAudio.currentTime = savedPosition;
       }
-
+  
       this.setupAudioEventHandlers(trackId);
     }
-
+  
     this.currentAudio?.play().catch((error) => {
       console.error('Error al intentar reproducir:', error);
     });
-
+  
     this.currentTrackIdSubject.next(trackId);
     this.isPlayingSubject.next(true);
     
@@ -209,8 +233,12 @@ export class AudiusRequest {
       const trackIndex = currentPlaylist.findIndex(track => 
         (track.track_id || track.id) === trackId
       );
+      
       if (trackIndex !== -1) {
+        console.log(`Actualizando índice actual a: ${trackIndex}`);
         this.currentTrackIndexSubject.next(trackIndex);
+      } else {
+        console.warn(`Track ${trackId} no encontrado en la playlist actual`);
       }
     }
   }
@@ -312,27 +340,37 @@ export class AudiusRequest {
         this.trackPositions.set(currentTrackId, position);
       }
     }
-  }
-
+  } 
+  
   playNextTrack() {
     const currentPlaylist = this.currentPlaylistSubject.value;
     const currentIndex = this.currentTrackIndexSubject.value;
+    
+    console.log(`Intentando reproducir siguiente track. Índice actual: ${currentIndex}, Playlist length: ${currentPlaylist?.length || 0}`);
     
     if (currentPlaylist && currentIndex !== -1 && currentIndex < currentPlaylist.length - 1) {
       const nextTrack = currentPlaylist[currentIndex + 1];
       const nextTrackId = nextTrack.track_id || nextTrack.id;
       if (nextTrackId) {
+        console.log(`Reproduciendo siguiente track: ${nextTrackId}`);
         this.playTrack(nextTrackId);
+      } else {
+        console.warn('El siguiente track no tiene ID válido');
       }
+    } else {
+      console.log('No hay más tracks en la playlist o no hay playlist activa');
     }
   }
-
+  
   playPreviousTrack() {
     const currentPlaylist = this.currentPlaylistSubject.value;
     const currentIndex = this.currentTrackIndexSubject.value;
     
+    console.log(`Intentando reproducir track anterior. Índice actual: ${currentIndex}`);
+    
     // Si la posición actual es mayor a 3 segundos, volver al inicio de la canción
     if (this.currentAudio && this.currentAudio.currentTime > 3) {
+      console.log('Volviendo al inicio de la canción actual');
       this.seekTo(0);
       return;
     }
@@ -342,8 +380,13 @@ export class AudiusRequest {
       const prevTrack = currentPlaylist[currentIndex - 1];
       const prevTrackId = prevTrack.track_id || prevTrack.id;
       if (prevTrackId) {
+        console.log(`Reproduciendo track anterior: ${prevTrackId}`);
         this.playTrack(prevTrackId);
+      } else {
+        console.warn('El track anterior no tiene ID válido');
       }
+    } else {
+      console.log('Ya estás en el primer track o no hay playlist activa');
     }
   }
 

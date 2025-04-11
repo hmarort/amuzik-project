@@ -450,10 +450,15 @@ export class HomePage implements OnInit, OnDestroy {
       console.error('Error: track es inválido. No se puede reproducir.');
       return;
     }
-
-    // Si tenemos una playlist de donde viene el track, la establecemos como la playlist actual
+  
+    // Mejora: Asegurarse de que siempre pasamos la lista completa si existe
     if (playlistTracks) {
-      this.audiusFacade.play(track.id, playlistTracks);
+      // Normalizar IDs en la lista de reproducción
+      const normalizedPlaylist = playlistTracks.map(item => ({
+        ...item,
+        id: item.track_id || item.id // Asegurar que siempre tenemos un ID consistente
+      }));
+      this.audiusFacade.play(track.id, normalizedPlaylist);
     } else {
       this.audiusFacade.play(track.id);
     }
@@ -480,17 +485,39 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   nextTrack() {
-    if (this.currentPlaylist && this.currentTrackIndex < this.currentPlaylist.length - 1) {
-      this.audiusFacade.next();
+    if (this.currentPlaylist && this.currentTrackIndex >= 0) {
+      const nextIndex = this.currentTrackIndex + 1;
+      if (nextIndex < this.currentPlaylist.length) {
+        const nextTrack = this.currentPlaylist[nextIndex];
+        const trackId = nextTrack.track_id || nextTrack.id;
+        if (trackId) {
+          console.log(`Reproduciendo siguiente track: ${trackId}`);
+          this.audiusFacade.play(trackId, this.currentPlaylist);
+        }
+      } else {
+        console.log('Ya estás en la última canción de la playlist');
+      }
+    } else {
+      console.log('No hay playlist activa para navegar');
     }
   }
-
+  
   previousTrack() {
-    if (this.currentPlaylist && this.currentTrackIndex > 0) {
-      this.audiusFacade.previous();
-    } else if (this.currentTime > 3) {
+    if (this.currentTime > 3) {
       // Si la reproducción lleva más de 3 segundos, volver al inicio
+      console.log('Volviendo al inicio de la canción actual');
       this.seekTo(0);
+    } else if (this.currentPlaylist && this.currentTrackIndex > 0) {
+      // Ir a la canción anterior
+      const prevIndex = this.currentTrackIndex - 1;
+      const prevTrack = this.currentPlaylist[prevIndex];
+      const trackId = prevTrack.track_id || prevTrack.id;
+      if (trackId) {
+        console.log(`Reproduciendo track anterior: ${trackId}`);
+        this.audiusFacade.play(trackId, this.currentPlaylist);
+      }
+    } else {
+      console.log('Ya estás en la primera canción o no hay playlist activa');
     }
   }
 
@@ -669,25 +696,43 @@ export class HomePage implements OnInit, OnDestroy {
         });
     }
   }
-
   playPlaylist(playlist: Playlist) {
     if (!playlist.playlist_contents || playlist.playlist_contents.length === 0) {
+      console.log(`Cargando tracks para la playlist ${playlist.id} antes de reproducir`);
       this.loadPlaylistTracksEfficiently(playlist)
         .pipe(takeUntil(this.destroy$))
         .subscribe(tracks => {
           if (tracks && tracks.length > 0) {
-            const firstTrack = tracks[0];
-            const trackId = firstTrack.track_id || firstTrack.id;
+            console.log(`Tracks cargados: ${tracks.length}`);
+            // Normalizar los tracks
+            const normalizedTracks = tracks.map((track: { track_id: any; id: any; }) => ({
+              ...track,
+              id: track.track_id || track.id
+            }));
+            
+            const firstTrack = normalizedTracks[0];
+            const trackId = firstTrack.id;
             if (trackId) {
-              this.audiusFacade.play(trackId, tracks);
+              console.log(`Reproduciendo primer track: ${trackId}`);
+              this.audiusFacade.play(trackId, normalizedTracks);
             }
+          } else {
+            console.warn('No se encontraron tracks en la playlist');
           }
         });
     } else {
-      const firstTrack = playlist.playlist_contents[0];
-      const trackId = firstTrack.track_id || firstTrack.id;
+      console.log(`Playlist ya cargada con ${playlist.playlist_contents.length} tracks`);
+      // Normalizar los tracks
+      const normalizedTracks = playlist.playlist_contents.map(track => ({
+        ...track,
+        id: track.track_id || track.id
+      }));
+      
+      const firstTrack = normalizedTracks[0];
+      const trackId = firstTrack.id;
       if (trackId) {
-        this.audiusFacade.play(trackId, playlist.playlist_contents);
+        console.log(`Reproduciendo primer track: ${trackId}`);
+        this.audiusFacade.play(trackId, normalizedTracks);
       }
     }
   }
