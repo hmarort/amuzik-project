@@ -40,8 +40,8 @@ import {
   searchOutline,
 } from 'ionicons/icons';
 import { SplashScreen } from '@capacitor/splash-screen';
-import { Subject, takeUntil, finalize, forkJoin, of } from 'rxjs';
-import { catchError, map, switchMap, tap } from 'rxjs/operators';
+import { Subject, takeUntil, finalize, forkJoin, of, from } from 'rxjs';
+import { catchError, map, switchMap, tap, toArray, concatMap, filter } from 'rxjs/operators';
 import { menuOutline } from 'ionicons/icons';
 interface Track {
   id: string;
@@ -190,45 +190,108 @@ export class HomePage implements OnInit, OnDestroy {
       });
 
     forkJoin({
-      tracks: this.audiusFacade.tracks(),
-      playlists: this.audiusFacade.playlists(),
+      tracks: this.audiusFacade.tracks().pipe(
+        catchError(() => of({ data: [] }))
+      ),
+      playlists: this.audiusFacade.playlists().pipe(
+        catchError(() => of({ data: [] }))
+      )
     })
+    .pipe(
+      takeUntil(this.destroy$),
+      finalize(() => {
+        // La pantalla de splash se ocultará después de validar las playlists
+      })
+    )
+    .subscribe({
+      next: (results) => {
+        // Procesamos los tracks primero
+        if (results.tracks?.data) {
+          this.trendingTracks = results.tracks.data.slice(0, 10);
+          results.tracks.data.forEach((track: any) => {
+            this.tracksCache.set(track.id, track);
+          });
+        }
+        
+        // Ahora procesamos y validamos las playlists
+        if (results.playlists?.data) {
+          const rawPlaylists = results.playlists.data.map((playlist: Playlist) => ({
+            ...playlist,
+            expanded: false,
+            isLoading: false,
+          }));
+          
+          // Validamos las playlists (eliminando las inválidas)
+          this.validateAllPlaylists(rawPlaylists);
+        } else {
+          this.isLoading = false;
+          SplashScreen.hide();
+        }
+      },
+      error: () => {
+        this.isLoading = false;
+        SplashScreen.hide();
+      },
+    });
+  }
+
+  private validateAllPlaylists(playlists: Playlist[]) {
+    const validationTasks = playlists.map(playlist => 
+      this.validatePlaylist(playlist).pipe(
+        catchError(() => of(null))
+      )
+    );
+    
+    // Usamos forkJoin para procesar todas las validaciones en paralelo
+    forkJoin(validationTasks)
       .pipe(
-        takeUntil(this.destroy$),
+        map(results => results.filter(p => p !== null) as Playlist[]),
         finalize(() => {
           this.isLoading = false;
           SplashScreen.hide();
-        })
+        }),
+        takeUntil(this.destroy$)
       )
-      .subscribe({
-        next: (results) => {
-          if (results.tracks?.data) {
-            this.trendingTracks = results.tracks.data.slice(0, 10);
-            results.tracks.data.forEach((track: any) => {
-              this.tracksCache.set(track.id, track);
-            });
-          }
-
-          if (results.playlists?.data) {
-            this.allPlaylists = results.playlists.data.map(
-              (playlist: Playlist) => ({
-                ...playlist,
-                expanded: false,
-                isLoading: false,
-              })
-            );
-            this.playlists = this.allPlaylists.slice(0, this.limit);
-            this.hasMorePlaylists = this.allPlaylists.length > this.limit;
-            if (this.playlists.length > 0) {
-              this.togglePlaylistExpansion(this.playlists[0]);
-            }
-          }
-        },
-        error: () => {
-          this.isLoading = false;
-          SplashScreen.hide();
-        },
+      .subscribe(validPlaylists => {
+        this.allPlaylists = validPlaylists;
+        this.playlists = this.allPlaylists.slice(0, this.limit);
+        this.hasMorePlaylists = this.allPlaylists.length > this.limit;
+        
+        // Expandimos la primera playlist si existe
+        if (this.playlists.length > 0) {
+          this.togglePlaylistExpansion(this.playlists[0]);
+        }
       });
+  }
+  
+  private validatePlaylist(playlist: Playlist) {
+    if (!playlist.id) return of(null);
+    
+    return this.audiusFacade.playlistTracks(playlist.id).pipe(
+      map(response => {
+        if (response?.data && Array.isArray(response.data) && response.data.length > 0) {
+          // Guardamos los tracks en caché
+          response.data.forEach((track: any) => {
+            if (track.id) {
+              this.tracksCache.set(track.id, track);
+            }
+          });
+          
+          // Devolvemos la playlist con sus tracks
+          return {
+            ...playlist,
+            playlist_contents: response.data,
+            track_count: response.data.length
+          };
+        }
+        // Si no hay tracks, retornamos null para filtrarla
+        return null;
+      }),
+      catchError(error => {
+        console.log(`Playlist ${playlist.id} - ${playlist.playlist_name} ignorada por error:`, error);
+        return of(null);
+      })
+    );
   }
 
   ngOnDestroy() {
@@ -281,36 +344,25 @@ export class HomePage implements OnInit, OnDestroy {
       playlist.expanded = false;
       return;
     }
+    
+    // Si ya tenemos los tracks cargados, solo expandimos la playlist
+    if (playlist.playlist_contents?.length > 0) {
+      playlist.expanded = true;
+      return;
+    }
+    
     playlist.isLoading = true;
     
-    this.audiusFacade.getPlaylistById(playlist.id).pipe(
-      switchMap(response => {
-        if (response?.data) {
-          playlist.playlist_contents = [];
-          playlist.track_count = response.data.track_count || 0;
-          
-          if (playlist.id) {
-            return this.loadPlaylistTracksEfficiently(playlist, true);
-          }
-        }
-        return of(null);
-      }),
-      finalize(() => {
-        playlist.isLoading = false;
-      }),
-      catchError(() => {
-        playlist.expanded = false;
-        return of(null);
-      }),
-      takeUntil(this.destroy$)
-    ).subscribe(tracks => {
-      if (tracks && tracks.length > 0) {
-        playlist.expanded = true;
-        console.log('Tracks actualizados correctamente:', tracks);
-      } else {
-        playlist.expanded = false;
-      }
-    });
+    this.loadPlaylistTracksEfficiently(playlist, true)
+      .pipe(
+        finalize(() => {
+          playlist.isLoading = false;
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(tracks => {
+        playlist.expanded = tracks && tracks.length > 0;
+      });
   }
   
   private loadPlaylistTracksEfficiently(playlist: Playlist, forceReload: boolean = false) {
@@ -329,7 +381,9 @@ export class HomePage implements OnInit, OnDestroy {
           playlist.track_count = response.data.length;
           
           response.data.forEach((track: any) => {
-            this.tracksCache.set(track.id, track);
+            if (track.id) {
+              this.tracksCache.set(track.id, track);
+            }
           });
           
           return response.data;
@@ -455,7 +509,9 @@ export class HomePage implements OnInit, OnDestroy {
         .subscribe((response) => {
           if (response?.data) {
             this.searchResults = response.data.map((track: any) => {
-              this.tracksCache.set(track.id, track);
+              if (track.id) {
+                this.tracksCache.set(track.id, track);
+              }
 
               return {
                 type: 'track',
