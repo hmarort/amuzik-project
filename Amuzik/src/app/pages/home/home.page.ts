@@ -132,7 +132,6 @@ export class HomePage implements OnInit, OnDestroy {
   isLoading: boolean = true;
   private _searchTimeout: any;
 
-  // Nuevas propiedades para el reproductor
   currentTime: number = 0;
   duration: number = 0;
   currentPlaylist: any[] | null = null;
@@ -159,7 +158,6 @@ export class HomePage implements OnInit, OnDestroy {
       menuOutline,
       playSkipForwardOutline,
       playSkipBackOutline,
-      volumeHighOutline,
     });
   }
 
