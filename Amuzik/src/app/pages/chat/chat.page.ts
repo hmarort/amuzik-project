@@ -58,8 +58,6 @@ export class ChatPage implements OnInit {
   friend: Friend | null = null;
   newMessage: string = '';
   messages: Message[] = [];
-  
-  // Lista de amigos para buscar según el ID
   friends: Friend[] = [
     {
       id: 1,
@@ -83,7 +81,6 @@ export class ChatPage implements OnInit {
     },
   ];
   
-  // Mensajes de ejemplo pre-cargados (simulación)
   mockMessages: { [key: number]: Message[] } = {
     1: [
       { id: 1, text: 'Hola Juan, ¿cómo estás?', isMe: true, time: new Date(Date.now() - 3600000) },
@@ -106,7 +103,6 @@ export class ChatPage implements OnInit {
   };
 
   constructor(private route: ActivatedRoute) {
-    // Registrar los iconos necesarios
     addIcons({
       send,
       arrowBack
@@ -114,9 +110,8 @@ export class ChatPage implements OnInit {
   }
 
   ngOnInit() {
-    // Obtener el ID del amigo de los parámetros de la ruta
     this.route.params.subscribe(params => {
-      this.friendId = +params['id']; // Convertir a número
+      this.friendId = +params['id'];
       this.loadFriendData();
       this.loadMessages();
     });
@@ -131,10 +126,8 @@ export class ChatPage implements OnInit {
   }
 
   loadMessages() {
-    // Cargar mensajes simulados según el ID del amigo
     this.messages = this.mockMessages[this.friendId] || [];
     
-    // Intentar cargar mensajes guardados en localStorage
     const storageKey = `messages_${this.friendId}`;
     const savedMessages = localStorage.getItem(storageKey);
     
@@ -142,7 +135,6 @@ export class ChatPage implements OnInit {
       try {
         const parsedMessages = JSON.parse(savedMessages);
         
-        // Convertir strings de fecha a objetos Date
         parsedMessages.forEach((msg: any) => {
           msg.time = new Date(msg.time);
         });
@@ -157,7 +149,6 @@ export class ChatPage implements OnInit {
   sendMessage() {
     if (this.newMessage.trim() === '') return;
     
-    // Crear nuevo mensaje
     const newMsg: Message = {
       id: this.messages.length + 1,
       text: this.newMessage.trim(),
@@ -165,24 +156,18 @@ export class ChatPage implements OnInit {
       time: new Date()
     };
     
-    // Añadir mensaje a la lista
     this.messages.push(newMsg);
     
-    // Guardar mensajes en localStorage
     this.saveMessages();
     
-    // Limpiar el campo de entrada
     this.newMessage = '';
     
-    // Desplazar al fondo para ver el mensaje nuevo
     this.scrollToBottom();
     
-    // Simular respuesta del amigo
     this.simulateResponse();
   }
 
   simulateResponse() {
-    // Simular una respuesta después de un pequeño retraso
     setTimeout(() => {
       const responses = [
         'Ok, entendido',
@@ -193,10 +178,8 @@ export class ChatPage implements OnInit {
         'Interesante, cuéntame más'
       ];
       
-      // Elegir una respuesta aleatoria
       const randomResponse = responses[Math.floor(Math.random() * responses.length)];
       
-      // Crear mensaje de respuesta
       const responseMsg: Message = {
         id: this.messages.length + 1,
         text: randomResponse,
@@ -204,19 +187,15 @@ export class ChatPage implements OnInit {
         time: new Date()
       };
       
-      // Añadir a la lista de mensajes
       this.messages.push(responseMsg);
       
-      // Guardar mensajes en localStorage
       this.saveMessages();
       
-      // Desplazar al fondo
       this.scrollToBottom();
     }, 1000);
   }
 
   saveMessages() {
-    // Guardar mensajes en localStorage
     const storageKey = `messages_${this.friendId}`;
     localStorage.setItem(storageKey, JSON.stringify(this.messages));
   }

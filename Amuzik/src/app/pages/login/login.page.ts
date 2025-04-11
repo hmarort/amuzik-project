@@ -42,7 +42,7 @@ export class LoginPage {
     this.isSubmitting = true;
     
     try {
-      // Aquí iría tu lógica de autenticación
+      // Aquí iría la lógica de autenticación
       // Por ejemplo:
       // await this.authService.login(this.loginForm.value.email, this.loginForm.value.password);
       

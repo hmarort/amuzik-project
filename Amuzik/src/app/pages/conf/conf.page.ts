@@ -100,7 +100,6 @@ export class ConfPage implements OnInit {
   ];
 
   constructor(private router: Router) {
-    // Registrar iconos
     addIcons({
       personOutline, 
       notificationsOutline, 
@@ -116,11 +115,9 @@ export class ConfPage implements OnInit {
 
   ngOnInit() {}
   guardarCambios() {
-    // Aquí iría el código para guardar los cambios en el almacenamiento
     console.log('Configuraciones guardadas:', this.configuraciones);
   }
 
-  // Función para cerrar sesión
   cerrarSesion() {
     this.router.navigate(['/login']);
   }

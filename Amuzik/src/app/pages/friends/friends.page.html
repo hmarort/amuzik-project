@@ -15,7 +15,6 @@
       </ion-toolbar>
     </ion-header>
 
-    <!-- Formulario para añadir amigos -->
     <div class="add-friend-form" *ngIf="showAddFriendForm">
       <ion-card>
         <ion-card-header>
@@ -43,16 +42,13 @@
       </ion-card>
     </div>
 
-    <!-- Lista de amigos con deslizamiento -->
     <div class="friends-container" *ngIf="!showAddFriendForm">      
-      <!-- Mensaje cuando no hay amigos -->
       <div class="empty-state" *ngIf="friends.length === 0">
         <ion-icon name="people-outline"></ion-icon>
         <h3>No tienes amigos en tu lista</h3>
         <p>Pulsa en el botón + para añadir amigos</p>
       </div>
       
-      <!-- Lista de amigos con deslizamiento -->
       <ion-list *ngIf="friends.length > 0" class="friend-list">
         <ion-item-sliding *ngFor="let friend of friends">
           <ion-item (click)="openChat(friend.id)" class="friend-item">
@@ -74,7 +70,6 @@
       </ion-list>
     </div>
 
-    <!-- Botón flotante para añadir amigos (siempre visible) -->
     <ion-fab vertical="bottom" horizontal="end" slot="fixed">
       <ion-fab-button (click)="showAddFriendForm = true">
         <ion-icon name="person-add"></ion-icon>

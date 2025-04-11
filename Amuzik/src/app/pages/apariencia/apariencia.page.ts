@@ -82,17 +82,11 @@ interface Tema {
   ]
 })
 export class AparienciaPage implements OnInit, OnDestroy {
-  // Tema actual
   temaActual: string = '';
-  modoOscuro: boolean = false;
-  
-  // Modo de brillo preferido
+  modoOscuro: boolean = false;  
   modoPreferido: ModoTema = 'sistema';
-
-  // Temas disponibles (utilizando la interfaz local para mantener compatibilidad con el HTML)
   temas: Tema[] = [];
   
-  // Suscripciones
   private temaSubscription: Subscription = new Subscription;
   private modoOscuroSubscription: Subscription = new Subscription;
   private preferenciaModoBrilloSubscription: Subscription = new Subscription;
@@ -111,7 +105,6 @@ export class AparienciaPage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // Mapear los temas del servicio a la estructura local
     this.temas = this.temaService.temasDisponibles
       .filter(tema => ['green', 'blue', 'purple', 'red', 'orange','standard','neutral'].includes(tema.id))
       .map(tema => ({
@@ -122,29 +115,23 @@ export class AparienciaPage implements OnInit, OnDestroy {
         modoOscuro: false
       }));
     
-    // Suscribirse a los cambios de tema
     this.temaSubscription = this.temaService.temaActual$.subscribe(tema => {
       this.temaActual = tema;
     });
-    
-    // Suscribirse a los cambios de modo oscuro
     this.modoOscuroSubscription = this.temaService.modoOscuro$.subscribe(modo => {
       this.modoOscuro = modo;
       
-      // Actualizar el estado de modo oscuro en los objetos tema
       this.temas.forEach(tema => {
         tema.modoOscuro = modo;
       });
     });
     
-    // Suscribirse a la preferencia de modo brillo
     this.preferenciaModoBrilloSubscription = this.temaService.preferenciaModoBrillo$.subscribe(modo => {
       this.modoPreferido = modo;
     });
   }
 
   ngOnDestroy() {
-    // Cancelar suscripciones para evitar memory leaks
     if (this.temaSubscription) {
       this.temaSubscription.unsubscribe();
     }
@@ -156,25 +143,20 @@ export class AparienciaPage implements OnInit, OnDestroy {
     }
   }
 
-  // Método para seleccionar un tema (compatible con el HTML original)
   seleccionarTema(tema: Tema) {
     this.temaService.cambiarTema(tema.id);
   }
 
-  // Método para cambiar el modo oscuro o claro manualmente
   cambiarModoManual(modo: ModoTema) {
     this.temaService.cambiarPreferenciaModo(modo);
   }
 
-  // Método para obtener la clase de vista previa (compatible con el HTML original)
   obtenerClasePrevia(tema: Tema): string {
     const sufijo = this.modoOscuro ? '-dark' : '-light';
     return `${tema.colorClase}${sufijo}`;
   }
 
-  // Método para obtener el ID del tema actual (compatible con el HTML original)
   obtenerTemaActualId(): string {
-    // Extraer el id del tema actual desde el nombre de la clase
     const temaActualNombre = this.temaActual.split('-light')[0].split('-dark')[0];
     
     for (const tema of this.temas) {
@@ -185,20 +167,15 @@ export class AparienciaPage implements OnInit, OnDestroy {
     return '';
   }
 
-  // Método para actualizar el tamaño de fuente
   updateFontSize(event: CustomEvent) {
     const percentage = event.detail.value;
     document.documentElement.style.fontSize = `${percentage}%`;
-    // Podrías guardar esta preferencia en localStorage si deseas que persista
     localStorage.setItem('font-size', percentage.toString());
   }
 
-  // Método para restaurar la configuración predeterminada
   restaurarConfiguracion() {
-    // Usar el método del servicio
     this.temaService.restaurarConfiguracionPredeterminada();
     
-    // Restaurar también el tamaño de fuente
     document.documentElement.style.fontSize = '100%';
     localStorage.removeItem('font-size');
   }

@@ -113,10 +113,8 @@ export class HomePage implements OnInit, OnDestroy {
   isLoading: boolean = true;
   private _searchTimeout: any;
 
-  // Caché para tracks
   private tracksCache: Map<string, any> = new Map();
 
-  // Parámetros para paginación
   playlistsOffset: number = 0;
   limit: number = 10;
   hasMorePlaylists: boolean = true;
@@ -141,7 +139,6 @@ export class HomePage implements OnInit, OnDestroy {
       autoHide: false,
     });
 
-    // Suscribirse a cambios en el estado de reproducción
     this.audiusFacade
       .isPlaying()
       .pipe(takeUntil(this.destroy$))
@@ -158,7 +155,6 @@ export class HomePage implements OnInit, OnDestroy {
           return;
         }
 
-        // Intentar encontrar el track en los ya cargados
         const track = this.findTrackInData(trackId);
 
         if (track) {
@@ -167,7 +163,6 @@ export class HomePage implements OnInit, OnDestroy {
           return;
         }
 
-        // Si no lo encontramos, cargar desde la API
         this.audiusFacade
           .getTrackById(trackId)
           .pipe(
@@ -194,7 +189,6 @@ export class HomePage implements OnInit, OnDestroy {
           });
       });
 
-    // Cargar datos iniciales en paralelo para mejorar rendimiento
     forkJoin({
       tracks: this.audiusFacade.tracks(),
       playlists: this.audiusFacade.playlists(),
@@ -208,7 +202,6 @@ export class HomePage implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (results) => {
-          // Procesar tracks
           if (results.tracks?.data) {
             this.trendingTracks = results.tracks.data.slice(0, 10);
             results.tracks.data.forEach((track: any) => {
@@ -216,7 +209,6 @@ export class HomePage implements OnInit, OnDestroy {
             });
           }
 
-          // Procesar playlists
           if (results.playlists?.data) {
             this.allPlaylists = results.playlists.data.map(
               (playlist: Playlist) => ({
@@ -225,8 +217,6 @@ export class HomePage implements OnInit, OnDestroy {
                 isLoading: false,
               })
             );
-
-            // Aplicar paginación local inicial
             this.playlists = this.allPlaylists.slice(0, this.limit);
             this.hasMorePlaylists = this.allPlaylists.length > this.limit;
             if (this.playlists.length > 0) {
@@ -247,7 +237,6 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   private findTrackInData(trackId: string): Track | null {
-    // Primero verificar en la caché para optimizar búsqueda
     if (this.tracksCache.has(trackId)) {
       const cachedTrack = this.tracksCache.get(trackId);
       return {
@@ -258,7 +247,6 @@ export class HomePage implements OnInit, OnDestroy {
       };
     }
 
-    // Buscar en trending tracks
     const trendingTrack = this.trendingTracks.find((t) => t.id === trackId);
     if (trendingTrack) return trendingTrack;
 
@@ -280,8 +268,6 @@ export class HomePage implements OnInit, OnDestroy {
           user: { name: playlistTrack.user?.name || 'Artista Desconocido' },
           artwork: playlistTrack.artwork || playlist.artwork,
         };
-
-        // Guardar en caché para futuras búsquedas rápidas
         this.tracksCache.set(trackId, track);
         return track;
       }
@@ -291,27 +277,18 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   togglePlaylistExpansion(playlist: Playlist) {
-    // Si ya está expandido, solo cerramos
     if (playlist.expanded) {
       playlist.expanded = false;
       return;
     }
-    
-    // Inicialmente no expandimos para evitar mostrar datos obsoletos
-    // playlist.expanded = true; - Quitamos esta línea
-    
-    // Marcamos como cargando antes de expandir
     playlist.isLoading = true;
     
-    // Primero obtenemos los datos básicos de la playlist
     this.audiusFacade.getPlaylistById(playlist.id).pipe(
       switchMap(response => {
         if (response?.data) {
-          // Limpiamos los contenidos para evitar mostrar datos obsoletos temporalmente
           playlist.playlist_contents = [];
           playlist.track_count = response.data.track_count || 0;
           
-          // Siempre cargamos los tracks completos
           if (playlist.id) {
             return this.loadPlaylistTracksEfficiently(playlist, true);
           }
@@ -322,18 +299,15 @@ export class HomePage implements OnInit, OnDestroy {
         playlist.isLoading = false;
       }),
       catchError(() => {
-        // No expandimos si hay error
         playlist.expanded = false;
         return of(null);
       }),
       takeUntil(this.destroy$)
     ).subscribe(tracks => {
-      // Solo expandimos cuando tengamos los tracks cargados correctamente
       if (tracks && tracks.length > 0) {
         playlist.expanded = true;
         console.log('Tracks actualizados correctamente:', tracks);
       } else {
-        // Si no hay tracks, no expandimos
         playlist.expanded = false;
       }
     });
@@ -342,7 +316,6 @@ export class HomePage implements OnInit, OnDestroy {
   private loadPlaylistTracksEfficiently(playlist: Playlist, forceReload: boolean = false) {
     if (!playlist.id) return of(null);
     
-    // Si forceReload es true, ignoramos la verificación de si ya hay tracks cargados
     if (!forceReload && playlist.playlist_contents?.length && !playlist.isLoading) {
       return of(playlist.playlist_contents);
     }
@@ -352,11 +325,9 @@ export class HomePage implements OnInit, OnDestroy {
     return this.audiusFacade.playlistTracks(playlist.id).pipe(
       map(response => {
         if (response?.data) {
-          // Siempre actualizamos los tracks
           playlist.playlist_contents = response.data;
           playlist.track_count = response.data.length;
           
-          // Actualizar la caché de los tracks
           response.data.forEach((track: any) => {
             this.tracksCache.set(track.id, track);
           });
@@ -433,11 +404,9 @@ export class HomePage implements OnInit, OnDestroy {
       return;
     }
 
-    // Incrementamos el offset para la siguiente carga
     this.playlistsOffset += this.limit;
 
     setTimeout(() => {
-      // Simulamos paginación local para mejorar rendimiento
       const newPlaylists = this.allPlaylists.slice(
         this.playlistsOffset,
         this.playlistsOffset + this.limit
@@ -446,7 +415,6 @@ export class HomePage implements OnInit, OnDestroy {
       if (newPlaylists.length) {
         this.playlists = [...this.playlists, ...newPlaylists];
 
-        // Revisar si hay más playlists disponibles
         this.hasMorePlaylists =
           this.playlistsOffset + this.limit < this.allPlaylists.length;
       } else {
@@ -474,7 +442,6 @@ export class HomePage implements OnInit, OnDestroy {
     this.isSearching = true;
     this.showSearchResults = true;
 
-    // Agregamos un debounce básico para evitar múltiples peticiones
     clearTimeout(this._searchTimeout);
     this._searchTimeout = setTimeout(() => {
       this.audiusFacade
@@ -487,9 +454,7 @@ export class HomePage implements OnInit, OnDestroy {
         )
         .subscribe((response) => {
           if (response?.data) {
-            // Procesar resultados y guardar en caché
             this.searchResults = response.data.map((track: any) => {
-              // Guardar en caché para futuras búsquedas
               this.tracksCache.set(track.id, track);
 
               return {

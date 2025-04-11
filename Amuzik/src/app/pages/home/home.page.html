@@ -4,7 +4,6 @@
       <ion-buttons slot="start">
         <ion-menu-button menu="main-menu"></ion-menu-button>
       </ion-buttons>
-      <!-- Barra de búsqueda -->
       <div class="flex-1 mx-4">
         <ion-searchbar placeholder="Buscar música..." 
                       [(ngModel)]="searchTerm"
@@ -16,15 +15,12 @@
   </ion-toolbar>
 </ion-header>
 
-<!-- Añadimos el ID main-content para conectar con el menú lateral -->
 <ion-content color="light" class="ion-padding-bottom">
-  <!-- Loading Indicator -->
   <div *ngIf="isLoading" class="ion-padding ion-text-center">
     <ion-spinner name="circular"></ion-spinner>
     <p>Cargando música...</p>
   </div>
 
-  <!-- Trending Tracks Carousel -->
   <div *ngIf="trendingTracks.length > 0" class="ion-padding-horizontal ion-padding-top">
     <h2 class="ion-text-white">Top 10 Trending</h2>
 
@@ -48,11 +44,9 @@
     </div>
   </div>
 
-  <!-- Playlists Section -->
   <div class="ion-padding-horizontal ion-padding-top">
     <h2 class="ion-text-white">Playlists destacadas</h2>
 
-    <!-- Playlists List -->
     <div *ngFor="let playlist of playlists" class="playlist-container ion-margin-bottom">
       <ion-card color="medium" (click)="togglePlaylistExpansion(playlist)">
         <div class="playlist-header ion-padding">
@@ -74,7 +68,6 @@
         </div>
       </ion-card>
 
-      <!-- Playlist Tracks (Expandible) -->
       <div *ngIf="playlist.expanded" class="playlist-tracks">
         <ion-list>
           <ion-item *ngFor="let item of playlist.playlist_contents" lines="none" class="track-item" color="light"
@@ -101,14 +94,12 @@
     </div>
   </div>
 
-  <!-- Infinite Scroll -->
   <ion-infinite-scroll (ionInfinite)="loadMore($event)">
     <ion-infinite-scroll-content loadingSpinner="bubbles" loadingText="Cargando más música...">
     </ion-infinite-scroll-content>
   </ion-infinite-scroll>
 </ion-content>
 
-<!-- NUEVA SECCIÓN: Search Results con scroll vertical -->
 <div *ngIf="showSearchResults" class="search-results-container" [class.with-player]="currentTrack">
   <div class="search-results-header">
     <h3 class="ion-text-white">Resultados para "{{ searchTerm }}"</h3>
@@ -145,7 +136,6 @@
   </div>
 </div>
 
-<!-- Player Bar -->
 <ion-footer *ngIf="currentTrack" class="ion-no-border">
   <ion-toolbar color="medium">
     <ion-item lines="none" color="medium">
