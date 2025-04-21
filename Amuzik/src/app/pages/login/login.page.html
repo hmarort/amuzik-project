@@ -10,20 +10,19 @@
 
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
         <div class="mb-4">
-          <label for="email" class="block text-sm font-medium text-ionic-medium mb-1">Email</label>
+          <label for="username" class="block text-sm font-medium text-ionic-medium mb-1">Username</label>
           <div class="relative">
-            <ion-icon name="mail" class="absolute left-3 top-3 text-ionic-medium"></ion-icon>
+            <ion-icon name="person" class="absolute left-3 top-3 text-ionic-medium"></ion-icon>
             <input 
-              type="email" 
-              id="email" 
-              formControlName="email" 
+              type="text" 
+              id="username" 
+              formControlName="username" 
               class="pl-10 w-full py-2 px-3 border border-ionic-medium rounded-lg focus:ring-2 focus:ring-ionic-primary focus:border-ionic-primary" 
-              placeholder="tucorreo@ejemplo.com"
+              placeholder="Tu nombre de usuario"
             />
           </div>
-          <div *ngIf="loginForm.get('email')?.touched && loginForm.get('email')?.invalid" class="mt-1 text-xs text-ionic-danger">
-            <div *ngIf="loginForm.get('email')?.errors?.['required']">El email es requerido</div>
-            <div *ngIf="loginForm.get('email')?.errors?.['email']">Ingresa un email válido</div>
+          <div *ngIf="loginForm.get('username')?.touched && loginForm.get('username')?.invalid" class="mt-1 text-xs text-ionic-danger">
+            <div *ngIf="loginForm.get('username')?.errors?.['required']">El nombre de usuario es requerido</div>
           </div>
         </div>
 
@@ -43,7 +42,7 @@
               (click)="togglePasswordVisibility()" 
               class="absolute inset-y-0 right-0 pr-3 flex items-center text-ionic-medium focus:outline-none"
             >
-              <ion-icon [name]="showPassword ? 'eye-off' : 'eye'"></ion-icon>
+              <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
             </button>
           </div>
           <div *ngIf="loginForm.get('password')?.touched && loginForm.get('password')?.invalid" class="mt-1 text-xs text-ionic-danger">
@@ -102,7 +101,7 @@
       <div class="mt-6 text-center">
         <p class="text-sm text-ionic-medium">
           ¿No tienes una cuenta?
-          <a href="#" class="font-medium text-ionic-primary hover:text-ionic-secondary">Regístrate</a>
+          <a href="/signin"  class="font-medium text-ionic-primary hover:text-ionic-secondary">Regístrate</a>
         </p>
       </div>
     </div>
