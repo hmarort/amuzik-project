@@ -1,3 +1,4 @@
+<!-- conf.page.html -->
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title color="primary">Configuración</ion-title>
@@ -20,7 +21,7 @@
         <div class="perfil-info">
           <h2>{{ usuario.nombre }}</h2>
           <p>{{ usuario.email }}</p>
-          <ion-button size="small" fill="outline">Editar perfil</ion-button>
+          <ion-button size="small" fill="outline" (click)="editarPerfil()">Editar perfil</ion-button>
         </div>
       </div>
     </ion-card-content>
@@ -35,7 +36,6 @@
         </span>
       </ion-label>
     </ion-item-divider>
-
     <ion-item>
       <ion-icon slot="start" name="language-outline"></ion-icon>
       <ion-label>Idioma</ion-label>
@@ -54,15 +54,21 @@
         </span>
       </ion-label>
     </ion-item-divider>
-
     <ion-item>
       <ion-label>Notificaciones push</ion-label>
       <ion-toggle [(ngModel)]="configuraciones.notificaciones.push"></ion-toggle>
     </ion-item>
-
     <ion-item>
       <ion-label>Notificaciones por email</ion-label>
       <ion-toggle [(ngModel)]="configuraciones.notificaciones.email"></ion-toggle>
+    </ion-item>
+    <ion-item *ngIf="configuraciones.notificaciones.push || configuraciones.notificaciones.email">
+      <ion-label>Sonido</ion-label>
+      <ion-toggle [(ngModel)]="configuraciones.notificaciones.sonido"></ion-toggle>
+    </ion-item>
+    <ion-item *ngIf="configuraciones.notificaciones.push">
+      <ion-label>Vibración</ion-label>
+      <ion-toggle [(ngModel)]="configuraciones.notificaciones.vibracion"></ion-toggle>
     </ion-item>
   </ion-list>
 
@@ -75,7 +81,19 @@
         </span>
       </ion-label>
     </ion-item-divider>
-    <ion-item button detail="true">
+    <ion-item>
+      <ion-label>Auto guardado</ion-label>
+      <ion-toggle [(ngModel)]="configuraciones.general.autoGuardado"></ion-toggle>
+    </ion-item>
+    <ion-item>
+      <ion-label>Sincronizar datos</ion-label>
+      <ion-toggle [(ngModel)]="configuraciones.general.sincronizarDatos"></ion-toggle>
+    </ion-item>
+    <ion-item>
+      <ion-label>Compartir estadísticas</ion-label>
+      <ion-toggle [(ngModel)]="configuraciones.general.compartirEstadisticas"></ion-toggle>
+    </ion-item>
+    <ion-item button detail="true" (click)="abrirAyudaSoporte()">
       <ion-icon slot="start" name="help-circle-outline"></ion-icon>
       <ion-label>Ayuda y soporte</ion-label>
       <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
@@ -90,7 +108,7 @@
   </div>
 
   <div class="accion-container">
-    <ion-button expand="block" (click)="guardarCambios()">
+    <ion-button expand="block" (click)="guardarCambios()" [disabled]="!hayCambiosSinGuardar()">
       Guardar cambios
     </ion-button>
   </div>
