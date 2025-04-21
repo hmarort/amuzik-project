@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { catchError, Observable, of, tap, BehaviorSubject } from 'rxjs';
+import { catchError, Observable, of, tap, BehaviorSubject, switchMap } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -146,30 +146,36 @@ export class AudiusRequest {
   }
 
   setCurrentPlaylist(playlist: any[] | null, initialTrackId?: string) {
-    // Normalizar los IDs de las canciones en la playlist
-    if (playlist) {
-      const normalizedPlaylist = playlist.map(track => ({
-        ...track,
-        id: track.track_id || track.id // Asegurar consistencia en IDs
-      }));
-      
-      this.currentPlaylistSubject.next(normalizedPlaylist);
-      
-      if (initialTrackId) {
-        const trackIndex = normalizedPlaylist.findIndex(track => 
-          (track.id === initialTrackId)
-        );
-        
-        if (trackIndex !== -1) {
-          console.log(`Estableciendo índice inicial: ${trackIndex} para track: ${initialTrackId}`);
-          this.currentTrackIndexSubject.next(trackIndex);
-        } else {
-          console.warn(`No se encontró el track ${initialTrackId} en la playlist`);
-        }
-      }
-    } else {
+    if (!playlist || playlist.length === 0) {
       this.currentPlaylistSubject.next(null);
       this.currentTrackIndexSubject.next(-1);
+      return;
+    }
+    
+    // Normalizar los IDs de las canciones en la playlist
+    const normalizedPlaylist = playlist.map(track => ({
+      ...track,
+      id: track.track_id || track.id // Asegurar consistencia en IDs
+    }));
+    
+    this.currentPlaylistSubject.next(normalizedPlaylist);
+    
+    if (initialTrackId) {
+      const trackIndex = normalizedPlaylist.findIndex(track => 
+        (track.id === initialTrackId || track.track_id === initialTrackId)
+      );
+      
+      if (trackIndex !== -1) {
+        console.log(`Estableciendo índice inicial: ${trackIndex} para track: ${initialTrackId}`);
+        this.currentTrackIndexSubject.next(trackIndex);
+      } else {
+        console.warn(`No se encontró el track ${initialTrackId} en la playlist`);
+        // Si no se encuentra, establecer el primero como actual
+        this.currentTrackIndexSubject.next(0);
+      }
+    } else if (normalizedPlaylist.length > 0) {
+      // Si no se especifica track inicial, usar el primero
+      this.currentTrackIndexSubject.next(0);
     }
   }
 
@@ -199,7 +205,7 @@ export class AudiusRequest {
     }
   
     if (!isCurrentTrack) {
-      this.stopCurrentTrack();
+      this.stopCurrentTrack(false); // No resetear la playlist actual
   
       const streamUrl = await this.getTrackStreamUrl(trackId);
       if (!streamUrl) {
@@ -231,7 +237,7 @@ export class AudiusRequest {
     const currentPlaylist = this.currentPlaylistSubject.value;
     if (currentPlaylist) {
       const trackIndex = currentPlaylist.findIndex(track => 
-        (track.track_id || track.id) === trackId
+        (track.track_id === trackId || track.id === trackId)
       );
       
       if (trackIndex !== -1) {
@@ -301,17 +307,22 @@ export class AudiusRequest {
     }
   }
 
-  stopCurrentTrack() {
+  stopCurrentTrack(resetPlaylist: boolean = true) {
     if (this.currentAudio) {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
       this.currentAudio = null;
     }
-
+  
     this.currentTrackIdSubject.next(null);
     this.isPlayingSubject.next(false);
     this.currentTimeSubject.next(0);
     this.durationSubject.next(0);
+    
+    if (resetPlaylist) {
+      this.currentPlaylistSubject.next(null);
+      this.currentTrackIndexSubject.next(-1);
+    }
   }
 
   isPlaying(): boolean {
@@ -359,7 +370,69 @@ export class AudiusRequest {
       }
     } else {
       console.log('No hay más tracks en la playlist o no hay playlist activa');
+      // Si no hay playlist o estamos en el último track, intentamos encontrar uno similar
+      this.findSimilarTrack(this.currentTrackIdSubject.value);
     }
+  }
+  
+  // Nueva función para encontrar tracks similares
+  private findSimilarTrack(currentTrackId: string | null) {
+    if (!currentTrackId) return;
+    
+    this.getTrackById(currentTrackId).pipe(
+      switchMap(trackData => {
+        if (!trackData?.data) return of(null);
+        
+        const genre = trackData.data.genre;
+        
+        if (genre) {
+          return this.http.get(`${this.API_URL}/tracks/trending?genre=${encodeURIComponent(genre)}&app_name=${this.APP_NAME}`)
+            .pipe(
+              catchError(() => of({ data: [] }))
+            );
+        }
+        
+        return of(null);
+      }),
+      catchError(() => of({ data: [] }))
+    ).subscribe((response: any) => {
+      if (response?.data && response.data.length > 0) {
+        // Filtrar el track actual
+        const similarTracks = response.data.filter((t: any) => t.id !== currentTrackId);
+        
+        if (similarTracks.length > 0) {
+          const randomIndex = Math.floor(Math.random() * similarTracks.length);
+          const nextTrack = similarTracks[randomIndex];
+          
+          // Crear una nueva playlist con tracks similares
+          this.setCurrentPlaylist(similarTracks, nextTrack.id);
+          this.playTrack(nextTrack.id);
+        } else {
+          this.findRandomTrack();
+        }
+      } else {
+        this.findRandomTrack();
+      }
+    });
+  }
+  
+  // Método auxiliar para encontrar un track aleatorio
+  private findRandomTrack() {
+    this.http.get(`${this.API_URL}/tracks/trending?app_name=${this.APP_NAME}`)
+      .pipe(
+        catchError(() => of({ data: [] }))
+      )
+      .subscribe((response: any) => {
+        if (response?.data && response.data.length > 0) {
+          const randomIndex = Math.floor(Math.random() * response.data.length);
+          const randomTrack = response.data[randomIndex];
+          
+          if (randomTrack?.id) {
+            this.setCurrentPlaylist(response.data);
+            this.playTrack(randomTrack.id);
+          }
+        }
+      });
   }
   
   playPreviousTrack() {

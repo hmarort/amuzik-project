@@ -297,7 +297,6 @@ export class HomePage implements OnInit, OnDestroy {
       this.validatePlaylist(playlist).pipe(catchError(() => of(null)))
     );
 
-    // Usamos forkJoin para procesar todas las validaciones en paralelo
     forkJoin(validationTasks)
       .pipe(
         map((results) => results.filter((p) => p !== null) as Playlist[]),
@@ -312,7 +311,6 @@ export class HomePage implements OnInit, OnDestroy {
         this.playlists = this.allPlaylists.slice(0, this.limit);
         this.hasMorePlaylists = this.allPlaylists.length > this.limit;
 
-        // Expandimos la primera playlist si existe
         if (this.playlists.length > 0) {
           this.togglePlaylistExpansion(this.playlists[0]);
         }
@@ -470,17 +468,18 @@ export class HomePage implements OnInit, OnDestroy {
       console.error('Error: track es inválido. No se puede reproducir.');
       return;
     }
-
-    // Mejora: Asegurarse de que siempre pasamos la lista completa si existe
-    if (playlistTracks) {
-      // Normalizar IDs en la lista de reproducción
-      const normalizedPlaylist = playlistTracks.map((item) => ({
-        ...item,
-        id: item.track_id || item.id, // Asegurar que siempre tenemos un ID consistente
-      }));
-      this.audiusFacade.play(track.id, normalizedPlaylist);
+  
+    const trackId = track.id;
+    
+    // Si se están reproduciendo tracks de una playlist, usar esa playlist
+    if (playlistTracks && playlistTracks.length) {
+      this.audiusFacade.play(trackId, playlistTracks);
+    } else if (this.currentPlaylist) {
+      // Mantener la playlist actual si existe
+      this.audiusFacade.play(trackId, this.currentPlaylist);
     } else {
-      this.audiusFacade.play(track.id);
+      // Si no hay playlist, crear una con solo este track
+      this.audiusFacade.play(trackId, [track]);
     }
   }
 
@@ -505,40 +504,11 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   nextTrack() {
-    if (this.currentPlaylist && this.currentTrackIndex >= 0) {
-      const nextIndex = this.currentTrackIndex + 1;
-      if (nextIndex < this.currentPlaylist.length) {
-        const nextTrack = this.currentPlaylist[nextIndex];
-        const trackId = nextTrack.track_id || nextTrack.id;
-        if (trackId) {
-          console.log(`Reproduciendo siguiente track: ${trackId}`);
-          this.audiusFacade.play(trackId, this.currentPlaylist);
-        }
-      } else {
-        console.log('Ya estás en la última canción de la playlist');
-      }
-    } else {
-      console.log('No hay playlist activa para navegar',this.currentPlaylist);
-    }
+    this.audiusFacade.next();
   }
 
   previousTrack() {
-    if (this.currentTime > 3) {
-      // Si la reproducción lleva más de 3 segundos, volver al inicio
-      console.log('Volviendo al inicio de la canción actual');
-      this.seekTo(0);
-    } else if (this.currentPlaylist && this.currentTrackIndex > 0) {
-      // Ir a la canción anterior
-      const prevIndex = this.currentTrackIndex - 1;
-      const prevTrack = this.currentPlaylist[prevIndex];
-      const trackId = prevTrack.track_id || prevTrack.id;
-      if (trackId) {
-        console.log(`Reproduciendo track anterior: ${trackId}`);
-        this.audiusFacade.play(trackId, this.currentPlaylist);
-      }
-    } else {
-      console.log('Ya estás en la primera canción o no hay playlist activa');
-    }
+    this.audiusFacade.previous();
   }
 
   seekTo(position: number) {
