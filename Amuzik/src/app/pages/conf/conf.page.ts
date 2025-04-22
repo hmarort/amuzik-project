@@ -185,11 +185,6 @@ export class ConfPage implements OnInit {
     this.router.navigate(['/editar-perfil']);
   }
 
-  abrirAyudaSoporte() {
-    // Navegar a la página de ayuda y soporte
-    this.router.navigate(['/ayuda']);
-  }
-
   hayCambiosSinGuardar(): boolean {
     return JSON.stringify(this.configuraciones) !== JSON.stringify(this.configuracionesOriginales);
   }

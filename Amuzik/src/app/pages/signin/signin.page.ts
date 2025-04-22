@@ -5,10 +5,10 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClientModule } from '@angular/common/http';
 import { IonContent, IonHeader, IonTitle, IonToolbar, IonIcon, IonSpinner } from '@ionic/angular/standalone';
-import { UsersService } from '../../services/requests/users.request';
 import { ToastController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { personOutline, mailOutline, lockClosedOutline, eyeOutline, eyeOffOutline, imageOutline, personAdd } from 'ionicons/icons';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-signin',
@@ -16,13 +16,10 @@ import { personOutline, mailOutline, lockClosedOutline, eyeOutline, eyeOffOutlin
   styleUrls: ['./signin.page.scss'],
   standalone: true,
   imports: [
-    IonContent, 
-    IonHeader, 
-    IonTitle, 
-    IonToolbar, 
+    IonContent,
     IonIcon,
     IonSpinner,
-    CommonModule, 
+    CommonModule,
     FormsModule,
     ReactiveFormsModule,
     HttpClientModule
@@ -38,7 +35,7 @@ export class SigninPage implements OnInit {
   constructor(
     private formBuilder: FormBuilder,
     private router: Router,
-    private usersService: UsersService,
+    private authService: AuthService, // Cambiado a AuthService
     private toastController: ToastController
   ) {
     // Añadir iconos
@@ -102,7 +99,8 @@ export class SigninPage implements OnInit {
         }
       });
 
-      this.usersService.register(formData).subscribe({
+      // Usar el AuthService para registrar
+      this.authService.register(formData).subscribe({
         next: async (response) => {
           console.log('Registro exitoso:', response);
           const toast = await this.toastController.create({

@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { AuthGuard } from './services/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -16,23 +17,28 @@ export const routes: Routes = [
   },
   {
     path: 'album',
-    loadComponent: () => import('./pages/album/album.page').then(m => m.AlbumPage)
+    loadComponent: () => import('./pages/album/album.page').then(m => m.AlbumPage),
+    canActivate: [AuthGuard] // Proteger esta ruta
   },
   {
     path: 'conf',
-    loadComponent: () => import('./pages/conf/conf.page').then(m => m.ConfPage)
+    loadComponent: () => import('./pages/conf/conf.page').then(m => m.ConfPage),
+    canActivate: [AuthGuard] // Proteger esta ruta
   },
   {
     path: 'apariencia',
-    loadComponent: () => import('./pages/apariencia/apariencia.page').then( m => m.AparienciaPage)
+    loadComponent: () => import('./pages/apariencia/apariencia.page').then(m => m.AparienciaPage),
+    canActivate: [AuthGuard] // Proteger esta ruta
   },
   {
     path: 'chat/:id',
-    loadComponent: () => import('./pages/chat/chat.page').then( m => m.ChatPage)
+    loadComponent: () => import('./pages/chat/chat.page').then(m => m.ChatPage),
+    canActivate: [AuthGuard] // Proteger esta ruta
   },
   {
     path: 'tabs',
     loadComponent: () => import('./pages/tabs/tabs.page').then(m => m.TabsPage),
+    canActivate: [AuthGuard], // Proteger toda la sección de tabs
     children: [
       {
         path: 'home',

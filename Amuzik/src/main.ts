@@ -9,7 +9,6 @@ import {
   IonicRouteStrategy,
   provideIonicAngular,
 } from '@ionic/angular/standalone';
-
 import { routes } from './app/app.routes';
 import { AppComponent } from './app/app.component';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
@@ -45,8 +44,10 @@ import {
   logoFacebook,
   eye,
 } from 'ionicons/icons';
-import { HttpClientModule } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { importProvidersFrom } from '@angular/core';
+import { AuthInterceptor} from './app/services/interceptors/auth.interceptor'
+
 addIcons({
   'lock-closed': lockClosed,
   mail: mail,
@@ -58,6 +59,8 @@ addIcons({
 bootstrapApplication(AppComponent, {
   providers: [
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
+    // Agregar el interceptor HTTP para autenticación
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
     provideIonicAngular(),
     provideRouter(routes, withPreloading(PreloadAllModules)),
     importProvidersFrom(HttpClientModule),

@@ -6,6 +6,7 @@ import {
   OnDestroy,
   ElementRef,
 } from '@angular/core';
+import { AuthService, User } from '../../services/auth.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -108,10 +109,9 @@ interface Playlist {
     IonInfiniteScrollContent,
     IonSearchbar,
     IonButtons,
-    IonMenuButton,
     IonRange,
-    IonProgressBar,
-  ],
+    IonProgressBar
+],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './home.page.html',
   styleUrls: ['./home.page.scss'],
@@ -120,6 +120,7 @@ export class HomePage implements OnInit, OnDestroy {
   @ViewChild(IonInfiniteScroll) infiniteScroll!: IonInfiniteScroll;
   @ViewChild('trackSeeker') trackSeeker?: ElementRef<HTMLIonRangeElement>;
 
+  currentUser: User | null = null;
   private destroy$ = new Subject<void>();
   searchTerm: string = '';
   searchResults: any[] = [];
@@ -145,7 +146,10 @@ export class HomePage implements OnInit, OnDestroy {
   hasMorePlaylists: boolean = true;
   allPlaylists: Playlist[] = [];
 
-  constructor(private audiusFacade: AudiusFacade) {
+  constructor(
+    private audiusFacade: AudiusFacade,
+    private authService: AuthService // Add this line
+  ) {
     addIcons({
       personCircleOutline,
       chevronDownOutline,
@@ -162,6 +166,12 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.authService.currentUser$
+    .pipe(takeUntil(this.destroy$))
+    .subscribe(user => {
+      this.currentUser = user;
+    });
+    
     SplashScreen.show({
       autoHide: false,
     });

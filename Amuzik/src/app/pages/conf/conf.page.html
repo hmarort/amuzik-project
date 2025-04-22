@@ -81,19 +81,7 @@
         </span>
       </ion-label>
     </ion-item-divider>
-    <ion-item>
-      <ion-label>Auto guardado</ion-label>
-      <ion-toggle [(ngModel)]="configuraciones.general.autoGuardado"></ion-toggle>
-    </ion-item>
-    <ion-item>
-      <ion-label>Sincronizar datos</ion-label>
-      <ion-toggle [(ngModel)]="configuraciones.general.sincronizarDatos"></ion-toggle>
-    </ion-item>
-    <ion-item>
-      <ion-label>Compartir estadísticas</ion-label>
-      <ion-toggle [(ngModel)]="configuraciones.general.compartirEstadisticas"></ion-toggle>
-    </ion-item>
-    <ion-item button detail="true" (click)="abrirAyudaSoporte()">
+    <ion-item button detail="true" href="https://hmarort.github.io/amuzik-blog/">
       <ion-icon slot="start" name="help-circle-outline"></ion-icon>
       <ion-label>Ayuda y soporte</ion-label>
       <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>

@@ -2,14 +2,15 @@
   <ion-toolbar color="light">
     <div class="flex items-center justify-between w-full px-4 py-2">
       <ion-buttons slot="start">
-        <ion-menu-button menu="main-menu"></ion-menu-button>
+        <ion-menu-toggle menu="main-menu" autoHide="false">
+
+          <img src="data:image/jpeg;base64,{{currentUser?.base64}}" alt="User Avatar"
+            style="width:40px; height:40px; border-radius:50%;">
+        </ion-menu-toggle>
       </ion-buttons>
       <div class="flex-1 mx-4">
-        <ion-searchbar placeholder="Buscar música..." 
-                      [(ngModel)]="searchTerm"
-                      (ionInput)="searchMusic($event)"
-                      (ionClear)="clearSearch()"
-                      class="w-full"></ion-searchbar>
+        <ion-searchbar placeholder="Buscar música..." [(ngModel)]="searchTerm" (ionInput)="searchMusic($event)"
+          (ionClear)="clearSearch()" class="w-full"></ion-searchbar>
       </div>
     </div>
   </ion-toolbar>
@@ -56,7 +57,8 @@
           <div class="playlist-info">
             <h3 class="ion-text-wrap ion-text-uppercase ion-text-white">{{ playlist.playlist_name }}</h3>
             <p class="ion-text-sm ion-text-color-light">Por: {{ playlist.user.name || 'Usuario desconocido' }}</p>
-            <p *ngIf="playlist.description" class="ion-text-sm ion-text-color-light description">{{ playlist.description }}</p>
+            <p *ngIf="playlist.description" class="ion-text-sm ion-text-color-light description">{{ playlist.description
+              }}</p>
             <p class="ion-text-sm ion-text-color-light">
               {{ playlist.track_count || (playlist.playlist_contents ? playlist.playlist_contents.length : 0) }}
               canciones
@@ -107,7 +109,7 @@
       <ion-icon name="close-outline" slot="icon-only"></ion-icon>
     </ion-button>
   </div>
-  
+
   <div class="search-results-content">
     <ion-list *ngIf="searchResults.length > 0; else noResults">
       <ion-item *ngFor="let item of searchResults" (click)="playSearchResult(item)">
@@ -141,7 +143,7 @@
   <div class="progress-bar-container">
     <ion-progress-bar [value]="getDurationPercentage() / 100"></ion-progress-bar>
   </div>
-  
+
   <ion-toolbar color="medium">
     <ion-item lines="none" color="medium" (click)="togglePlayer()">
       <ion-thumbnail slot="start">
@@ -155,7 +157,8 @@
         <ion-button fill="clear" color="light" (click)="previousTrack(); $event.stopPropagation()">
           <ion-icon name="play-skip-back-outline" slot="icon-only"></ion-icon>
         </ion-button>
-        <ion-button fill="clear" color="light" (click)="isPlaying ? pauseTrack() : playTrack(currentTrack); $event.stopPropagation()">
+        <ion-button fill="clear" color="light"
+          (click)="isPlaying ? pauseTrack() : playTrack(currentTrack); $event.stopPropagation()">
           <ion-icon [name]="isPlaying ? 'pause-outline' : 'play-outline'" slot="icon-only"></ion-icon>
         </ion-button>
         <ion-button fill="clear" color="light" (click)="nextTrack(); $event.stopPropagation()">
@@ -164,7 +167,7 @@
       </ion-buttons>
     </ion-item>
   </ion-toolbar>
-  
+
   <!-- Reproductor expandido -->
   <div class="expanded-player" *ngIf="isPlayerExpanded" color="medium">
     <div class="player-content ion-padding">
@@ -173,36 +176,33 @@
           <ion-icon name="chevron-down-outline" slot="icon-only"></ion-icon>
         </ion-button>
       </div>
-      
+
       <div class="artwork-container">
         <img [src]="currentTrack.artwork?.['480x480'] || 'assets/default.jpg'" class="large-artwork">
       </div>
-      
+
       <div class="track-info ion-text-center ion-padding">
         <h2 class="ion-text-white">{{ currentTrack.title }}</h2>
         <p class="ion-text-color-light">{{ currentTrack.user.name }}</p>
       </div>
-      
+
       <div class="player-controls">
         <div class="track-progress">
           <span class="current-time">{{ getFormattedTime(currentTime) }}</span>
-          <ion-range #trackSeeker
-            [min]="0"
-            [max]="duration"
-            [value]="currentTime"
-            (ionChange)="onSeek($event)"
-            color="light"
-            class="track-seeker">
+          <ion-range #trackSeeker [min]="0" [max]="duration" [value]="currentTime" (ionChange)="onSeek($event)"
+            color="light" class="track-seeker">
           </ion-range>
           <span class="total-time">{{ getFormattedTime(duration) }}</span>
         </div>
-        
+
         <div class="player-buttons ion-text-center">
           <ion-button fill="clear" color="light" size="large" (click)="previousTrack()">
             <ion-icon name="play-skip-back-outline" slot="icon-only"></ion-icon>
           </ion-button>
-          <ion-button fill="clear" color="light" size="large" (click)="isPlaying ? pauseTrack() : playTrack(currentTrack)">
-            <ion-icon [name]="isPlaying ? 'pause-outline' : 'play-outline'" slot="icon-only" class="play-button"></ion-icon>
+          <ion-button fill="clear" color="light" size="large"
+            (click)="isPlaying ? pauseTrack() : playTrack(currentTrack)">
+            <ion-icon [name]="isPlaying ? 'pause-outline' : 'play-outline'" slot="icon-only"
+              class="play-button"></ion-icon>
           </ion-button>
           <ion-button fill="clear" color="light" size="large" (click)="nextTrack()">
             <ion-icon name="play-skip-forward-outline" slot="icon-only"></ion-icon>
