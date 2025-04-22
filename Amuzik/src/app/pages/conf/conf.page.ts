@@ -1,5 +1,4 @@
-// conf.page.ts
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -37,7 +36,9 @@ import {
   chevronForwardOutline
 } from 'ionicons/icons';
 import { Router } from '@angular/router';
-import { ConfigService, Configuraciones, Usuario } from '../../services/config.service';
+import { ConfigService, Configuraciones } from '../../services/config.service';
+import { AuthService, User } from '../../services/auth.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-conf',
@@ -69,9 +70,17 @@ import { ConfigService, Configuraciones, Usuario } from '../../services/config.s
     IonItemDivider
   ]
 })
-export class ConfPage implements OnInit {
+export class ConfPage implements OnInit, OnDestroy {
   // Datos del usuario
-  usuario: Usuario;
+  usuario: User = {
+    id: '',
+    username: '',
+    email: '',
+    nombre: '',
+    base64: ''
+  };
+  
+  private userSubscription: Subscription | null = null;
   
   // Configuraciones
   configuraciones: Configuraciones;
@@ -88,6 +97,7 @@ export class ConfPage implements OnInit {
   constructor(
     private router: Router,
     private configService: ConfigService,
+    private authService: AuthService,
     private alertController: AlertController,
     private toastController: ToastController
   ) {
@@ -102,24 +112,42 @@ export class ConfPage implements OnInit {
     });
     
     // Inicializar con valores por defecto
-    this.usuario = this.configService.usuarioActual;
     this.configuraciones = this.configService.configuracionesActuales;
     this.configuracionesOriginales = JSON.parse(JSON.stringify(this.configuraciones));
   }
 
   ngOnInit() {
+    // Verificar autenticación
+    if (!this.authService.isAuthenticated()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    
     // Suscribirnos a los cambios en las configuraciones
     this.configService.configuraciones$.subscribe(config => {
       this.configuraciones = config;
       this.configuracionesOriginales = JSON.parse(JSON.stringify(config));
     });
     
-    // Suscribirnos a los cambios en el usuario
-    this.configService.usuario$.subscribe(user => {
+    // Suscribirnos a los cambios en el usuario desde AuthService
+    this.userSubscription = this.authService.currentUser$.subscribe(user => {
       if (user) {
         this.usuario = user;
       }
     });
+    
+    // Obtener el usuario actual si está disponible
+    const currentUser = this.authService.getCurrentUser();
+    if (currentUser) {
+      this.usuario = currentUser;
+    }
+  }
+
+  ngOnDestroy() {
+    // Desuscribirse para evitar memory leaks
+    if (this.userSubscription) {
+      this.userSubscription.unsubscribe();
+    }
   }
 
   async guardarCambios() {
@@ -174,10 +202,8 @@ export class ConfPage implements OnInit {
   }
 
   logout() {
-    // Usar el servicio para cerrar sesión
-    this.configService.cerrarSesion().subscribe(() => {
-      this.router.navigate(['/login']);
-    });
+    // Usar el authService para cerrar sesión
+    this.authService.logout();
   }
 
   editarPerfil() {

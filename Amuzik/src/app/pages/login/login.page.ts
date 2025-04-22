@@ -1,8 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { IonContent, IonHeader, IonTitle, IonToolbar, IonIcon, IonSpinner } from '@ionic/angular/standalone';
 import { HttpClientModule } from '@angular/common/http';
 import { addIcons } from 'ionicons';
@@ -23,16 +23,18 @@ import { AuthService } from '../../services/auth.service';
     FormsModule,
     ReactiveFormsModule,
     HttpClientModule
-]
+  ]
 })
-export class LoginPage {
+export class LoginPage implements OnInit {
   loginForm: FormGroup;
   isSubmitting = false;
   showPassword = false;
+  returnUrl: string;
   
   constructor(
     private formBuilder: FormBuilder,
     private router: Router,
+    private route: ActivatedRoute,
     private authService: AuthService,
     private toastController: ToastController
   ) {
@@ -42,8 +44,18 @@ export class LoginPage {
     this.loginForm = this.formBuilder.group({
       username: ['', [Validators.required]],
       password: ['', [Validators.required, Validators.minLength(6)]],
-      rememberMe: [false]
+      rememberMe: [true] // Por defecto activado para persistencia
     });
+    
+    // Capturar URL a la que redirigir después del login
+    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/home';
+  }
+
+  ngOnInit() {
+    // Verificar si ya hay una sesión activa y redirigir
+    if (this.authService.isAuthenticated()) {
+      this.router.navigate([this.returnUrl]);
+    }
   }
 
   async onSubmit() {
@@ -56,17 +68,16 @@ export class LoginPage {
       });
       return;
     }
-
+    
     this.isSubmitting = true;
     
     try {
       const { username, password } = this.loginForm.value;
       
       this.authService.login(username, password).subscribe({
-        next: (response) => {
-          console.log('Login exitoso:', response);
-
-          this.router.navigate(['/home']);
+        next: () => {
+          // Redirigir a la página de destino después del login exitoso
+          this.router.navigate([this.returnUrl]);
         },
         error: async (error) => {
           console.error('Error al iniciar sesión:', error);
@@ -77,6 +88,7 @@ export class LoginPage {
             color: 'danger'
           });
           toast.present();
+          this.isSubmitting = false;
         },
         complete: () => {
           this.isSubmitting = false;
@@ -85,9 +97,17 @@ export class LoginPage {
     } catch (error) {
       console.error('Error inesperado:', error);
       this.isSubmitting = false;
+      
+      const toast = await this.toastController.create({
+        message: 'Error al procesar la solicitud. Inténtelo de nuevo.',
+        duration: 3000,
+        position: 'top',
+        color: 'danger'
+      });
+      toast.present();
     }
   }
-
+  
   togglePasswordVisibility() {
     this.showPassword = !this.showPassword;
   }

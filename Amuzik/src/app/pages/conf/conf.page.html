@@ -16,11 +16,11 @@
     <ion-card-content>
       <div class="perfil-container">
         <ion-avatar>
-          <img [src]="usuario.foto" alt="Foto de perfil">
+          <img src="data:image/jpeg;base64,{{usuario?.base64}}" alt="Foto de perfil">
         </ion-avatar>
         <div class="perfil-info">
-          <h2>{{ usuario.nombre }}</h2>
-          <p>{{ usuario.email }}</p>
+          <h2>{{ usuario?.username }}</h2>
+          <p>{{ usuario?.email }}</p>
           <ion-button size="small" fill="outline" (click)="editarPerfil()">Editar perfil</ion-button>
         </div>
       </div>
