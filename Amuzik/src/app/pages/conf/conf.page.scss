@@ -53,3 +53,62 @@ ion-item-divider {
     color: var(--ion-color-primary);
   }
 }
+
+.perfil-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 10px;
+  
+  ion-avatar {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .perfil-info {
+    flex: 1;
+    
+    h2 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+    
+    p {
+      margin: 4px 0;
+    }
+  }
+}
+
+.perfil-edit-container {
+  .edit-avatar {
+    width: 80px;
+    height: 80px;
+    margin-right: 16px;
+  }
+  
+  .avatar-button {
+    margin-left: 10px;
+  }
+  
+  .botones-edicion {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: space-between;
+  }
+}
+
+.seccion-titulo {
+  display: flex;
+  align-items: center;
+  
+  ion-icon {
+    margin-right: 8px;
+  }
+}
+
+.accion-container {
+  margin-top: 20px;
+}

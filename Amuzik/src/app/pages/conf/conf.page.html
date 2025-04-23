@@ -9,23 +9,69 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" class="ion-padding">
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title color="primary">Perfil</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <div class="perfil-container">
-        <ion-avatar>
-          <img src="data:image/jpeg;base64,{{usuario.base64}}" alt="Foto de perfil">
-        </ion-avatar>
-        <div class="perfil-info">
-          <h2>{{ usuario.username }}</h2>
-          <p>{{ usuario.email }}</p>
-          <ion-button size="small" fill="outline" (click)="editarPerfil()">Editar perfil</ion-button>
-        </div>
+  <!-- Update the profile card section in conf.page.html -->
+<ion-card>
+  <ion-card-header>
+    <ion-card-title color="primary">Perfil</ion-card-title>
+  </ion-card-header>
+  <ion-card-content>
+    <!-- View Mode -->
+    <div class="perfil-container" *ngIf="!editMode">
+      <ion-avatar>
+        <img [src]="usuario.base64 ? 'data:image/jpeg;base64,' + usuario.base64 : 'assets/default-avatar.png'" alt="Foto de perfil">
+      </ion-avatar>
+      <div class="perfil-info">
+        <h2>{{ usuario.username }}</h2>
+        <p><strong>Email:</strong> {{ usuario.email }}</p>
+        <p *ngIf="usuario.nombre"><strong>Nombre:</strong> {{ usuario.nombre }}</p>
+        <p *ngIf="usuario.apellidos"><strong>Apellidos:</strong> {{ usuario.apellidos }}</p>
+        <ion-button size="small" fill="outline" (click)="toggleEditMode()">Editar perfil</ion-button>
       </div>
-    </ion-card-content>
-  </ion-card>
+    </div>
+
+    <!-- Edit Mode -->
+    <div class="perfil-edit-container" *ngIf="editMode">
+      <form (ngSubmit)="guardarPerfil()" #perfilForm="ngForm">
+        <ion-list>
+          <ion-item>
+            <ion-avatar class="edit-avatar">
+              <img [src]="previewImage || (usuario.base64 ? 'data:image/jpeg;base64,' + usuario.base64 : 'assets/default-avatar.png')" alt="Foto de perfil">
+            </ion-avatar>
+            <ion-button class="avatar-button" size="small" fill="outline" (click)="seleccionarImagen()">
+              Cambiar foto
+            </ion-button>
+            <input type="file" #fileInput style="display: none" accept="image/*" (change)="onFileSelected($event)">
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="floating">Nombre de usuario</ion-label>
+            <ion-input [(ngModel)]="perfilEditado.username" name="username" required></ion-input>
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="floating">Email</ion-label>
+            <ion-input [(ngModel)]="perfilEditado.email" name="email" type="email" required></ion-input>
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="floating">Nombre</ion-label>
+            <ion-input [(ngModel)]="perfilEditado.nombre" name="nombre"></ion-input>
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="floating">Apellidos</ion-label>
+            <ion-input [(ngModel)]="perfilEditado.apellidos" name="apellidos"></ion-input>
+          </ion-item>
+          
+          <div class="botones-edicion">
+            <ion-button type="button" fill="outline" (click)="cancelarEdicion()">Cancelar</ion-button>
+            <ion-button type="submit" expand="block">Guardar perfil</ion-button>
+          </div>
+        </ion-list>
+      </form>
+    </div>
+  </ion-card-content>
+</ion-card>
 
   <ion-list>
     <ion-item-divider>

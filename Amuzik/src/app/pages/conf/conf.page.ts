@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -23,7 +23,8 @@ import {
   IonButtons, 
   IonBackButton,
   AlertController,
-  ToastController
+  ToastController,
+  IonInput
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -33,7 +34,8 @@ import {
   languageOutline,
   helpCircleOutline,
   logOutOutline,
-  chevronForwardOutline
+  chevronForwardOutline,
+  cameraOutline
 } from 'ionicons/icons';
 import { Router } from '@angular/router';
 import { ConfigService, Configuraciones } from '../../services/config.service';
@@ -67,10 +69,13 @@ import { Subscription } from 'rxjs';
     IonCardTitle,
     IonAvatar,
     IonButton,
-    IonItemDivider
+    IonItemDivider,
+    IonInput
   ]
 })
 export class ConfPage implements OnInit, OnDestroy {
+  @ViewChild('fileInput') fileInput!: ElementRef;
+  
   // Datos del usuario
   usuario: User = {
     id: '',
@@ -79,6 +84,21 @@ export class ConfPage implements OnInit, OnDestroy {
     nombre: '',
     base64: ''
   };
+  
+  // Para modo edición
+  editMode: boolean = false;
+  perfilEditado: User = {
+    id: '',
+    username: '',
+    email: '',
+    nombre: '',
+    apellidos: '',
+    base64: ''
+  };
+  
+  // Para vista previa de la imagen
+  previewImage: string | null = null;
+  selectedFile: File | null = null;
   
   private userSubscription: Subscription | null = null;
   
@@ -108,7 +128,8 @@ export class ConfPage implements OnInit, OnDestroy {
       languageOutline,
       helpCircleOutline,
       logOutOutline,
-      chevronForwardOutline
+      chevronForwardOutline,
+      cameraOutline
     });
     
     // Inicializar con valores por defecto
@@ -133,6 +154,8 @@ export class ConfPage implements OnInit, OnDestroy {
     this.userSubscription = this.authService.currentUser$.subscribe(user => {
       if (user) {
         this.usuario = user;
+        // Copiar los datos al objeto de edición
+        this.resetPerfilEditado();
       }
     });
     
@@ -140,6 +163,7 @@ export class ConfPage implements OnInit, OnDestroy {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser) {
       this.usuario = currentUser;
+      this.resetPerfilEditado();
     }
   }
 
@@ -147,6 +171,82 @@ export class ConfPage implements OnInit, OnDestroy {
     // Desuscribirse para evitar memory leaks
     if (this.userSubscription) {
       this.userSubscription.unsubscribe();
+    }
+  }
+
+  toggleEditMode() {
+    this.editMode = true;
+    this.resetPerfilEditado();
+  }
+
+  cancelarEdicion() {
+    this.editMode = false;
+    this.resetPerfilEditado();
+    this.previewImage = null;
+    this.selectedFile = null;
+  }
+
+  resetPerfilEditado() {
+    this.perfilEditado = {
+      id: this.usuario.id,
+      username: this.usuario.username,
+      email: this.usuario.email || '',
+      nombre: this.usuario.nombre || '',
+      apellidos: this.usuario.apellidos || '',
+      base64: this.usuario.base64 || ''
+    };
+  }
+
+  async guardarPerfil() {
+    try {
+      const formData = new FormData();
+      
+      // Añadir datos del usuario
+      formData.append('id', this.perfilEditado.id);
+      formData.append('username', this.perfilEditado.username);
+      formData.append('email', this.perfilEditado.email || '');
+      formData.append('nombre', this.perfilEditado.nombre || '');
+      formData.append('apellidos', this.perfilEditado.apellidos || '');
+      
+      // Añadir imagen si se seleccionó
+      if (this.selectedFile) {
+        formData.append('imagen', this.selectedFile);
+      }
+      
+      // Llamar al servicio para actualizar
+      this.authService.updateUserData(formData).subscribe(
+        response => {
+          this.editMode = false;
+          this.previewImage = null;
+          this.selectedFile = null;
+          this.mostrarToast('Perfil actualizado correctamente');
+        },
+        error => {
+          console.error('Error al actualizar perfil:', error);
+          this.mostrarToast('Error al actualizar perfil', 'danger');
+        }
+      );
+    } catch (error) {
+      console.error('Error al procesar la actualización del perfil:', error);
+      this.mostrarToast('Error al actualizar perfil', 'danger');
+    }
+  }
+
+  seleccionarImagen() {
+    this.fileInput.nativeElement.click();
+  }
+
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.selectedFile = input.files[0];
+      
+      // Mostrar vista previa
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.previewImage = e.target.result;
+      };
+      reader.readAsDataURL(this.selectedFile);
     }
   }
 
@@ -207,8 +307,8 @@ export class ConfPage implements OnInit, OnDestroy {
   }
 
   editarPerfil() {
-    // Navegar a la página de edición de perfil
-    this.router.navigate(['/editar-perfil']);
+    // Cambiado a usar el toggle para edición en la misma página
+    this.toggleEditMode();
   }
 
   hayCambiosSinGuardar(): boolean {
