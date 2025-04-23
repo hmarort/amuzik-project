@@ -389,3 +389,19 @@ ion-footer ion-thumbnail {
   height: 48px;
   --border-radius: 4px;
 }
+
+.chip-style {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 50%; /* Hace el contenedor redondo */
+  background-color: var(--ion-color-primary); /* Puedes elegir un color de fondo */
+  box-shadow: 0 0 6px rgba(0,0,0,0.1); /* Opcional: sombra suave como la de un chip */
+}
+
+ion-avatar {
+  width: 40px;  /* Ajusta el tamaño del avatar */
+  height: 40px; /* Ajusta el tamaño del avatar */
+  border-radius: 50%;  /* Asegura que el avatar también sea redondo */
+}

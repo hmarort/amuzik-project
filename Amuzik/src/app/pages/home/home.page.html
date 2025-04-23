@@ -3,9 +3,13 @@
     <div class="flex items-center justify-between w-full px-4 py-2">
       <ion-buttons slot="start">
         <ion-menu-toggle menu="main-menu" autoHide="false">
+          <div class="chip-style">
+            <ion-avatar>
+              <img src="data:image/jpeg;base64,{{currentUser?.base64}}" alt="User Avatar">
+            </ion-avatar>
+          </div>
 
-          <img src="data:image/jpeg;base64,{{currentUser?.base64}}" alt="User Avatar"
-            style="width:40px; height:40px; border-radius:50%;">
+
         </ion-menu-toggle>
       </ion-buttons>
       <div class="flex-1 mx-4">
