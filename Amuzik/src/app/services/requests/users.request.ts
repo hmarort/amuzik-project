@@ -38,7 +38,7 @@ export class UserRequest {
     const headers = new HttpHeaders({
       'Authorization': `Bearer ${this.token}`
     });
-    return this.http.put(`${this.apiUrl}user`, userData, { headers });
+    return this.http.post(`${this.apiUrl}update`, userData, { headers });
   }
 
   getUserById(userId: string): Observable<any> {
