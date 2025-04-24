@@ -58,8 +58,6 @@ export class AuthService {
     return this.userRequest.login(username, password).pipe(
       tap(response => {
         const userData = response.message;
-        
-        // Actualizar estado del usuario
         this.currentUserSubject.next(userData);
         
         // Guardar en localStorage o sessionStorage según la opción "rememberMe"
@@ -69,7 +67,6 @@ export class AuthService {
           sessionStorage.setItem('userData', JSON.stringify(userData));
         }
         
-        // Guardar token si existe en la respuesta
         if (response.token) {
           if (localStorage.getItem('rememberMe') === 'true') {
             localStorage.setItem(this.tokenKey, response.token);
@@ -84,8 +81,6 @@ export class AuthService {
   // Método para registrarse
   register(userData: FormData): Observable<any> {
     return this.userRequest.register(userData);
-    // No hacemos login automático después del registro,
-    // así que no necesitamos tap() aquí
   }
 
   // Método para cerrar sesión
@@ -95,11 +90,7 @@ export class AuthService {
     sessionStorage.removeItem('userData');
     localStorage.removeItem(this.tokenKey);
     sessionStorage.removeItem(this.tokenKey);
-    
-    // Resetear el estado del usuario
     this.currentUserSubject.next(null);
-    
-    // Redirigir a la página de login
     this.router.navigate(['/login']);
   }
 
@@ -113,6 +104,7 @@ export class AuthService {
     return this.userRequest.updateUserData(userData).pipe(
       tap(response => {
         // Actualizar el usuario en el estado y en el almacenamiento
+        console.log('User data updated:', response);
         const updatedUser = { ...this.currentUserSubject.value, ...response.user };
         this.currentUserSubject.next(updatedUser);
         

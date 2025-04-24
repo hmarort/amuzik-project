@@ -201,16 +201,29 @@ export class ConfPage implements OnInit, OnDestroy {
     try {
       const formData = new FormData();
       
-      // Añadir datos del usuario
+      // Siempre añadir el ID
       formData.append('id', this.perfilEditado.id);
-      formData.append('username', this.perfilEditado.username);
-      formData.append('email', this.perfilEditado.email || '');
-      formData.append('nombre', this.perfilEditado.nombre || '');
-      formData.append('apellidos', this.perfilEditado.apellidos || '');
       
-      // Añadir imagen si se seleccionó
+      // Comparar los campos actuales con los originales y solo añadir los modificados
+      if (this.perfilEditado.username !== this.usuario.username) {
+        formData.append('username', this.perfilEditado.username);
+      }
+      
+      if (this.perfilEditado.email !== this.usuario.email) {
+        formData.append('email', this.perfilEditado.email || '');
+      }
+      
+      if (this.perfilEditado.nombre !== this.usuario.nombre) {
+        formData.append('nombre', this.perfilEditado.nombre || '');
+      }
+      
+      if (this.perfilEditado.apellidos !== this.usuario.apellidos) {
+        formData.append('apellidos', this.perfilEditado.apellidos || '');
+      }
+      
+      // Añadir imagen solo si se seleccionó una nueva
       if (this.selectedFile) {
-        formData.append('imagen', this.selectedFile);
+        formData.append('pfp', this.selectedFile); // Cambiado a 'pfp' para que coincida con el backend
       }
       
       // Llamar al servicio para actualizar
@@ -223,7 +236,7 @@ export class ConfPage implements OnInit, OnDestroy {
         },
         error => {
           console.error('Error al actualizar perfil:', error);
-          this.mostrarToast('Error al actualizar perfil', 'danger');
+          this.mostrarToast('Error al actualizar perfil: ' + (error.error?.error || 'Error desconocido'), 'danger');
         }
       );
     } catch (error) {
