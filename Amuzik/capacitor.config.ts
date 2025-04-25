@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'io.ionic.starter',
+  appId: 'com.amuzik.hmarort',
   appName: 'Amuzik',
   webDir: 'www',
   plugins: {
@@ -10,6 +10,8 @@ const config: CapacitorConfig = {
       launchAutoHide: false,
       backgroundColor: "#ffffffff",
       androidScaleType: "CENTER_CROP",
+      splashFullScreen: true,
+      splashImmersive: true,
       showSpinner: false,
     },
   },
