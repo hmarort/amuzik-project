@@ -7,7 +7,7 @@ import { IonContent, IonHeader, IonTitle, IonToolbar, IonIcon, IonSpinner } from
 import { HttpClientModule } from '@angular/common/http';
 import { addIcons } from 'ionicons';
 import { eyeOutline, eyeOffOutline, mailOutline, lockClosedOutline, logoGoogle, logoFacebook, person, lockClosed } from 'ionicons/icons';
-import { ToastController } from '@ionic/angular';
+import { ToastController } from '@ionic/angular/standalone';
 import { AuthService } from '../../services/auth.service';
 
 @Component({

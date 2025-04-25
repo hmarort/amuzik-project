@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
 import { UserRequest } from './requests/users.request';
 import { Router } from '@angular/router';
 
@@ -12,7 +12,6 @@ export interface User {
   apellidos?: string;
   base64?: string;
   friends?: User[];
-  
 }
 
 @Injectable({
@@ -22,17 +21,21 @@ export class AuthService {
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
   private tokenKey = 'auth_token';
-
+  private userDataKey = 'userData';
+  private rememberMeKey = 'rememberMe';
+  
   constructor(
     private userRequest: UserRequest,
     private router: Router
   ) {
     this.loadUserFromStorage();
   }
-
-  // Cargar usuario desde localStorage o sessionStorage
+  
+  /**
+   * Cargar usuario desde localStorage o sessionStorage
+   */
   private loadUserFromStorage(): void {
-    const userData = localStorage.getItem('userData') || sessionStorage.getItem('userData');
+    const userData = this.getStoredItem(this.userDataKey);
     if (userData) {
       try {
         const user = JSON.parse(userData);
@@ -44,76 +47,173 @@ export class AuthService {
     }
   }
   
-  // Obtener usuario actual
+  /**
+   * Determina si se debe usar localStorage o sessionStorage
+   * @returns true si se debe usar localStorage, false para sessionStorage
+   */
+  private useLocalStorage(): boolean {
+    return localStorage.getItem(this.rememberMeKey) === 'true';
+  }
+  
+  /**
+   * Obtiene un item del almacenamiento apropiado
+   * @param key La clave del item
+   * @returns El valor almacenado o null
+   */
+  private getStoredItem(key: string): string | null {
+    return localStorage.getItem(key) || sessionStorage.getItem(key);
+  }
+  
+  /**
+   * Almacena un item en el storage apropiado (local o session)
+   * @param key La clave del item
+   * @param value El valor a almacenar
+   */
+  private storeItem(key: string, value: string): void {
+    if (this.useLocalStorage()) {
+      localStorage.setItem(key, value);
+    } else {
+      sessionStorage.setItem(key, value);
+    }
+  }
+  
+  /**
+   * Obtener usuario actual
+   * @returns El usuario autenticado o null
+   */
   public getCurrentUser(): User | null {
     return this.currentUserSubject.value;
   }
   
-  // Obtener token
+  /**
+   * Obtener token de autenticación
+   * @returns El token almacenado o null
+   */
   public getToken(): string | null {
-    return localStorage.getItem(this.tokenKey) || sessionStorage.getItem(this.tokenKey);
+    return this.getStoredItem(this.tokenKey);
   }
-
-  // Método para iniciar sesión
+  
+  /**
+   * Método para iniciar sesión
+   * @param username Nombre de usuario
+   * @param password Contraseña
+   * @returns Observable con la respuesta
+   */
   login(username: string, password: string): Observable<any> {
     return this.userRequest.login(username, password).pipe(
       tap(response => {
-        const userData = response.message;
-        this.currentUserSubject.next(userData);
-        
-        // Guardar en localStorage o sessionStorage según la opción "rememberMe"
-        if (localStorage.getItem('rememberMe') === 'true') {
-          localStorage.setItem('userData', JSON.stringify(userData));
-        } else {
-          sessionStorage.setItem('userData', JSON.stringify(userData));
-        }
-        
-        if (response.token) {
-          if (localStorage.getItem('rememberMe') === 'true') {
-            localStorage.setItem(this.tokenKey, response.token);
-          } else {
-            sessionStorage.setItem(this.tokenKey, response.token);
+        if (response && response.message) {
+          const userData = response.message;
+          this.currentUserSubject.next(userData);
+          
+          // Guardar en el almacenamiento apropiado
+          this.storeItem(this.userDataKey, JSON.stringify(userData));
+          
+          // Si hay un token en la respuesta, guardarlo también
+          if (response.token) {
+            this.storeItem(this.tokenKey, response.token);
           }
         }
+      }),
+      catchError(error => {
+        console.error('Error during login:', error);
+        return throwError(() => error);
       })
     );
   }
-
-  // Método para registrarse
+  
+  /**
+   * Método para registrarse
+   * @param userData Datos del formulario de registro
+   * @returns Observable con la respuesta
+   */
   register(userData: FormData): Observable<any> {
-    return this.userRequest.register(userData);
+    return this.userRequest.register(userData).pipe(
+      catchError(error => {
+        console.error('Error during registration:', error);
+        return throwError(() => error);
+      })
+    );
   }
-
-  // Método para cerrar sesión
+  
+  /**
+   * Método para cerrar sesión
+   */
   logout(): void {
     // Limpiar datos almacenados
-    localStorage.removeItem('userData');
-    sessionStorage.removeItem('userData');
+    localStorage.removeItem(this.userDataKey);
+    sessionStorage.removeItem(this.userDataKey);
     localStorage.removeItem(this.tokenKey);
     sessionStorage.removeItem(this.tokenKey);
+    
+    // Resetear el estado
     this.currentUserSubject.next(null);
+    
+    // Redirigir al login
     this.router.navigate(['/login']);
   }
-
-  // Verificar si el usuario está autenticado
+  
+  /**
+   * Verificar si el usuario está autenticado
+   * @returns true si hay un usuario autenticado
+   */
   isAuthenticated(): boolean {
     return !!this.currentUserSubject.value;
   }
-
-  // Actualizar datos del usuario
+  
+  /**
+   * Actualizar datos del usuario
+   * @param userData Datos del formulario de actualización
+   * @returns Observable con la respuesta
+   */
   updateUserData(userData: FormData): Observable<any> {
     return this.userRequest.updateUserData(userData).pipe(
       tap(response => {
-        // Actualizar el usuario en el estado y en el almacenamiento
-        console.log('User data updated:', response);
-        const updatedUser = { ...this.currentUserSubject.value, ...response.user };
-        this.currentUserSubject.next(updatedUser);
-        
-        if (localStorage.getItem('userData')) {
-          localStorage.setItem('userData', JSON.stringify(updatedUser));
-        } else {
-          sessionStorage.setItem('userData', JSON.stringify(updatedUser));
+        if (response && response.user) {
+          // Actualizar el usuario en el estado y en el almacenamiento
+          const updatedUser = { ...this.currentUserSubject.value, ...response.user };
+          this.currentUserSubject.next(updatedUser);
+          
+          // Guardar en el almacenamiento apropiado
+          if (this.getStoredItem(this.userDataKey)) {
+            this.storeItem(this.userDataKey, JSON.stringify(updatedUser));
+          }
         }
+      }),
+      catchError(error => {
+        console.error('Error updating user data:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+  
+  /**
+   * Refrescar los datos del usuario actual siempre desde la base de datos
+   * @returns Observable con la respuesta
+   */
+  refreshUserData(): Observable<any> {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser || !currentUser.id) {
+      return throwError(() => new Error('No hay usuario actual o el ID no está disponible'));
+    }
+    
+    return this.userRequest.getUserById(currentUser.id).pipe(
+      tap(response => {
+        if (response && response.message) {
+          // Usar siempre los datos frescos del servidor, incluyendo la lista de amigos
+          const refreshedUser = response.message;
+          
+          // Actualizar el estado y el almacenamiento
+          this.currentUserSubject.next(refreshedUser);
+          
+          if (this.getStoredItem(this.userDataKey)) {
+            this.storeItem(this.userDataKey, JSON.stringify(refreshedUser));
+          }
+        }
+      }),
+      catchError(error => {
+        console.error('Error refreshing user data:', error);
+        return throwError(() => error);
       })
     );
   }

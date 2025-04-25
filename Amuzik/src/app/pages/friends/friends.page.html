@@ -2,54 +2,87 @@
   <ion-header [translucent]="true">
     <ion-toolbar>
       <ion-buttons slot="start">
-        <ion-menu-button></ion-menu-button>
+        <ion-menu-toggle menu="main-menu" autoHide="false">
+          <div class="chip-style">
+            <ion-avatar>
+              <img src="data:image/jpeg;base64,{{currentUser?.base64}}" alt="User Avatar">
+            </ion-avatar>
+          </div>
+        </ion-menu-toggle>
       </ion-buttons>
       <ion-title>Amigos</ion-title>
     </ion-toolbar>
   </ion-header>
+  
   <ion-content [fullscreen]="true">
     <ion-header collapse="condense">
       <ion-toolbar>
         <ion-title size="large">Amigos</ion-title>
       </ion-toolbar>
     </ion-header>
+    
+    <!-- Formulario de búsqueda de amigos -->
     <div class="add-friend-form" *ngIf="showAddFriendForm">
       <ion-card>
         <ion-card-header>
-          <ion-card-title>Añadir nuevo amigo</ion-card-title>
+          <ion-card-title>Buscar y añadir amigos</ion-card-title>
         </ion-card-header>
         <ion-card-content>
-          <ion-item>
-            <ion-label position="floating">Nombre de usuario</ion-label>
-            <ion-input [(ngModel)]="newFriend.username" placeholder="Introduce el nombre de usuario"></ion-input>
-          </ion-item>
-          <ion-item>
-            <ion-label position="floating">Avatar URL (opcional)</ion-label>
-            <ion-input [(ngModel)]="newFriend.base64" placeholder="URL de la imagen"></ion-input>
-          </ion-item>
-          <div class="avatar-preview" *ngIf="newFriend.base64">
-            <ion-avatar>
-              <img [src]="newFriend.base64" (error)="handleImageError()">
-            </ion-avatar>
+          <div class="search-container">
+            <ion-item>
+              <ion-label position="floating">Nombre de usuario</ion-label>
+              <ion-input [(ngModel)]="searchUsername" placeholder="Busca a tus amigos por nombre de usuario"></ion-input>
+            </ion-item>
+            <div class="button-group">
+              <ion-button fill="outline" (click)="cancelAddFriend()">Cancelar</ion-button>
+              <ion-button (click)="searchUser()" [disabled]="!searchUsername">Buscar</ion-button>
+            </div>
           </div>
-          <div class="button-group">
-            <ion-button fill="outline" (click)="cancelAddFriend()">Cancelar</ion-button>
-            <ion-button (click)="addFriend()" [disabled]="!newFriend.username">Añadir</ion-button>
+          
+          <!-- Resultados de búsqueda -->
+          <div class="search-results" *ngIf="isSearching">
+            <div class="spinner-container">
+              <ion-spinner name="circular"></ion-spinner>
+              <p>Buscando usuario...</p>
+            </div>
+          </div>
+          
+          <div class="search-results" *ngIf="searchResults.length > 0">
+            <h4>Resultados de búsqueda</h4>
+            <ion-list>
+              <ion-item *ngFor="let user of searchResults" class="search-result-item">
+                <ion-avatar slot="start">
+                  <img src="data:image/jpeg;base64,{{user?.base64}}" alt="User Avatar" />
+                </ion-avatar>
+                <ion-label>
+                  <h2>{{ user.username }}</h2>
+                  <p *ngIf="user.nombre || user.apellidos">
+                    {{ user.nombre }} {{ user.apellidos }}
+                  </p>
+                </ion-label>
+                <ion-button slot="end" (click)="addFriend(user)">
+                  <ion-icon name="add-outline" slot="icon-only"></ion-icon>
+                </ion-button>
+              </ion-item>
+            </ion-list>
           </div>
         </ion-card-content>
       </ion-card>
     </div>
+    
+    <!-- Lista de amigos -->
     <div class="friends-container" *ngIf="!showAddFriendForm">
       <div class="empty-state" *ngIf="friends.length === 0">
         <ion-icon name="people-outline"></ion-icon>
         <h3>No tienes amigos en tu lista</h3>
         <p>Pulsa en el botón + para añadir amigos</p>
       </div>
+      
       <ion-list *ngIf="friends.length > 0" class="friend-list">
         <ion-item-sliding *ngFor="let friend of friends">
           <ion-item (click)="openChat(friend.id)" class="friend-item">
             <ion-avatar slot="start">
-              <img [src]="friend.base64" />
+              <img src="data:image/jpeg;base64,{{friend?.base64}}" alt="User Avatar" />
             </ion-avatar>
             <ion-label>
               <h2>{{ friend.username }}</h2>
@@ -67,6 +100,8 @@
         </ion-item-sliding>
       </ion-list>
     </div>
+    
+    <!-- Botón flotante para añadir amigos -->
     <ion-fab vertical="bottom" horizontal="end" slot="fixed">
       <ion-fab-button (click)="showAddFriendForm = true">
         <ion-icon name="person-add"></ion-icon>
