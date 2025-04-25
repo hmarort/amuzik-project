@@ -10,8 +10,9 @@ export interface User {
   email?: string;
   nombre?: string;
   apellidos?: string;
-  base64?: string; // Para la imagen de perfil
-  // Agregar otros campos según la respuesta de tu API
+  base64?: string;
+  friends?: User[];
+  
 }
 
 @Injectable({

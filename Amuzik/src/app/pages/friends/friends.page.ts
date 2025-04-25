@@ -29,12 +29,7 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { menuOutline, personAdd, peopleOutline, trashOutline, chatbubbleOutline } from 'ionicons/icons';
-
-interface Friend {
-  id: number;
-  name: string;
-  avatar: string;
-}
+import { AuthService, User } from 'src/app/services/auth.service';
 
 @Component({
   selector: 'app-friends',
@@ -70,38 +65,19 @@ interface Friend {
 })
 export class FriendsPage implements OnInit {
   showAddFriendForm = false;
-  friends: Friend[] = [
-    {
-      id: 1,
-      name: 'Juan Pérez',
-      avatar: 'https://randomuser.me/api/portraits/men/1.jpg',
-    },
-    {
-      id: 2,
-      name: 'Ana López',
-      avatar: 'https://randomuser.me/api/portraits/women/1.jpg',
-    },
-    {
-      id: 3,
-      name: 'Carlos García',
-      avatar: 'https://randomuser.me/api/portraits/men/2.jpg',
-    },
-    {
-      id: 4,
-      name: 'Laura Martín',
-      avatar: 'https://randomuser.me/api/portraits/women/2.jpg',
-    },
-  ];
+  friends: User[] = [];
+  currentUser: User | null = null;
 
-  newFriend: Friend = {
-    id: 0,
-    name: '',
-    avatar: ''
+  newFriend: User = {
+    id: '',
+    username: '',
+    base64: ''
   };
 
   constructor(
     private router: Router,
-    private alertController: AlertController
+    private alertController: AlertController,
+    private authService: AuthService
   ) {
     addIcons({
       menuOutline,
@@ -113,17 +89,18 @@ export class FriendsPage implements OnInit {
   }
 
   ngOnInit() {
-    const savedFriends = localStorage.getItem('friendsList');
-    if (savedFriends) {
-      try {
-        this.friends = JSON.parse(savedFriends);
-      } catch (error) {
-        console.error('Error al cargar amigos:', error);
+    // Suscribirse al usuario actual para obtener la lista de amigos
+    this.authService.currentUser$.subscribe((user: User | null) => {
+      this.currentUser = user;
+      if (user && user.friends) {
+        this.friends = user.friends;
+      } else {
+        this.friends = [];
       }
-    }
+    });
   }
 
-  openChat(friendId: number) {
+  openChat(friendId: string) {
     this.router.navigate(['/chat', friendId]);
   }
 
@@ -134,39 +111,55 @@ export class FriendsPage implements OnInit {
 
   resetNewFriend() {
     this.newFriend = {
-      id: 0,
-      name: '',
-      avatar: ''
+      id: '',
+      username: '',
+      base64: ''
     };
   }
 
   handleImageError() {
-    this.newFriend.avatar = 'https://randomuser.me/api/portraits/lego/1.jpg';
+    this.newFriend.base64 = 'https://randomuser.me/api/portraits/lego/1.jpg';
   }
 
   addFriend() {
-    if (!this.newFriend.name.trim()) {
-      alert('Por favor, introduce un nombre para el amigo');
+    if (!this.newFriend.username.trim()) {
+      this.presentAlert('Error', 'Por favor, introduce un nombre para el amigo');
       return;
     }
-    const maxId = Math.max(...this.friends.map(f => f.id), 0);
-    this.newFriend.id = maxId + 1;
-    if (!this.newFriend.avatar) {
+
+    // Generar un ID temporal para el nuevo amigo
+    this.newFriend.id = Date.now().toString();
+    
+    // Si no se proporciona una imagen, generar una aleatoria
+    if (!this.newFriend.base64) {
       const gender = Math.random() > 0.5 ? 'men' : 'women';
       const randomNum = Math.floor(Math.random() * 99) + 1;
-      this.newFriend.avatar = `https://randomuser.me/api/portraits/${gender}/${randomNum}.jpg`;
+      this.newFriend.base64 = `https://randomuser.me/api/portraits/${gender}/${randomNum}.jpg`;
     }
-    this.friends.push({...this.newFriend});
-    localStorage.setItem('friendsList', JSON.stringify(this.friends));
-    alert(`${this.newFriend.name} ha sido añadido a tu lista de amigos`);
-    this.showAddFriendForm = false;
-    this.resetNewFriend();
+
+    // Agregar el amigo a la lista actual del usuario
+    if (this.currentUser) {
+      if (!this.currentUser.friends) {
+        this.currentUser.friends = [];
+      }
+      
+      this.currentUser.friends.push({...this.newFriend});
+      
+      // Actualizar el usuario en el servicio
+      this.updateUserData();
+      
+      this.presentAlert('Éxito', `${this.newFriend.username} ha sido añadido a tu lista de amigos`);
+      this.showAddFriendForm = false;
+      this.resetNewFriend();
+    } else {
+      this.presentAlert('Error', 'No se pudo agregar el amigo. No se ha iniciado sesión.');
+    }
   }
 
-  async removeFriend(friend: Friend) {
+  async removeFriend(friend: User) {
     const alert = await this.alertController.create({
       header: 'Eliminar amigo',
-      message: `¿Estás seguro de que quieres eliminar a ${friend.name} de tu lista de amigos?`,
+      message: `¿Estás seguro de que quieres eliminar a ${friend.username} de tu lista de amigos?`,
       buttons: [
         {
           text: 'Cancelar',
@@ -175,11 +168,43 @@ export class FriendsPage implements OnInit {
         {
           text: 'Eliminar',
           handler: () => {
-            this.friends = this.friends.filter(f => f.id !== friend.id);
-            localStorage.setItem('friendsList', JSON.stringify(this.friends));
+            if (this.currentUser && this.currentUser.friends) {
+              this.currentUser.friends = this.currentUser.friends.filter((f: { id: any; }) => f.id !== friend.id);
+              this.updateUserData();
+            }
           }
         }
       ]
+    });
+
+    await alert.present();
+  }
+
+  private updateUserData() {
+    // Crear FormData para actualizar el usuario
+    const formData = new FormData();
+    if (this.currentUser) {
+      formData.append('id', this.currentUser.id);
+      formData.append('friends', JSON.stringify(this.currentUser.friends));
+      
+      // Actualizar el usuario en el servicio
+      this.authService.updateUserData(formData).subscribe({
+        next: (response: any) => {
+          console.log('Amigos actualizados correctamente');
+        },
+        error: (error: any) => {
+          console.error('Error al actualizar amigos:', error);
+          this.presentAlert('Error', 'No se pudieron actualizar los amigos. Por favor, inténtalo de nuevo.');
+        }
+      });
+    }
+  }
+
+  async presentAlert(header: string, message: string) {
+    const alert = await this.alertController.create({
+      header,
+      message,
+      buttons: ['OK']
     });
 
     await alert.present();

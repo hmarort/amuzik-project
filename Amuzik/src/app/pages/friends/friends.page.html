@@ -4,17 +4,15 @@
       <ion-buttons slot="start">
         <ion-menu-button></ion-menu-button>
       </ion-buttons>
-      <ion-title>Friends</ion-title>
+      <ion-title>Amigos</ion-title>
     </ion-toolbar>
   </ion-header>
-
   <ion-content [fullscreen]="true">
     <ion-header collapse="condense">
       <ion-toolbar>
-        <ion-title size="large">Friends</ion-title>
+        <ion-title size="large">Amigos</ion-title>
       </ion-toolbar>
     </ion-header>
-
     <div class="add-friend-form" *ngIf="showAddFriendForm">
       <ion-card>
         <ion-card-header>
@@ -22,45 +20,45 @@
         </ion-card-header>
         <ion-card-content>
           <ion-item>
-            <ion-label position="floating">Nombre</ion-label>
-            <ion-input [(ngModel)]="newFriend.name" placeholder="Introduce el nombre"></ion-input>
+            <ion-label position="floating">Nombre de usuario</ion-label>
+            <ion-input [(ngModel)]="newFriend.username" placeholder="Introduce el nombre de usuario"></ion-input>
           </ion-item>
           <ion-item>
             <ion-label position="floating">Avatar URL (opcional)</ion-label>
-            <ion-input [(ngModel)]="newFriend.avatar" placeholder="URL de la imagen"></ion-input>
+            <ion-input [(ngModel)]="newFriend.base64" placeholder="URL de la imagen"></ion-input>
           </ion-item>
-          <div class="avatar-preview" *ngIf="newFriend.avatar">
+          <div class="avatar-preview" *ngIf="newFriend.base64">
             <ion-avatar>
-              <img [src]="newFriend.avatar" (error)="handleImageError()">
+              <img [src]="newFriend.base64" (error)="handleImageError()">
             </ion-avatar>
           </div>
           <div class="button-group">
             <ion-button fill="outline" (click)="cancelAddFriend()">Cancelar</ion-button>
-            <ion-button (click)="addFriend()" [disabled]="!newFriend.name">Añadir</ion-button>
+            <ion-button (click)="addFriend()" [disabled]="!newFriend.username">Añadir</ion-button>
           </div>
         </ion-card-content>
       </ion-card>
     </div>
-
-    <div class="friends-container" *ngIf="!showAddFriendForm">      
+    <div class="friends-container" *ngIf="!showAddFriendForm">
       <div class="empty-state" *ngIf="friends.length === 0">
         <ion-icon name="people-outline"></ion-icon>
         <h3>No tienes amigos en tu lista</h3>
         <p>Pulsa en el botón + para añadir amigos</p>
       </div>
-      
       <ion-list *ngIf="friends.length > 0" class="friend-list">
         <ion-item-sliding *ngFor="let friend of friends">
           <ion-item (click)="openChat(friend.id)" class="friend-item">
             <ion-avatar slot="start">
-              <img [src]="friend.avatar" />
+              <img [src]="friend.base64" />
             </ion-avatar>
             <ion-label>
-              <h2>{{ friend.name }}</h2>
+              <h2>{{ friend.username }}</h2>
+              <p *ngIf="friend.nombre || friend.apellidos">
+                {{ friend.nombre }} {{ friend.apellidos }}
+              </p>
             </ion-label>
             <ion-icon name="chatbubble-outline" slot="end"></ion-icon>
           </ion-item>
-          
           <ion-item-options side="end">
             <ion-item-option color="danger" (click)="removeFriend(friend)">
               <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
@@ -69,7 +67,6 @@
         </ion-item-sliding>
       </ion-list>
     </div>
-
     <ion-fab vertical="bottom" horizontal="end" slot="fixed">
       <ion-fab-button (click)="showAddFriendForm = true">
         <ion-icon name="person-add"></ion-icon>
