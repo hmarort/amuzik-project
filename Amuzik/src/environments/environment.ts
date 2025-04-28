@@ -5,6 +5,7 @@
 export const environment = {
   production: false,
   apiUrl:'https://apirest.saicasl.eu/api3/api/public/',
+  socketUrl: 'localhost:3000',
 };
 
 /*
