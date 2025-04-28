@@ -33,6 +33,7 @@
     "@ionic/angular": "^8.0.0",
     "ionicons": "^7.4.0",
     "rxjs": "~7.8.0",
+    "socket.io-client": "^4.8.1",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"
   },
@@ -54,6 +55,7 @@
     "@tailwindcss/line-clamp": "latest",
     "@tailwindcss/typography": "latest",
     "@types/jasmine": "~5.1.0",
+    "@types/socket.io-client": "^1.4.36",
     "@typescript-eslint/eslint-plugin": "^8.18.0",
     "@typescript-eslint/parser": "^8.18.0",
     "autoprefixer": "^10.4.21",
