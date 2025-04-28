@@ -12,10 +12,13 @@ import {
   IonFooter,
   IonInput,
   IonButton,
-  IonIcon
+  IonIcon,
+  IonAvatar,
+  IonSpinner
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { send, arrowBack } from 'ionicons/icons';
+import { AuthService, User } from 'src/app/services/auth.service';
 
 interface Message {
   id: number;
@@ -24,85 +27,42 @@ interface Message {
   time: Date;
 }
 
-interface Friend {
-  id: number;
-  name: string;
-  avatar: string;
-}
-
 @Component({
   selector: 'app-chat',
   templateUrl: './chat.page.html',
   styleUrls: ['./chat.page.scss'],
   standalone: true,
   imports: [
-    CommonModule, 
+    CommonModule,
     FormsModule,
-    IonContent, 
-    IonHeader, 
-    IonTitle, 
-    IonToolbar, 
-    IonButtons, 
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    IonButtons,
     IonBackButton,
     IonFooter,
     IonInput,
     IonButton,
-    IonIcon
-  ]
+    IonIcon,
+    IonSpinner
+]
 })
 export class ChatPage implements OnInit {
   @ViewChild('content')
   content!: IonContent;
   
-  friendId!: number;
-  friend: Friend | null = null;
+  friendId!: string;
+  friend: User | null = null;
+  currentUser: User | null = null;
   newMessage: string = '';
   messages: Message[] = [];
-  friends: Friend[] = [
-    {
-      id: 1,
-      name: 'Juan Pérez',
-      avatar: 'https://randomuser.me/api/portraits/men/1.jpg',
-    },
-    {
-      id: 2,
-      name: 'Ana López',
-      avatar: 'https://randomuser.me/api/portraits/women/1.jpg',
-    },
-    {
-      id: 3,
-      name: 'Carlos García',
-      avatar: 'https://randomuser.me/api/portraits/men/2.jpg',
-    },
-    {
-      id: 4,
-      name: 'Laura Martín',
-      avatar: 'https://randomuser.me/api/portraits/women/2.jpg',
-    },
-  ];
+  isLoading: boolean = false;
   
-  mockMessages: { [key: number]: Message[] } = {
-    1: [
-      { id: 1, text: 'Hola Juan, ¿cómo estás?', isMe: true, time: new Date(Date.now() - 3600000) },
-      { id: 2, text: '¡Hola! Todo bien, ¿y tú?', isMe: false, time: new Date(Date.now() - 3500000) },
-      { id: 3, text: 'Muy bien, gracias. ¿Qué tal el proyecto?', isMe: true, time: new Date(Date.now() - 3400000) }
-    ],
-    2: [
-      { id: 1, text: 'Ana, ¿viste el email que envié?', isMe: true, time: new Date(Date.now() - 86400000) },
-      { id: 2, text: 'Sí, ya lo revisé. Te responderé más tarde', isMe: false, time: new Date(Date.now() - 82800000) }
-    ],
-    3: [
-      { id: 1, text: 'Hola Carlos, necesito los documentos', isMe: true, time: new Date(Date.now() - 172800000) },
-      { id: 2, text: 'Te los envío mañana sin falta', isMe: false, time: new Date(Date.now() - 169200000) }
-    ],
-    4: [
-      { id: 1, text: 'Laura, ¿asistirás a la reunión?', isMe: true, time: new Date(Date.now() - 259200000) },
-      { id: 2, text: 'Sí, allí estaré', isMe: false, time: new Date(Date.now() - 255600000) },
-      { id: 3, text: 'Perfecto, nos vemos entonces', isMe: true, time: new Date(Date.now() - 252000000) }
-    ]
-  };
-
-  constructor(private route: ActivatedRoute) {
+  constructor(
+    private route: ActivatedRoute,
+    private authService: AuthService
+  ) {
     addIcons({
       send,
       arrowBack
@@ -110,8 +70,13 @@ export class ChatPage implements OnInit {
   }
 
   ngOnInit() {
+    // Get the current logged in user
+    this.authService.currentUser$.subscribe((user: User | null) => {
+      this.currentUser = user;
+    });
+
     this.route.params.subscribe(params => {
-      this.friendId = +params['id'];
+      this.friendId = params['id'];
       this.loadFriendData();
       this.loadMessages();
     });
@@ -122,12 +87,28 @@ export class ChatPage implements OnInit {
   }
 
   loadFriendData() {
-    this.friend = this.friends.find(f => f.id === this.friendId) || null;
+    this.isLoading = true;
+    if (this.currentUser && this.currentUser.friends) {
+      this.friend = this.currentUser.friends.find(f => f.id === this.friendId) || null;
+      this.isLoading = false;
+    } else {
+      // Otherwise refresh user data from server
+      this.authService.refreshUserData().subscribe({
+        next: () => {
+          if (this.currentUser && this.currentUser.friends) {
+            this.friend = this.currentUser.friends.find(f => f.id === this.friendId) || null;
+          }
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('Error loading user data:', error);
+          this.isLoading = false;
+        }
+      });
+    }
   }
 
   loadMessages() {
-    this.messages = this.mockMessages[this.friendId] || [];
-    
     const storageKey = `messages_${this.friendId}`;
     const savedMessages = localStorage.getItem(storageKey);
     
@@ -142,7 +123,11 @@ export class ChatPage implements OnInit {
         this.messages = parsedMessages;
       } catch (error) {
         console.error('Error al cargar mensajes:', error);
+        this.messages = [];
       }
+    } else {
+      // No saved messages yet, initialize with empty array
+      this.messages = [];
     }
   }
 
@@ -206,5 +191,11 @@ export class ChatPage implements OnInit {
         this.content.scrollToBottom(300);
       }, 100);
     }
+  }
+
+  // Helper function to get user's avatar
+  getFriendAvatar(): string {
+    if (!this.friend) return '';
+    return this.friend.base64 || 'assets/img/default-avatar.png'; // Fallback to default avatar
   }
 }
