@@ -1,92 +1,86 @@
-.chat-container {
+.loading-container, .error-container {
   display: flex;
   flex-direction: column;
-  padding: 10px;
-  padding-bottom: 60px; /* Espacio adicional para evitar que el teclado oculte mensajes */
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: 20px;
+  text-align: center;
 }
 
-.message-received,
-.message-sent {
+.chat-container {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-chat {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: var(--ion-color-medium);
+  text-align: center;
+  padding: 20px;
+}
+
+.message-sent, .message-received {
   display: flex;
   margin-bottom: 10px;
   max-width: 80%;
+}
+
+.message-sent {
+  align-self: flex-end;
+  justify-content: flex-end;
 }
 
 .message-received {
   align-self: flex-start;
 }
 
-.message-sent {
-  align-self: flex-end;
-}
-
 .message-bubble {
-  padding: 10px 15px;
-  border-radius: 20px;
+  padding: 8px 12px;
+  border-radius: 16px;
   position: relative;
   
   p {
     margin: 0;
-    padding-right: 40px;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
-}
-
-.message-received .message-bubble {
-  background-color: var(--ion-color-secondary);
-  color: #000;
 }
 
 .message-sent .message-bubble {
   background-color: var(--ion-color-primary);
-  color: #fff;
+  color: white;
+  border-bottom-right-radius: 2px;
+}
+
+.message-received .message-bubble {
+  background-color: var(--ion-color-light);
+  color: var(--ion-color-dark);
+  border-bottom-left-radius: 2px;
 }
 
 .message-time {
   font-size: 0.7rem;
   opacity: 0.7;
-  position: absolute;
-  bottom: 7px;
-  right: 10px;
+  display: block;
+  text-align: right;
+  margin-top: 2px;
 }
 
 .message-input-container {
   display: flex;
   align-items: center;
-  padding: 5px 10px;
-  background-color: #fff;
-  color: #000;
-  ion-input {
-    --padding-start: 15px;
-    --padding-end: 15px;
-    --padding-top: 10px;
-    --padding-bottom: 10px;
-    --background: #f1f0f0;
-    border-radius: 20px;
-    margin-right: 10px;
-  }
+  background-color: var(--ion-color-light);
+  border-radius: 24px;
+  padding: 4px 8px;
+  margin: 8px;
   
-  ion-button {
-    --padding-start: 0;
-    --padding-end: 0;
-    height: 40px;
-    width: 40px;
-  }
-}
-
-/* Estilos específicos para iOS */
-:host-context(.ios) ion-footer {
-  position: sticky;
-  bottom: 0;
-}
-
-/* Para ambas plataformas - cuando el teclado está abierto */
-ion-footer {
-  z-index: 11; /* Asegura que el footer esté por encima */
-}
-
-/* Ajuste para pantallas pequeñas */
-@media (max-height: 568px) {
-  .chat-container {
-    padding-bottom: 80px; /* Más espacio para dispositivos pequeños */
+  ion-input {
+    --padding-start: 8px;
+    --padding-end: 8px;
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -19,13 +19,8 @@ import {
 import { addIcons } from 'ionicons';
 import { send, arrowBack } from 'ionicons/icons';
 import { AuthService, User } from 'src/app/services/auth.service';
-
-interface Message {
-  id: number;
-  text: string;
-  isMe: boolean;
-  time: Date;
-}
+import { ChatService, Message } from 'src/app/services/chat.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-chat',
@@ -45,10 +40,11 @@ interface Message {
     IonInput,
     IonButton,
     IonIcon,
+    IonAvatar,
     IonSpinner
-]
+  ]
 })
-export class ChatPage implements OnInit {
+export class ChatPage implements OnInit, OnDestroy {
   @ViewChild('content')
   content!: IonContent;
   
@@ -59,9 +55,12 @@ export class ChatPage implements OnInit {
   messages: Message[] = [];
   isLoading: boolean = false;
   
+  private subscriptions: Subscription[] = [];
+  
   constructor(
     private route: ActivatedRoute,
-    private authService: AuthService
+    private authService: AuthService,
+    private chatService: ChatService
   ) {
     addIcons({
       send,
@@ -71,19 +70,35 @@ export class ChatPage implements OnInit {
 
   ngOnInit() {
     // Get the current logged in user
-    this.authService.currentUser$.subscribe((user: User | null) => {
+    const userSub = this.authService.currentUser$.subscribe((user: User | null) => {
       this.currentUser = user;
+      if (user && this.friendId) {
+        // Conectar al WebSocket cuando tengamos usuario y amigo
+        this.chatService.connect();
+      }
     });
+    this.subscriptions.push(userSub);
 
-    this.route.params.subscribe(params => {
+    const routeSub = this.route.params.subscribe(params => {
       this.friendId = params['id'];
       this.loadFriendData();
       this.loadMessages();
     });
+    this.subscriptions.push(routeSub);
+  }
+
+  ngOnDestroy() {
+    // Limpiar todas las suscripciones
+    this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 
   ionViewDidEnter() {
     this.scrollToBottom();
+  }
+
+  ionViewWillLeave() {
+    // Opcional: desconectar WebSocket cuando salimos de la página
+    // this.chatService.disconnect();
   }
 
   loadFriendData() {
@@ -109,80 +124,29 @@ export class ChatPage implements OnInit {
   }
 
   loadMessages() {
-    const storageKey = `messages_${this.friendId}`;
-    const savedMessages = localStorage.getItem(storageKey);
+    this.isLoading = true;
     
-    if (savedMessages) {
-      try {
-        const parsedMessages = JSON.parse(savedMessages);
-        
-        parsedMessages.forEach((msg: any) => {
-          msg.time = new Date(msg.time);
-        });
-        
-        this.messages = parsedMessages;
-      } catch (error) {
-        console.error('Error al cargar mensajes:', error);
-        this.messages = [];
+    const messagesSub = this.chatService.loadConversation(this.friendId).subscribe({
+      next: (messages) => {
+        this.messages = messages;
+        this.isLoading = false;
+        this.scrollToBottom();
+      },
+      error: (error) => {
+        console.error('Error loading messages:', error);
+        this.isLoading = false;
       }
-    } else {
-      // No saved messages yet, initialize with empty array
-      this.messages = [];
-    }
+    });
+    
+    this.subscriptions.push(messagesSub);
   }
 
   sendMessage() {
     if (this.newMessage.trim() === '') return;
     
-    const newMsg: Message = {
-      id: this.messages.length + 1,
-      text: this.newMessage.trim(),
-      isMe: true,
-      time: new Date()
-    };
-    
-    this.messages.push(newMsg);
-    
-    this.saveMessages();
-    
+    this.chatService.sendMessage(this.friendId, this.newMessage.trim());
     this.newMessage = '';
-    
     this.scrollToBottom();
-    
-    this.simulateResponse();
-  }
-
-  simulateResponse() {
-    setTimeout(() => {
-      const responses = [
-        'Ok, entendido',
-        '¡Claro!',
-        'Me parece bien',
-        'Estoy de acuerdo',
-        '¿En serio?',
-        'Interesante, cuéntame más'
-      ];
-      
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      
-      const responseMsg: Message = {
-        id: this.messages.length + 1,
-        text: randomResponse,
-        isMe: false,
-        time: new Date()
-      };
-      
-      this.messages.push(responseMsg);
-      
-      this.saveMessages();
-      
-      this.scrollToBottom();
-    }, 1000);
-  }
-
-  saveMessages() {
-    const storageKey = `messages_${this.friendId}`;
-    localStorage.setItem(storageKey, JSON.stringify(this.messages));
   }
 
   scrollToBottom() {
@@ -191,6 +155,11 @@ export class ChatPage implements OnInit {
         this.content.scrollToBottom(300);
       }, 100);
     }
+  }
+
+  // Helper method to determine if a message was sent by the current user
+  isMyMessage(message: Message): boolean {
+    return message.senderId === this.currentUser?.id;
   }
 
   // Helper function to get user's avatar
