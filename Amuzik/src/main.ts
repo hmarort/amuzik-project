@@ -47,6 +47,7 @@ import {
 import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { importProvidersFrom } from '@angular/core';
 import { AuthInterceptor} from './app/services/interceptors/auth.interceptor'
+import { environment } from './environments/environment';
 
 addIcons({
   'lock-closed': lockClosed,
@@ -65,15 +66,7 @@ bootstrapApplication(AppComponent, {
     provideRouter(routes, withPreloading(PreloadAllModules)),
     importProvidersFrom(HttpClientModule),
     provideFirebaseApp(() =>
-      initializeApp({
-        projectId: 'amuzik-38d5c',
-        appId: '1:142614205335:web:919e66396d143fc658ead2',
-        storageBucket: 'amuzik-38d5c.firebasestorage.app',
-        apiKey: 'AIzaSyAxqDUI3mkgl9lRctgmqmIfPMv-HRMQ0BE',
-        authDomain: 'amuzik-38d5c.firebaseapp.com',
-        messagingSenderId: '142614205335',
-        measurementId: 'G-YGSB2ZZGX4',
-      })
+      initializeApp(environment.firebaseConfig)
     ),
     provideAuth(() => getAuth()),
     provideAnalytics(() => getAnalytics()),

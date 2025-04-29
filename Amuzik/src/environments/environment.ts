@@ -5,6 +5,23 @@
 export const environment = {
   production: false,
   apiUrl:'https://apirest.saicasl.eu/api3/api/public/',
+  firebaseConfig : {
+
+    apiKey: "AIzaSyAxqDUI3mkgl9lRctgmqmIfPMv-HRMQ0BE",
+  
+    authDomain: "amuzik-38d5c.firebaseapp.com",
+  
+    projectId: "amuzik-38d5c",
+  
+    storageBucket: "amuzik-38d5c.firebasestorage.app",
+  
+    messagingSenderId: "142614205335",
+  
+    appId: "1:142614205335:web:919e66396d143fc658ead2",
+  
+    measurementId: "G-YGSB2ZZGX4"
+  
+  }
 };
 
 /*
