@@ -39,7 +39,7 @@ export class ChatService {
 
     try {
       // Reemplaza esta URL con la de tu servidor WebSocket
-      this.socket = new WebSocket(`ws://tu-servidor-websocket.com?userId=${userId}`);
+      this.socket = new WebSocket(`http://localhost:8080?userId=${userId}`);
       
       this.socket.onopen = () => {
         console.log('WebSocket conectado');
