@@ -36,12 +36,11 @@ import { AuthService } from '../../services/auth.service';
     IonContent,
     IonIcon,
     IonSpinner,
-    IonButton,
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    HttpClientModule,
-  ],
+    HttpClientModule
+],
 })
 export class SigninPage implements OnInit {
   signinForm: FormGroup;

@@ -19,12 +19,11 @@ import { AuthService } from '../../services/auth.service';
     IonIcon,
     IonContent,
     IonSpinner,
-    IonButton,
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
     HttpClientModule
-  ]
+]
 })
 export class LoginPage implements OnInit {
   loginForm: FormGroup;
