@@ -86,7 +86,7 @@
           </div>
         </div>
 
-        <div class="mt-6 grid grid-cols-2 gap-3">
+        <div class="mt-6 grid grid-cols-1 gap-3">
           <button 
             (click)="loginWithGoogle()" 
             [disabled]="isGoogleSubmitting"
@@ -96,17 +96,13 @@
             <ion-icon *ngIf="!isGoogleSubmitting" name="logo-google" class="text-xl text-red-500 mr-2"></ion-icon>
             <span class="text-sm font-medium text-ionic-dark">Google</span>
           </button>
-          <a href="#" class="flex justify-center items-center py-2 px-4 border border-ionic-medium rounded-lg shadow-sm bg-ionic-light hover:bg-ionic-medium">
-            <ion-icon name="logo-facebook" class="text-xl text-ionic-primary mr-2"></ion-icon>
-            <span class="text-sm font-medium text-ionic-dark">Facebook</span>
-          </a>
         </div>
       </div>
 
       <div class="mt-6 text-center">
         <button 
           (click)="navigateToRegister()" 
-          class="w-full border-3 border-ionic-primary text-ionic-primary hover:text-white hover:bg-ionic-primary py-3 px-4 rounded-lg font-medium transition duration-150 ease-in-out shadow-md hover:shadow-lg focus:ring-4 focus:ring-ionic-primary/50 focus:outline-none"
+          class="w-full border-3 border-ionic-primary text-ionic-primary hover:text-white hover:bg-ionic-medium py-3 px-4 rounded-lg font-medium transition duration-150 ease-in-out shadow-md hover:shadow-lg focus:ring-4 focus:ring-ionic-primary/50 focus:outline-none"
         >
           <span class="text-lg">Regístrate</span>
         </button>
