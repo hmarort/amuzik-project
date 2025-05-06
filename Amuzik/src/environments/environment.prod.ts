@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl:'https://apirest.saicasl.eu/api3/api/public/',
+  apiUrl:'https://amuzikapi-3ff2.onrender.com/',
 };
