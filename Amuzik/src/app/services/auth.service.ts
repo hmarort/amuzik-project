@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, throwError } from 'rxjs';
-import { tap, catchError } from 'rxjs/operators';
+import { BehaviorSubject, Observable, throwError, from, of } from 'rxjs';
+import { tap, catchError, switchMap } from 'rxjs/operators';
 import { UserRequest } from './requests/users.request';
 import { Router } from '@angular/router';
+import { Auth, GoogleAuthProvider, signInWithPopup, UserCredential } from '@angular/fire/auth';
 
 export interface User {
   id: string;
@@ -12,6 +13,7 @@ export interface User {
   apellidos?: string;
   base64?: string;
   friends?: User[];
+  provider?: string; // Para indicar el proveedor de autenticación (normal, google, etc.)
 }
 
 @Injectable({
@@ -26,7 +28,8 @@ export class AuthService {
   
   constructor(
     private userRequest: UserRequest,
-    private router: Router
+    private router: Router,
+    private auth: Auth
   ) {
     this.loadUserFromStorage();
   }
@@ -104,6 +107,8 @@ export class AuthService {
       tap(response => {
         if (response && response.message) {
           const userData = response.message;
+          // Añadir el proveedor para diferenciarlo
+          userData.provider = 'normal';
           this.currentUserSubject.next(userData);
           
           // Guardar en el almacenamiento apropiado
@@ -146,6 +151,11 @@ export class AuthService {
     localStorage.removeItem(this.tokenKey);
     sessionStorage.removeItem(this.tokenKey);
     
+    // Desconectar de Firebase si está autenticado
+    if (this.auth.currentUser) {
+      this.auth.signOut();
+    }
+    
     // Resetear el estado
     this.currentUserSubject.next(null);
     
@@ -170,8 +180,12 @@ export class AuthService {
     return this.userRequest.updateUserData(userData).pipe(
       tap(response => {
         if (response && response.user) {
+          // Mantener el proveedor actual
+          const currentUser = this.currentUserSubject.value;
+          const provider = currentUser?.provider || 'normal';
+          
           // Actualizar el usuario en el estado y en el almacenamiento
-          const updatedUser = { ...this.currentUserSubject.value, ...response.user };
+          const updatedUser = { ...currentUser, ...response.user, provider };
           this.currentUserSubject.next(updatedUser);
           
           // Guardar en el almacenamiento apropiado
@@ -200,8 +214,11 @@ export class AuthService {
     return this.userRequest.getUserById(currentUser.id).pipe(
       tap(response => {
         if (response && response.message) {
+          // Mantener el proveedor actual
+          const provider = currentUser.provider || 'normal';
+          
           // Usar siempre los datos frescos del servidor, incluyendo la lista de amigos
-          const refreshedUser = response.message;
+          const refreshedUser = { ...response.message, provider };
           
           // Actualizar el estado y el almacenamiento
           this.currentUserSubject.next(refreshedUser);
@@ -213,6 +230,54 @@ export class AuthService {
       }),
       catchError(error => {
         console.error('Error refreshing user data:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+  
+  /**
+   * Método para iniciar sesión con Google
+   */
+  loginWithGoogle(): Observable<any> {
+    const provider = new GoogleAuthProvider();
+    
+    return from(signInWithPopup(this.auth, provider)).pipe(
+      switchMap((result: UserCredential) => {
+        const user = result.user;
+        
+        if (!user.email) {
+          return throwError(() => new Error('No se pudo obtener el email del usuario de Google'));
+        }
+        
+        // Verificar si el usuario ya existe en nuestra base de datos
+        return this.userRequest.findOrCreateGoogleUser({
+          email: user.email,
+          nombre: user.displayName?.split(' ')[0] || '',
+          apellidos: user.displayName?.split(' ').slice(1).join(' ') || '',
+          username: user.email.split('@')[0],
+          google_id: user.uid,
+          photo_url: user.photoURL || '',
+        }).pipe(
+          tap(response => {
+            if (response && response.message) {
+              const userData = response.message;
+              // Añadir el proveedor para diferenciarlo
+              userData.provider = 'google';
+              this.currentUserSubject.next(userData);
+              
+              // Guardar en el almacenamiento apropiado
+              this.storeItem(this.userDataKey, JSON.stringify(userData));
+              
+              // Si hay un token en la respuesta, guardarlo también
+              if (response.token) {
+                this.storeItem(this.tokenKey, response.token);
+              }
+            }
+          })
+        );
+      }),
+      catchError(error => {
+        console.error('Error during Google sign-in:', error);
         return throwError(() => error);
       })
     );

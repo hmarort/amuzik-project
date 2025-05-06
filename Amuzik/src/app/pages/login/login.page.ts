@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { IonContent, IonHeader, IonTitle, IonToolbar, IonIcon, IonSpinner } from '@ionic/angular/standalone';
+import { IonContent, IonHeader, IonTitle, IonToolbar, IonIcon, IonSpinner, IonButton } from '@ionic/angular/standalone';
 import { HttpClientModule } from '@angular/common/http';
 import { addIcons } from 'ionicons';
 import { eyeOutline, eyeOffOutline, mailOutline, lockClosedOutline, logoGoogle, logoFacebook, person, lockClosed } from 'ionicons/icons';
@@ -19,6 +19,7 @@ import { AuthService } from '../../services/auth.service';
     IonIcon,
     IonContent,
     IonSpinner,
+    IonButton,
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
@@ -28,9 +29,10 @@ import { AuthService } from '../../services/auth.service';
 export class LoginPage implements OnInit {
   loginForm: FormGroup;
   isSubmitting = false;
+  isGoogleSubmitting = false;
   showPassword = false;
   returnUrl: string;
-  
+
   constructor(
     private formBuilder: FormBuilder,
     private router: Router,
@@ -68,12 +70,11 @@ export class LoginPage implements OnInit {
       });
       return;
     }
-    
+
     this.isSubmitting = true;
-    
+
     try {
       const { username, password } = this.loginForm.value;
-      
       this.authService.login(username, password).subscribe({
         next: () => {
           // Redirigir a la página de destino después del login exitoso
@@ -97,7 +98,6 @@ export class LoginPage implements OnInit {
     } catch (error) {
       console.error('Error inesperado:', error);
       this.isSubmitting = false;
-      
       const toast = await this.toastController.create({
         message: 'Error al procesar la solicitud. Inténtelo de nuevo.',
         duration: 3000,
@@ -107,11 +107,49 @@ export class LoginPage implements OnInit {
       toast.present();
     }
   }
-  
+
   togglePasswordVisibility() {
     this.showPassword = !this.showPassword;
   }
+
   navigateToRegister() {
     this.router.navigate(['/signin']);
+  }
+  
+  async loginWithGoogle() {
+    this.isGoogleSubmitting = true;
+    
+    try {
+      this.authService.loginWithGoogle().subscribe({
+        next: () => {
+          // Redirigir a la página de destino después del login exitoso con Google
+          this.router.navigate([this.returnUrl]);
+        },
+        error: async (error) => {
+          console.error('Error al iniciar sesión con Google:', error);
+          const toast = await this.toastController.create({
+            message: error.message || 'Error al iniciar sesión con Google',
+            duration: 3000,
+            position: 'top',
+            color: 'danger'
+          });
+          toast.present();
+          this.isGoogleSubmitting = false;
+        },
+        complete: () => {
+          this.isGoogleSubmitting = false;
+        }
+      });
+    } catch (error) {
+      console.error('Error inesperado en inicio con Google:', error);
+      this.isGoogleSubmitting = false;
+      const toast = await this.toastController.create({
+        message: 'Error al procesar la solicitud con Google. Inténtelo de nuevo.',
+        duration: 3000,
+        position: 'top',
+        color: 'danger'
+      });
+      toast.present();
+    }
   }
 }

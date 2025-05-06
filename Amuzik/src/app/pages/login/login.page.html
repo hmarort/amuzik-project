@@ -87,10 +87,15 @@
         </div>
 
         <div class="mt-6 grid grid-cols-2 gap-3">
-          <a href="#" class="flex justify-center items-center py-2 px-4 border border-ionic-medium rounded-lg shadow-sm bg-ionic-light hover:bg-ionic-medium">
-            <ion-icon name="logo-google" class="text-xl text-red-500 mr-2"></ion-icon>
+          <button 
+            (click)="loginWithGoogle()" 
+            [disabled]="isGoogleSubmitting"
+            class="flex justify-center items-center py-2 px-4 border border-ionic-medium rounded-lg shadow-sm bg-ionic-light hover:bg-ionic-medium"
+          >
+            <ion-spinner *ngIf="isGoogleSubmitting" name="crescent" class="mr-2 text-sm"></ion-spinner>
+            <ion-icon *ngIf="!isGoogleSubmitting" name="logo-google" class="text-xl text-red-500 mr-2"></ion-icon>
             <span class="text-sm font-medium text-ionic-dark">Google</span>
-          </a>
+          </button>
           <a href="#" class="flex justify-center items-center py-2 px-4 border border-ionic-medium rounded-lg shadow-sm bg-ionic-light hover:bg-ionic-medium">
             <ion-icon name="logo-facebook" class="text-xl text-ionic-primary mr-2"></ion-icon>
             <span class="text-sm font-medium text-ionic-dark">Facebook</span>

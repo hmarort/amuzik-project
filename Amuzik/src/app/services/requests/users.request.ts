@@ -3,6 +3,15 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+export interface GoogleUserData {
+  email: string;
+  nombre: string;
+  apellidos: string;
+  username: string;
+  google_id: string;
+  photo_url: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -21,11 +30,9 @@ export class UserRequest {
     let headers = new HttpHeaders({
       Authorization: `Bearer ${this.token}`
     });
-    
     if (contentType) {
       headers = headers.set('Content-Type', contentType);
     }
-    
     return headers;
   }
   
@@ -35,7 +42,6 @@ export class UserRequest {
   login(username: string, password: string): Observable<any> {
     const headers = this.getAuthHeaders('application/json');
     const body = { username, password };
-    
     return this.http.post(`${this.apiUrl}login`, body, { headers });
   }
   
@@ -69,7 +75,6 @@ export class UserRequest {
   getUserByUsername(username: string): Observable<any> {
     const headers = this.getAuthHeaders('application/json');
     const body = { username };
-    
     return this.http.post(`${this.apiUrl}find`, body, { headers });
   }
   
@@ -82,17 +87,27 @@ export class UserRequest {
       user_id: userId,
       friend_id: friendId,
     };
-    
     return this.http.post(`${this.apiUrl}saveFriendship`, body, { headers });
   }
-
+  
+  /**
+   * Delete friend relationship
+   */
   deleteFriend(userId: string, friendId: string): Observable<any> {
     const headers = this.getAuthHeaders('application/json');
     const body = {
       user_id: userId,
       friend_id: friendId,
     };
-    
     return this.http.post(`${this.apiUrl}deleteFriendship`, body, { headers });
+  }
+  
+  /**
+   * Find or create a user from Google Auth
+   * Este método buscará un usuario por email, y si no existe, lo creará
+   */
+  findOrCreateGoogleUser(googleUser: GoogleUserData): Observable<any> {
+    const headers = this.getAuthHeaders('application/json');
+    return this.http.post(`${this.apiUrl}googleAuth`, googleUser, { headers });
   }
 }
