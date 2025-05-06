@@ -292,6 +292,72 @@ export class AuthService {
    * @param user Usuario de Firebase
    */
   private registerGoogleUser(user: any): Observable<any> {
+    // En lugar de intentar descargar la imagen de Google (que podría causar problemas CORS),
+    // usaremos directamente una imagen predeterminada local
+    return this.getDefaultProfileImage().pipe(
+      switchMap(defaultImageFile => {
+        return this.registerGoogleUserWithProfileImage(user, defaultImageFile);
+      }),
+      catchError(error => {
+        console.error('Error al obtener imagen predeterminada:', error);
+        // Como último recurso, intentamos registrar sin imagen
+        return this.registerGoogleUserWithoutImage(user);
+      })
+    );
+  }
+  
+  /**
+   * Método alternativo para registrar sin imagen de perfil
+   * Solo para casos donde no se puede obtener ninguna imagen
+   */
+  private registerGoogleUserWithoutImage(user: any): Observable<any> {
+    console.warn('Intentando registro sin imagen de perfil - esto podría fallar si el backend requiere pfp');
+    
+    // Crear datos básicos para el registro
+    const formData = new FormData();
+    
+    // Extraer nombre y apellidos del displayName
+    let nombre = '';
+    let apellidos = '';
+    
+    if (user.displayName) {
+      const nameParts = user.displayName.split(' ');
+      nombre = nameParts[0] || '';
+      apellidos = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+    }
+    
+    const username = user.email?.split('@')[0] || `user_${Date.now()}`;
+    const email = user.email || '';
+    nombre = nombre || 'Usuario';
+    apellidos = apellidos || 'Google';
+    const password = this.generateRandomPassword();
+    
+    formData.append('username', username);
+    formData.append('email', email);
+    formData.append('nombre', nombre);
+    formData.append('apellidos', apellidos);
+    formData.append('password', password);
+    
+    // NOTA: No estamos adjuntando ninguna imagen pfp - esto probablemente fallará
+    // si el backend requiere esta imagen, pero es un último recurso
+    
+    return this.userRequest.register(formData).pipe(
+      switchMap(response => {
+        return this.login(username, password);
+      }),
+      catchError(error => {
+        console.error('Error en registro sin imagen:', error);
+        return throwError(() => new Error('No se pudo registrar el usuario de Google: ' + error.message));
+      })
+    );
+  }
+
+  /**
+   * Completar el registro de Google con la imagen de perfil
+   * @param user Usuario de Firebase
+   * @param profileImage Archivo de imagen de perfil
+   */
+  private registerGoogleUserWithProfileImage(user: any, profileImage: File): Observable<any> {
     // Crear FormData para mantener consistencia con el método de registro normal
     const formData = new FormData();
     
@@ -319,36 +385,103 @@ export class AuthService {
     formData.append('apellidos', apellidos);
     formData.append('password', password);
     
-    // Si hay foto de perfil, intentar obtenerla para el campo pfp
-    if (user.photoURL) {
-      // Opción 1: Si el backend acepta URL y luego la procesa
-      formData.append('pfp_url', user.photoURL);
-      
-      // Opción 2: Si necesitamos convertir la imagen a un archivo
-      // Esto requeriría implementar una función para convertir URL a File/Blob
-      // this.urlToFile(user.photoURL).then(file => {
-      //   formData.append('pfp', file, 'profile.jpg');
-      // });
-    }
+    // Añadir la imagen de perfil como archivo
+    formData.append('pfp', profileImage, 'profile.jpg');
+    
+    // Guardamos las credenciales para usarlas después del registro
+    const credentials = { username, password };
     
     return this.userRequest.register(formData).pipe(
       switchMap(response => {
-        if (response && response.message) {
-          // Simulamos un login después de registrar
-          return this.processGoogleLoginSuccess(response);
-        }
-        return throwError(() => new Error('Error al registrar usuario de Google'));
+        // Una vez registrado, hacemos login directamente con las credenciales
+        // en lugar de procesar la respuesta del registro
+        console.log('Registro exitoso, intentando login con credenciales:', credentials.username);
+        return this.login(credentials.username, credentials.password);
+      }),
+      catchError(error => {
+        console.error('Error en el registro de Google:', error);
+        return throwError(() => new Error('Error al registrar usuario de Google: ' + (error.message || 'Error desconocido')));
       })
     );
   }
   
   /**
+   * Obtiene una imagen de perfil predeterminada
+   * @returns Observable con el archivo de imagen
+   */
+  private getDefaultProfileImage(): Observable<File> {
+    // Generamos una imagen simple de 1x1 pixel como último recurso
+    // Esto garantiza que siempre tendremos una imagen válida para enviar
+    
+    try {
+      // Crear un canvas pequeño de 100x100 pixels
+      const canvas = document.createElement('canvas');
+      canvas.width = 100;
+      canvas.height = 100;
+      
+      // Obtener el contexto 2D y dibujar un círculo de color
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        // Fondo
+        ctx.fillStyle = '#e0e0e0';
+        ctx.fillRect(0, 0, 100, 100);
+        
+        // Círculo para avatar
+        ctx.fillStyle = '#3498db';
+        ctx.beginPath();
+        ctx.arc(50, 50, 40, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Iniciales genéricas
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 40px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('U', 50, 50);
+      }
+      
+      // Convertir el canvas a blob
+      return from(new Promise<File>((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], 'default-avatar.png', { type: 'image/png' }));
+          } else {
+            reject(new Error('No se pudo crear la imagen'));
+          }
+        }, 'image/png');
+      })).pipe(
+        catchError(error => {
+          console.error('Error al crear la imagen de canvas:', error);
+          // Crear un pixel transparente como último recurso absoluto
+          const transparentPixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+          return from(fetch(transparentPixel)
+            .then(response => response.blob())
+            .then(blob => new File([blob], 'pixel.png', { type: 'image/png' }))
+          );
+        })
+      );
+    } catch (error) {
+      console.error('Error al generar imagen predeterminada:', error);
+      // Crear un pixel transparente como último recurso
+      const transparentPixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+      return from(fetch(transparentPixel)
+        .then(response => response.blob())
+        .then(blob => new File([blob], 'pixel.png', { type: 'image/png' }))
+      );
+    }
+  }
+  
+  /**
    * Procesa la respuesta exitosa del login con Google
+   * NOTA: Este método ya no se usa, se reemplazó por un login directo después del registro
+   * Se mantiene para referencia o uso futuro
    * @param response Respuesta del servidor
    */
   private processGoogleLoginSuccess(response: any): Observable<any> {
-    if (response && response.message) {
+    // Validamos primero que la respuesta contenga datos de usuario
+    if (response && response.message && typeof response.message === 'object') {
       const userData = response.message;
+      
       // Añadir el proveedor para diferenciarlo
       userData.provider = 'google';
       this.currentUserSubject.next(userData);
@@ -364,6 +497,7 @@ export class AuthService {
       return from([response]);
     }
     
+    console.error('Respuesta inválida en processGoogleLoginSuccess:', response);
     return throwError(() => new Error('Respuesta inválida del servidor'));
   }
   
@@ -385,19 +519,47 @@ export class AuthService {
   }
   
   /**
-   * Función auxiliar para convertir una URL de imagen a un archivo
-   * Útil si necesitamos convertir photoURL de Google a un archivo para subir
+   * Función mejorada para convertir una URL de imagen a un archivo
    * @param url URL de la imagen
    * @param filename Nombre del archivo
    */
   private async urlToFile(url: string, filename: string = 'profile.jpg'): Promise<File> {
     try {
-      const response = await fetch(url);
+      // Crear una petición con encabezados para evitar problemas CORS
+      const headers = new Headers();
+      headers.append('Access-Control-Allow-Origin', '*');
+      
+      const corsProxyUrl = `https://cors-anywhere.herokuapp.com/${url}`;
+      // Intentar primero con la URL directa, sino intentar con un proxy CORS
+      let response: Response;
+      
+      try {
+        response = await fetch(url, { mode: 'cors' });
+      } catch (directError) {
+        console.warn('Error al cargar directamente, intentando con proxy CORS:', directError);
+        try {
+          response = await fetch(corsProxyUrl);
+        } catch (proxyError) {
+          throw new Error('No se pudo acceder a la imagen: ' + (proxyError instanceof Error ? proxyError.message : 'Error desconocido'));
+        }
+      }
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const blob = await response.blob();
-      return new File([blob], filename, { type: blob.type });
+      return new File([blob], filename, { type: blob.type || 'image/jpeg' });
     } catch (error) {
       console.error('Error al convertir URL a File:', error);
-      throw new Error('No se pudo convertir la URL de la imagen a un archivo');
+      
+      // Si hay un error al descargar la imagen, intentamos con una imagen predeterminada
+      return this.getDefaultProfileImage().toPromise().then(file => {
+        if (!file) {
+          throw new Error('Failed to generate default profile image');
+        }
+        return file;
+      });
     }
   }
 }
