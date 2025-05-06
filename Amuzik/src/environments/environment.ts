@@ -4,7 +4,7 @@
 
 export const environment = {
   production: false,
-  apiUrl:'https://apirest.saicasl.eu/api3/api/public/',
+  apiUrl:'https://amuzikapi-3ff2.onrender.com/',
   socketUrl: 'localhost:3000',
 };
 
