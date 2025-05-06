@@ -99,10 +99,12 @@
       </div>
 
       <div class="mt-6 text-center">
-        <p class="text-sm text-ionic-medium">
-          ¿No tienes una cuenta?
-          <a href="/signin"  class="font-medium text-ionic-primary hover:text-ionic-secondary">Regístrate</a>
-        </p>
+        <button 
+          (click)="navigateToRegister()" 
+          class="w-full border-3 border-ionic-primary text-ionic-primary hover:text-white hover:bg-ionic-primary py-3 px-4 rounded-lg font-medium transition duration-150 ease-in-out shadow-md hover:shadow-lg focus:ring-4 focus:ring-ionic-primary/50 focus:outline-none"
+        >
+          <span class="text-lg">Regístrate</span>
+        </button>
       </div>
     </div>
   </div>

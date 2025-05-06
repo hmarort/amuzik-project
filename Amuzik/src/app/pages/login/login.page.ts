@@ -111,4 +111,7 @@ export class LoginPage implements OnInit {
   togglePasswordVisibility() {
     this.showPassword = !this.showPassword;
   }
+  navigateToRegister() {
+    this.router.navigate(['/signin']);
+  }
 }
