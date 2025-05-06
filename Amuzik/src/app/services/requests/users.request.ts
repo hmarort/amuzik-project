@@ -3,13 +3,15 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+// Esta interfaz ya no es necesaria ya que estamos usando los endpoints normales
+// pero la mantenemos por compatibilidad con código existente
 export interface GoogleUserData {
   email: string;
   nombre: string;
   apellidos: string;
   username: string;
-  google_id: string;
-  photo_url: string;
+  password: string;
+  pfp?: File | Blob;  // Campo para la foto de perfil
 }
 
 @Injectable({
@@ -18,9 +20,9 @@ export interface GoogleUserData {
 export class UserRequest {
   private apiUrl = environment.apiUrl;
   private token = 'W66jQhYGGzEIuCcAXfpTJkt7uH6GBGpcJLCSXo6O2WF1AZkxiMXpypFaKEfA';
-  
+
   constructor(private http: HttpClient) {}
-  
+
   /**
    * Get authorization headers with token
    * @param contentType Optional content type
@@ -35,7 +37,7 @@ export class UserRequest {
     }
     return headers;
   }
-  
+
   /**
    * Login with username and password
    */
@@ -44,7 +46,7 @@ export class UserRequest {
     const body = { username, password };
     return this.http.post(`${this.apiUrl}login`, body, { headers });
   }
-  
+
   /**
    * Register a new user
    */
@@ -52,7 +54,7 @@ export class UserRequest {
     const headers = this.getAuthHeaders();
     return this.http.post(`${this.apiUrl}register`, userData, { headers });
   }
-  
+
   /**
    * Update user data
    */
@@ -60,7 +62,7 @@ export class UserRequest {
     const headers = this.getAuthHeaders();
     return this.http.post(`${this.apiUrl}update`, userData, { headers });
   }
-  
+
   /**
    * Get user by ID
    */
@@ -68,7 +70,7 @@ export class UserRequest {
     const headers = this.getAuthHeaders();
     return this.http.get(`${this.apiUrl}info?id=${userId}`, { headers });
   }
-  
+
   /**
    * Get user by username
    */
@@ -77,7 +79,7 @@ export class UserRequest {
     const body = { username };
     return this.http.post(`${this.apiUrl}find`, body, { headers });
   }
-  
+
   /**
    * Save friend relationship
    */
@@ -89,7 +91,7 @@ export class UserRequest {
     };
     return this.http.post(`${this.apiUrl}saveFriendship`, body, { headers });
   }
-  
+
   /**
    * Delete friend relationship
    */
@@ -100,14 +102,5 @@ export class UserRequest {
       friend_id: friendId,
     };
     return this.http.post(`${this.apiUrl}deleteFriendship`, body, { headers });
-  }
-  
-  /**
-   * Find or create a user from Google Auth
-   * Este método buscará un usuario por email, y si no existe, lo creará
-   */
-  findOrCreateGoogleUser(googleUser: GoogleUserData): Observable<any> {
-    const headers = this.getAuthHeaders('application/json');
-    return this.http.post(`${this.apiUrl}googleAuth`, googleUser, { headers });
   }
 }

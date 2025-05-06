@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, throwError, from, of } from 'rxjs';
-import { tap, catchError, switchMap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, throwError, from } from 'rxjs';
+import { tap, catchError, switchMap, map } from 'rxjs/operators';
 import { UserRequest } from './requests/users.request';
 import { Router } from '@angular/router';
 import { Auth, GoogleAuthProvider, signInWithPopup, UserCredential } from '@angular/fire/auth';
@@ -237,6 +237,7 @@ export class AuthService {
   
   /**
    * Método para iniciar sesión con Google
+   * Utiliza los endpoints existentes para login/register
    */
   loginWithGoogle(): Observable<any> {
     const provider = new GoogleAuthProvider();
@@ -249,37 +250,154 @@ export class AuthService {
           return throwError(() => new Error('No se pudo obtener el email del usuario de Google'));
         }
         
-        // Verificar si el usuario ya existe en nuestra base de datos
-        return this.userRequest.findOrCreateGoogleUser({
-          email: user.email,
-          nombre: user.displayName?.split(' ')[0] || '',
-          apellidos: user.displayName?.split(' ').slice(1).join(' ') || '',
-          username: user.email.split('@')[0],
-          google_id: user.uid,
-          photo_url: user.photoURL || '',
-        }).pipe(
-          tap(response => {
+        // Primero intentamos iniciar sesión directamente usando el email como username
+        // y el uid como password (simulación)
+        const username = user.email.split('@')[0];
+        
+        // Primero verificamos si el usuario existe buscando por username o email
+        return this.userRequest.getUserByUsername(username).pipe(
+          switchMap(response => {
             if (response && response.message) {
-              const userData = response.message;
-              // Añadir el proveedor para diferenciarlo
-              userData.provider = 'google';
-              this.currentUserSubject.next(userData);
-              
-              // Guardar en el almacenamiento apropiado
-              this.storeItem(this.userDataKey, JSON.stringify(userData));
-              
-              // Si hay un token en la respuesta, guardarlo también
-              if (response.token) {
-                this.storeItem(this.tokenKey, response.token);
-              }
+              // Usuario encontrado, intentar login con credenciales normales
+              // En un caso real, esto podría necesitar un endpoint específico que verifique
+              // el token de Google en lugar de una contraseña
+              return this.login(username, user.uid).pipe(
+                catchError(loginError => {
+                  // Si el login falla (p.ej. contraseña incorrecta para usuario existente)
+                  console.error('Error en login con usuario existente:', loginError);
+                  return throwError(() => new Error('No se pudo iniciar sesión con la cuenta de Google. El usuario existe pero no coinciden las credenciales.'));
+                })
+              );
+            } else {
+              // Usuario no encontrado, hay que registrarlo
+              return this.registerGoogleUser(user);
             }
+          }),
+          catchError(error => {
+            // Error al buscar el usuario, intentamos registrarlo
+            console.log('Usuario no encontrado, procediendo a registrar:', error);
+            return this.registerGoogleUser(user);
           })
         );
       }),
       catchError(error => {
-        console.error('Error during Google sign-in:', error);
+        console.error('Error durante el inicio de sesión con Google:', error);
         return throwError(() => error);
       })
     );
+  }
+  
+  /**
+   * Registra un nuevo usuario que viene de Google Auth
+   * @param user Usuario de Firebase
+   */
+  private registerGoogleUser(user: any): Observable<any> {
+    // Crear FormData para mantener consistencia con el método de registro normal
+    const formData = new FormData();
+    
+    // Extraer nombre y apellidos del displayName
+    let nombre = '';
+    let apellidos = '';
+    
+    if (user.displayName) {
+      const nameParts = user.displayName.split(' ');
+      nombre = nameParts[0] || '';
+      apellidos = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+    }
+    
+    // Asegurar que se envíen valores no vacíos (requisitos de la tabla)
+    const username = user.email?.split('@')[0] || `user_${Date.now()}`;
+    const email = user.email || '';
+    nombre = nombre || 'Usuario';
+    apellidos = apellidos || 'Google';
+    const password = this.generateRandomPassword();
+    
+    // Añadir campos requeridos por la tabla users
+    formData.append('username', username);
+    formData.append('email', email);
+    formData.append('nombre', nombre);
+    formData.append('apellidos', apellidos);
+    formData.append('password', password);
+    
+    // Si hay foto de perfil, intentar obtenerla para el campo pfp
+    if (user.photoURL) {
+      // Opción 1: Si el backend acepta URL y luego la procesa
+      formData.append('pfp_url', user.photoURL);
+      
+      // Opción 2: Si necesitamos convertir la imagen a un archivo
+      // Esto requeriría implementar una función para convertir URL a File/Blob
+      // this.urlToFile(user.photoURL).then(file => {
+      //   formData.append('pfp', file, 'profile.jpg');
+      // });
+    }
+    
+    return this.userRequest.register(formData).pipe(
+      switchMap(response => {
+        if (response && response.message) {
+          // Simulamos un login después de registrar
+          return this.processGoogleLoginSuccess(response);
+        }
+        return throwError(() => new Error('Error al registrar usuario de Google'));
+      })
+    );
+  }
+  
+  /**
+   * Procesa la respuesta exitosa del login con Google
+   * @param response Respuesta del servidor
+   */
+  private processGoogleLoginSuccess(response: any): Observable<any> {
+    if (response && response.message) {
+      const userData = response.message;
+      // Añadir el proveedor para diferenciarlo
+      userData.provider = 'google';
+      this.currentUserSubject.next(userData);
+      
+      // Guardar en el almacenamiento apropiado
+      this.storeItem(this.userDataKey, JSON.stringify(userData));
+      
+      // Si hay un token en la respuesta, guardarlo también
+      if (response.token) {
+        this.storeItem(this.tokenKey, response.token);
+      }
+      
+      return from([response]);
+    }
+    
+    return throwError(() => new Error('Respuesta inválida del servidor'));
+  }
+  
+  /**
+   * Genera una contraseña aleatoria para usuarios de Google
+   * @returns Contraseña aleatoria
+   */
+  private generateRandomPassword(): string {
+    // Generamos una contraseña más segura con letras mayúsculas, minúsculas y números
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let password = '';
+    
+    // Crear contraseña de 12 caracteres
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    return password;
+  }
+  
+  /**
+   * Función auxiliar para convertir una URL de imagen a un archivo
+   * Útil si necesitamos convertir photoURL de Google a un archivo para subir
+   * @param url URL de la imagen
+   * @param filename Nombre del archivo
+   */
+  private async urlToFile(url: string, filename: string = 'profile.jpg'): Promise<File> {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new File([blob], filename, { type: blob.type });
+    } catch (error) {
+      console.error('Error al convertir URL a File:', error);
+      throw new Error('No se pudo convertir la URL de la imagen a un archivo');
+    }
   }
 }
