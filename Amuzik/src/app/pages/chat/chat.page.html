@@ -20,18 +20,18 @@
     <div *ngIf="!friend && !isLoading" class="error-container">
       <p>No se encontró el contacto. Vuelve a la lista de amigos e inténtalo de nuevo.</p>
     </div>
-
+    
     <div class="chat-container" *ngIf="friend && !isLoading">
       <!-- Empty state when no messages -->
       <div *ngIf="messages.length === 0" class="empty-chat">
         <p>No hay mensajes aún. ¡Empieza la conversación!</p>
       </div>
       
-      <!-- Message list - keeping your original classes -->
-      <div *ngFor="let message of messages" [ngClass]="{'message-received': !message.isMe, 'message-sent': message.isMe}">
+      <!-- Message list -->
+      <div *ngFor="let message of messages" [ngClass]="{'message-received': !isMyMessage(message), 'message-sent': isMyMessage(message)}">
         <div class="message-bubble">
           <p>{{ message.text }}</p>
-          <span class="message-time">{{ message.time | date:'shortTime' }}</span>
+          <span class="message-time">{{ message.timestamp | date:'shortTime' }}</span>
         </div>
       </div>
     </div>
