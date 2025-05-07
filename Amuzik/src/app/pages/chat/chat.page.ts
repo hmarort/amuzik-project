@@ -14,10 +14,11 @@ import {
   IonButton,
   IonIcon,
   IonAvatar,
-  IonSpinner
+  IonSpinner,
+  IonBadge
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { send, arrowBack } from 'ionicons/icons';
+import { send, arrowBack, checkmarkDone, checkmark } from 'ionicons/icons';
 import { AuthService, User } from 'src/app/services/auth.service';
 import { ChatService, Message } from 'src/app/services/chat.service';
 import { Subscription } from 'rxjs';
@@ -41,7 +42,8 @@ import { Subscription } from 'rxjs';
     IonButton,
     IonIcon,
     IonAvatar,
-    IonSpinner
+    IonSpinner,
+    IonBadge
   ]
 })
 export class ChatPage implements OnInit, OnDestroy {
@@ -56,6 +58,7 @@ export class ChatPage implements OnInit, OnDestroy {
   isLoading: boolean = false;
   
   private subscriptions: Subscription[] = [];
+  private mutationObserver: MutationObserver | null = null;
   
   constructor(
     private route: ActivatedRoute,
@@ -64,7 +67,9 @@ export class ChatPage implements OnInit, OnDestroy {
   ) {
     addIcons({
       send,
-      arrowBack
+      arrowBack,
+      checkmarkDone,
+      checkmark
     });
   }
 
@@ -90,15 +95,43 @@ export class ChatPage implements OnInit, OnDestroy {
   ngOnDestroy() {
     // Limpiar todas las suscripciones
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    
+    // Limpiar observer
+    if (this.mutationObserver) {
+      this.mutationObserver.disconnect();
+    }
   }
 
   ionViewDidEnter() {
     this.scrollToBottom();
+    this.setupMessageObserver();
+    
+    // Marcar mensajes como leídos cuando se entra a la vista
+    if (this.friendId) {
+      this.chatService.markMessagesAsRead(this.friendId);
+    }
   }
 
   ionViewWillLeave() {
-    // Opcional: desconectar WebSocket cuando salimos de la página
-    // this.chatService.disconnect();
+    // Opcional: desconectar observer
+    if (this.mutationObserver) {
+      this.mutationObserver.disconnect();
+    }
+  }
+
+  // Observar cambios en el contenedor de mensajes para auto-scroll
+  private setupMessageObserver(): void {
+    const chatContainer = document.querySelector('.chat-container');
+    if (chatContainer && !this.mutationObserver) {
+      this.mutationObserver = new MutationObserver(() => {
+        this.scrollToBottom();
+      });
+      
+      this.mutationObserver.observe(chatContainer, { 
+        childList: true, 
+        subtree: true 
+      });
+    }
   }
 
   loadFriendData() {
@@ -128,9 +161,14 @@ export class ChatPage implements OnInit, OnDestroy {
     
     const messagesSub = this.chatService.loadConversation(this.friendId).subscribe({
       next: (messages) => {
-        this.messages = messages;
+        this.messages = this.sortMessagesByDate(messages);
         this.isLoading = false;
         this.scrollToBottom();
+        
+        // Marcar mensajes como leídos
+        if (this.friendId) {
+          this.chatService.markMessagesAsRead(this.friendId);
+        }
       },
       error: (error) => {
         console.error('Error loading messages:', error);
@@ -139,6 +177,13 @@ export class ChatPage implements OnInit, OnDestroy {
     });
     
     this.subscriptions.push(messagesSub);
+  }
+
+  // Ordenar mensajes por fecha
+  private sortMessagesByDate(messages: Message[]): Message[] {
+    return [...messages].sort((a, b) => {
+      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+    });
   }
 
   sendMessage() {
@@ -166,5 +211,49 @@ export class ChatPage implements OnInit, OnDestroy {
   getFriendAvatar(): string {
     if (!this.friend) return '';
     return this.friend.base64 || 'assets/img/default-avatar.png'; // Fallback to default avatar
+  }
+  
+  // Helper to get status icon
+  getMessageStatusIcon(message: Message): string {
+    if (!message.status || !this.isMyMessage(message)) return '';
+    
+    switch (message.status) {
+      case 'sent': return 'checkmark';
+      case 'delivered': return 'checkmarkDone';
+      case 'read': return 'checkmarkDone'; // Mismo icono pero podría tener diferente estilo CSS
+      default: return '';
+    }
+  }
+  
+  // Helper to format time
+  formatMessageTime(date: Date): string {
+    if (!date) return '';
+    
+    const today = new Date();
+    const messageDate = new Date(date);
+    
+    // Si es hoy, solo mostrar hora
+    if (today.toDateString() === messageDate.toDateString()) {
+      return messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); 
+    }
+    
+    // Si es ayer
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (yesterday.toDateString() === messageDate.toDateString()) {
+      return 'Ayer ' + messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    // Si es de la semana actual, mostrar día de la semana
+    const daysOfWeek = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const dayDiff = (today.getTime() - messageDate.getTime()) / (1000 * 60 * 60 * 24);
+    if (dayDiff < 7) {
+      return daysOfWeek[messageDate.getDay()] + ' ' + 
+             messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    // Para fechas más antiguas, mostrar día/mes/año
+    return messageDate.toLocaleDateString() + ' ' + 
+           messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 }
