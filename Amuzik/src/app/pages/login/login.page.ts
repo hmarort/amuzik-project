@@ -3,10 +3,25 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { IonContent, IonHeader, IonTitle, IonToolbar, IonIcon, IonSpinner, IonButton } from '@ionic/angular/standalone';
+import { 
+  IonContent, 
+  IonIcon, 
+  IonSpinner, 
+  IonCheckbox,
+  IonButton
+} from '@ionic/angular/standalone';
 import { HttpClientModule } from '@angular/common/http';
 import { addIcons } from 'ionicons';
-import { eyeOutline, eyeOffOutline, mailOutline, lockClosedOutline, logoGoogle, logoFacebook, person, lockClosed } from 'ionicons/icons';
+import { 
+  eyeOutline, 
+  eyeOffOutline, 
+  mailOutline, 
+  lockClosedOutline, 
+  logoGoogle, 
+  logoFacebook, 
+  person, 
+  lockClosed 
+} from 'ionicons/icons';
 import { ToastController } from '@ionic/angular/standalone';
 import { AuthService } from '../../services/auth.service';
 
@@ -19,11 +34,13 @@ import { AuthService } from '../../services/auth.service';
     IonIcon,
     IonContent,
     IonSpinner,
+    IonCheckbox,
+    IonButton,
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
     HttpClientModule
-]
+  ]
 })
 export class LoginPage implements OnInit {
   loginForm: FormGroup;
@@ -39,21 +56,30 @@ export class LoginPage implements OnInit {
     private authService: AuthService,
     private toastController: ToastController
   ) {
-    // Añadir iconos que utilizamos en el template
-    addIcons({lockClosed, person, logoGoogle, logoFacebook, eyeOutline, eyeOffOutline, mailOutline, lockClosedOutline});
+    // Add icons needed in the template
+    addIcons({
+      lockClosed, 
+      person, 
+      logoGoogle, 
+      logoFacebook, 
+      eyeOutline, 
+      eyeOffOutline, 
+      mailOutline, 
+      lockClosedOutline
+    });
     
     this.loginForm = this.formBuilder.group({
       username: ['', [Validators.required]],
       password: ['', [Validators.required, Validators.minLength(6)]],
-      rememberMe: [true] // Por defecto activado para persistencia
+      rememberMe: [true] // Default active for persistence
     });
     
-    // Capturar URL a la que redirigir después del login
+    // Get URL to redirect after login
     this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/home';
   }
 
   ngOnInit() {
-    // Verificar si ya hay una sesión activa y redirigir
+    // Check if there's an active session and redirect
     if (this.authService.isAuthenticated()) {
       this.router.navigate([this.returnUrl]);
     }
@@ -76,13 +102,13 @@ export class LoginPage implements OnInit {
       const { username, password } = this.loginForm.value;
       this.authService.login(username, password).subscribe({
         next: () => {
-          // Redirigir a la página de destino después del login exitoso
+          // Redirect to target page after successful login
           this.router.navigate([this.returnUrl]);
         },
         error: async (error) => {
-          console.error('Error al iniciar sesión:', error);
+          console.error('Error during login:', error);
           const toast = await this.toastController.create({
-            message: error.error?.error || 'Error al iniciar sesión',
+            message: error.error?.error || 'Error durante el inicio de sesión',
             duration: 3000,
             position: 'top',
             color: 'danger'
@@ -95,7 +121,7 @@ export class LoginPage implements OnInit {
         }
       });
     } catch (error) {
-      console.error('Error inesperado:', error);
+      console.error('Unexpected error:', error);
       this.isSubmitting = false;
       const toast = await this.toastController.create({
         message: 'Error al procesar la solicitud. Inténtelo de nuevo.',
@@ -121,11 +147,11 @@ export class LoginPage implements OnInit {
     try {
       this.authService.loginWithGoogle().subscribe({
         next: () => {
-          // Redirigir a la página de destino después del login exitoso con Google
+          // Redirect to target page after successful login with Google
           this.router.navigate([this.returnUrl]);
         },
         error: async (error) => {
-          console.error('Error al iniciar sesión con Google:', error);
+          console.error('Error during Google login:', error);
           const toast = await this.toastController.create({
             message: error.message || 'Error al iniciar sesión con Google',
             duration: 3000,
@@ -140,7 +166,7 @@ export class LoginPage implements OnInit {
         }
       });
     } catch (error) {
-      console.error('Error inesperado en inicio con Google:', error);
+      console.error('Unexpected error in Google login:', error);
       this.isGoogleSubmitting = false;
       const toast = await this.toastController.create({
         message: 'Error al procesar la solicitud con Google. Inténtelo de nuevo.',
