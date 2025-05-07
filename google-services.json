@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "142614205335",
+    "project_id": "amuzik-38d5c",
+    "storage_bucket": "amuzik-38d5c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:142614205335:android:9e3f0de6234f52a458ead2",
+        "android_client_info": {
+          "package_name": "com.amuzik.hmarort"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "142614205335-8crf7uknqp3gc4mdhoi20tihbujs5mbq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.amuzik.hmarort",
+            "certificate_hash": "884767858258d223624b29222a325abc665f7209"
+          }
+        },
+        {
+          "client_id": "142614205335-r748a0d0k3ofo4n3if7dprbql67hor8u.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDjhoW7oH9tjFoG-pjhDt3zsBlo41iJSXI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "142614205335-r748a0d0k3ofo4n3if7dprbql67hor8u.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
