@@ -8,6 +8,18 @@
         <p class="mt-2 text-sm text-ionic-medium">Ingresa tus credenciales para acceder</p>
       </div>
 
+      <!-- Botón de Biometría si está disponible -->
+      <div *ngIf="isBiometricsAvailable && authService.isBiometricEnabled()" class="mb-6">
+        <button 
+          (click)="loginWithBiometrics()" 
+          [disabled]="isBiometricSubmitting"
+          class="w-full flex justify-center items-center bg-ionic-secondary text-white py-3 px-4 rounded-lg shadow-md hover:bg-ionic-primary transition-colors">
+          <ion-spinner *ngIf="isBiometricSubmitting" name="crescent" class="mr-2"></ion-spinner>
+          <ion-icon *ngIf="!isBiometricSubmitting" name="finger-print" class="text-2xl mr-2"></ion-icon>
+          <span>Iniciar sesión con biometría</span>
+        </button>
+      </div>
+
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
         <div class="mb-4">
           <label for="username" class="block text-sm font-medium text-ionic-medium mb-1">Username</label>
@@ -64,6 +76,19 @@
           <a href="#" class="text-sm font-medium text-ionic-primary hover:text-ionic-secondary">¿Olvidaste tu contraseña?</a>
         </div>
 
+        <!-- Opción para habilitar biometría -->
+        <div *ngIf="isBiometricsAvailable" class="flex items-center mb-6">
+          <input 
+            id="enable-biometric" 
+            type="checkbox" 
+            formControlName="enableBiometric" 
+            class="h-4 w-4 text-ionic-primary focus:ring-ionic-primary border-ionic-medium rounded"
+          />
+          <label for="enable-biometric" class="ml-2 block text-sm text-ionic-medium">
+            Habilitar inicio de sesión con biometría
+          </label>
+        </div>
+
         <div>
           <button 
             type="submit" 
@@ -75,29 +100,6 @@
           </button>
         </div>
       </form>
-
-      <div class="mt-6">
-        <div class="relative">
-          <div class="absolute inset-0 flex items-center">
-            <div class="w-full border-t border-ionic-medium"></div>
-          </div>
-          <div class="relative flex justify-center text-sm">
-            <span class="px-2 bg-ionic-light text-ionic-medium">O continúa con</span>
-          </div>
-        </div>
-
-        <div class="mt-6 grid grid-cols-1 gap-3">
-          <button 
-            (click)="loginWithGoogle()" 
-            [disabled]="isGoogleSubmitting"
-            class="flex justify-center items-center py-2 px-4 border border-ionic-medium rounded-lg shadow-sm bg-ionic-light hover:bg-ionic-medium"
-          >
-            <ion-spinner *ngIf="isGoogleSubmitting" name="crescent" class="mr-2 text-sm"></ion-spinner>
-            <ion-icon *ngIf="!isGoogleSubmitting" name="logo-google" class="text-xl text-red-500 mr-2"></ion-icon>
-            <span class="text-sm font-medium text-ionic-dark">Google</span>
-          </button>
-        </div>
-      </div>
 
       <div class="mt-6 text-center">
         <button 

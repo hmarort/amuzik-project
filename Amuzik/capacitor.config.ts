@@ -8,11 +8,15 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 0,
       launchAutoHide: false,
-      backgroundColor: "#ffffffff",
-      androidScaleType: "CENTER_CROP",
+      backgroundColor: '#ffffffff',
+      androidScaleType: 'CENTER_CROP',
       splashFullScreen: true,
       splashImmersive: true,
       showSpinner: false,
+    },
+    FirebaseAuthentication: {
+      skipNativeAuth: false,
+      providers: ['google.com'],
     },
   },
 };

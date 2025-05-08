@@ -6,12 +6,8 @@ import { Router } from '@angular/router';
 import { HttpClientModule } from '@angular/common/http';
 import {
   IonContent,
-  IonHeader,
-  IonTitle,
-  IonToolbar,
   IonIcon,
   IonSpinner,
-  IonButton,
 } from '@ionic/angular/standalone';
 import { ToastController } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -24,6 +20,7 @@ import {
   imageOutline,
   personAdd,
   closeOutline,
+  logoGoogle,
 } from 'ionicons/icons';
 import { AuthService } from '../../services/auth.service';
 
@@ -45,9 +42,11 @@ import { AuthService } from '../../services/auth.service';
 export class SigninPage implements OnInit {
   signinForm: FormGroup;
   isSubmitting = false;
+  isGoogleSubmitting = false;
   showPassword = false;
   selectedFile: File | null = null;
   previewUrl: string | ArrayBuffer | null = null;
+  googleCredentials: {username: string, password: string} | null = null;
 
   constructor(
     private formBuilder: FormBuilder,
@@ -65,6 +64,7 @@ export class SigninPage implements OnInit {
       eyeOutline,
       eyeOffOutline,
       closeOutline,
+      logoGoogle,
     });
 
     this.signinForm = this.formBuilder.group({
@@ -240,5 +240,66 @@ export class SigninPage implements OnInit {
       console.error('Error inesperado:', error);
       this.isSubmitting = false;
     }
+  }
+
+  /**
+   * Método para registrarse con Google
+   */
+  registerWithGoogle() {
+    this.isGoogleSubmitting = true;
+    this.googleCredentials = null;
+
+    this.authService.registerWithGoogle().subscribe({
+      next: async (response) => {
+        console.log('Registro con Google exitoso:', response);
+        
+        // Si la respuesta contiene credenciales, las mostramos al usuario
+        if (response && response.credentials) {
+          this.googleCredentials = response.credentials;
+          await this.showToast(
+            'Cuenta creada con éxito. Guarda tus credenciales.',
+            'success'
+          );
+        } else {
+          await this.showToast('Registro con Google completado', 'success');
+          this.router.navigate(['/login']);
+        }
+      },
+      error: async (error) => {
+        console.error('Error en registro con Google:', error);
+        await this.showToast(
+          error.message || 'Error al registrar con Google',
+          'danger'
+        );
+      },
+      complete: () => {
+        this.isGoogleSubmitting = false;
+      }
+    });
+  }
+
+  /**
+   * Navegar a la página de login
+   */
+  navigateToLogin() {
+    this.router.navigate(['/login']);
+  }
+
+  /**
+   * Copiar las credenciales al portapapeles
+   */
+  copyCredentialsToClipboard() {
+    if (!this.googleCredentials) return;
+    
+    const text = `Usuario: ${this.googleCredentials.username}\nContraseña: ${this.googleCredentials.password}`;
+    
+    navigator.clipboard.writeText(text).then(
+      () => {
+        this.showToast('Credenciales copiadas al portapapeles', 'success');
+      },
+      () => {
+        this.showToast('No se pudieron copiar las credenciales', 'danger');
+      }
+    );
   }
 }

@@ -1,9 +1,16 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, throwError, from } from 'rxjs';
-import { tap, catchError, switchMap, map } from 'rxjs/operators';
+import { BehaviorSubject, Observable, throwError, from, of } from 'rxjs';
+import { tap, catchError, switchMap, map, finalize } from 'rxjs/operators';
 import { UserRequest } from './requests/users.request';
 import { Router } from '@angular/router';
-import { Auth, GoogleAuthProvider, signInWithPopup, UserCredential } from '@angular/fire/auth';
+import { 
+  Auth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  UserCredential 
+} from '@angular/fire/auth';
+import { Platform } from '@ionic/angular/standalone';
+import { BiometricService } from './biometric.service';
 
 export interface User {
   id: string;
@@ -25,11 +32,14 @@ export class AuthService {
   private tokenKey = 'auth_token';
   private userDataKey = 'userData';
   private rememberMeKey = 'rememberMe';
+  private biometricEnabledKey = 'biometricEnabled';
   
   constructor(
     private userRequest: UserRequest,
     private router: Router,
-    private auth: Auth
+    private auth: Auth,
+    private platform: Platform,
+    public biometricService: BiometricService
   ) {
     this.loadUserFromStorage();
   }
@@ -97,12 +107,74 @@ export class AuthService {
   }
   
   /**
+   * Verifica si el usuario tiene habilitada la autenticación biométrica
+   * @returns true si la autenticación biométrica está habilitada
+   */
+  public isBiometricEnabled(): boolean {
+    return this.getStoredItem(this.biometricEnabledKey) === 'true';
+  }
+  
+  /**
+   * Habilita la autenticación biométrica para el usuario actual
+   * @param username Nombre de usuario
+   * @param password Contraseña
+   * @returns Observable que indica si se guardaron correctamente
+   */
+  enableBiometricAuth(username: string, password: string): Observable<boolean> {
+    return this.biometricService.isBiometricsAvailable().pipe(
+      switchMap(isAvailable => {
+        if (!isAvailable) {
+          return of(false);
+        }
+        
+        return this.biometricService.saveCredentials(username, password).pipe(
+          tap(success => {
+            if (success) {
+              this.storeItem(this.biometricEnabledKey, 'true');
+            }
+          })
+        );
+      })
+    );
+  }
+  
+  /**
+   * Deshabilita la autenticación biométrica para el usuario actual
+   */
+  disableBiometricAuth(): Observable<boolean> {
+    return this.biometricService.deleteCredentials().pipe(
+      tap(success => {
+        if (success) {
+          localStorage.removeItem(this.biometricEnabledKey);
+          sessionStorage.removeItem(this.biometricEnabledKey);
+        }
+      })
+    );
+  }
+  
+  /**
+   * Intenta iniciar sesión utilizando autenticación biométrica
+   */
+  loginWithBiometrics(): Observable<any> {
+    return this.biometricService.verifyIdentity().pipe(
+      switchMap(credentials => {
+        if (!credentials) {
+          return throwError(() => new Error('Autenticación biométrica fallida'));
+        }
+        
+        return this.login(credentials.username, credentials.password, false);
+      })
+    );
+  }
+  
+  /**
    * Método para iniciar sesión
    * @param username Nombre de usuario
    * @param password Contraseña
+   * @param saveCredentials Si es true, intentará guardar credenciales para biometría
    * @returns Observable con la respuesta
    */
-  login(username: string, password: string): Observable<any> {
+  login(username: string, password: string, saveBiometrics: boolean = false): Observable<any> {
     return this.userRequest.login(username, password).pipe(
       tap(response => {
         if (response && response.message) {
@@ -117,6 +189,18 @@ export class AuthService {
           // Si hay un token en la respuesta, guardarlo también
           if (response.token) {
             this.storeItem(this.tokenKey, response.token);
+          }
+          
+          // Si se indicó guardar credenciales y hay soporte biométrico, guardarlas
+          if (saveBiometrics) {
+            this.biometricService.isBiometricsAvailable().pipe(
+              switchMap(isAvailable => {
+                if (isAvailable) {
+                  return this.enableBiometricAuth(username, password);
+                }
+                return of(false);
+              })
+            ).subscribe();
           }
         }
       }),
@@ -236,52 +320,59 @@ export class AuthService {
   }
   
   /**
-   * Método para iniciar sesión con Google
-   * Utiliza los endpoints existentes para login/register
+   * Detecta si estamos en Android
    */
-  loginWithGoogle(): Observable<any> {
+  private isAndroid(): boolean {
+    return this.platform.is('android');
+  }
+  
+  /**
+   * Método para registrarse con Google
+   * (Modificado para solo usar en registro y no en login)
+   */
+  registerWithGoogle(): Observable<any> {
     const provider = new GoogleAuthProvider();
     
+    // Solo usamos el Popup para el registro con Google
     return from(signInWithPopup(this.auth, provider)).pipe(
       switchMap((result: UserCredential) => {
-        const user = result.user;
-        
-        if (!user.email) {
-          return throwError(() => new Error('No se pudo obtener el email del usuario de Google'));
-        }
-        
-        // Primero intentamos iniciar sesión directamente usando el email como username
-        // y el uid como password (simulación)
-        const username = user.email.split('@')[0];
-        
-        // Primero verificamos si el usuario existe buscando por username o email
-        return this.userRequest.getUserByUsername(username).pipe(
-          switchMap(response => {
-            if (response && response.message) {
-              // Usuario encontrado, intentar login con credenciales normales
-              // En un caso real, esto podría necesitar un endpoint específico que verifique
-              // el token de Google en lugar de una contraseña
-              return this.login(username, user.uid).pipe(
-                catchError(loginError => {
-                  // Si el login falla (p.ej. contraseña incorrecta para usuario existente)
-                  console.error('Error en login con usuario existente:', loginError);
-                  return throwError(() => new Error('No se pudo iniciar sesión con la cuenta de Google. El usuario existe pero no coinciden las credenciales.'));
-                })
-              );
-            } else {
-              // Usuario no encontrado, hay que registrarlo
-              return this.registerGoogleUser(user);
-            }
-          }),
-          catchError(error => {
-            // Error al buscar el usuario, intentamos registrarlo
-            console.log('Usuario no encontrado, procediendo a registrar:', error);
-            return this.registerGoogleUser(user);
-          })
-        );
+        return this.processGoogleUserRegistration(result.user);
       }),
       catchError(error => {
-        console.error('Error durante el inicio de sesión con Google:', error);
+        console.error('Error durante el registro con Google:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+  
+  /**
+   * Procesa el usuario de Google después de la autenticación para registro
+   */
+  private processGoogleUserRegistration(user: any): Observable<any> {
+    if (!user.email) {
+      return throwError(() => new Error('No se pudo obtener el email del usuario de Google'));
+    }
+    
+    // Extraemos el username del email
+    const username = user.email.split('@')[0];
+    
+    // Verificamos si el usuario ya existe
+    return this.userRequest.getUserByUsername(username).pipe(
+      switchMap(response => {
+        if (response && response.message) {
+          // Usuario ya existe, informar al usuario que debe usar ese nombre de usuario para iniciar sesión
+          return throwError(() => new Error('Este usuario ya existe. Por favor inicia sesión con tu nombre de usuario y contraseña.'));
+        } else {
+          // Usuario no encontrado, registrarlo
+          return this.registerGoogleUser(user);
+        }
+      }),
+      catchError(error => {
+        // Error al buscar el usuario, intentamos registrarlo
+        if (error.status === 404) {
+          console.log('Usuario no encontrado, procediendo a registrar');
+          return this.registerGoogleUser(user);
+        }
         return throwError(() => error);
       })
     );
@@ -292,8 +383,7 @@ export class AuthService {
    * @param user Usuario de Firebase
    */
   private registerGoogleUser(user: any): Observable<any> {
-    // En lugar de intentar descargar la imagen de Google (que podría causar problemas CORS),
-    // usaremos directamente una imagen predeterminada local
+    // Usamos directamente una imagen predeterminada local
     return this.getDefaultProfileImage().pipe(
       switchMap(defaultImageFile => {
         return this.registerGoogleUserWithProfileImage(user, defaultImageFile);
@@ -338,12 +428,20 @@ export class AuthService {
     formData.append('apellidos', apellidos);
     formData.append('password', password);
     
-    // NOTA: No estamos adjuntando ninguna imagen pfp - esto probablemente fallará
-    // si el backend requiere esta imagen, pero es un último recurso
+    // Almacenar temporalmente la contraseña para mostrarla al usuario
+    const tempPassword = password;
     
+    // Registro y retorno de información de credenciales
     return this.userRequest.register(formData).pipe(
-      switchMap(response => {
-        return this.login(username, password);
+      map(response => {
+        // Retornamos las credenciales para que el usuario pueda iniciar sesión
+        return {
+          ...response,
+          credentials: {
+            username,
+            password: tempPassword
+          }
+        };
       }),
       catchError(error => {
         console.error('Error en registro sin imagen:', error);
@@ -388,15 +486,16 @@ export class AuthService {
     // Añadir la imagen de perfil como archivo
     formData.append('pfp', profileImage, 'profile.jpg');
     
-    // Guardamos las credenciales para usarlas después del registro
+    // Guardamos las credenciales para retornarlas
     const credentials = { username, password };
     
     return this.userRequest.register(formData).pipe(
-      switchMap(response => {
-        // Una vez registrado, hacemos login directamente con las credenciales
-        // en lugar de procesar la respuesta del registro
-        console.log('Registro exitoso, intentando login con credenciales:', credentials.username);
-        return this.login(credentials.username, credentials.password);
+      map(response => {
+        // Retornamos la respuesta y las credenciales para mostrarlas al usuario
+        return {
+          ...response,
+          credentials
+        };
       }),
       catchError(error => {
         console.error('Error en el registro de Google:', error);
@@ -410,8 +509,7 @@ export class AuthService {
    * @returns Observable con el archivo de imagen
    */
   private getDefaultProfileImage(): Observable<File> {
-    // Generamos una imagen simple de 1x1 pixel como último recurso
-    // Esto garantiza que siempre tendremos una imagen válida para enviar
+    // Generamos una imagen simple como último recurso
     
     try {
       // Crear un canvas pequeño de 100x100 pixels
@@ -472,36 +570,6 @@ export class AuthService {
   }
   
   /**
-   * Procesa la respuesta exitosa del login con Google
-   * NOTA: Este método ya no se usa, se reemplazó por un login directo después del registro
-   * Se mantiene para referencia o uso futuro
-   * @param response Respuesta del servidor
-   */
-  private processGoogleLoginSuccess(response: any): Observable<any> {
-    // Validamos primero que la respuesta contenga datos de usuario
-    if (response && response.message && typeof response.message === 'object') {
-      const userData = response.message;
-      
-      // Añadir el proveedor para diferenciarlo
-      userData.provider = 'google';
-      this.currentUserSubject.next(userData);
-      
-      // Guardar en el almacenamiento apropiado
-      this.storeItem(this.userDataKey, JSON.stringify(userData));
-      
-      // Si hay un token en la respuesta, guardarlo también
-      if (response.token) {
-        this.storeItem(this.tokenKey, response.token);
-      }
-      
-      return from([response]);
-    }
-    
-    console.error('Respuesta inválida en processGoogleLoginSuccess:', response);
-    return throwError(() => new Error('Respuesta inválida del servidor'));
-  }
-  
-  /**
    * Genera una contraseña aleatoria para usuarios de Google
    * @returns Contraseña aleatoria
    */
@@ -516,50 +584,5 @@ export class AuthService {
     }
     
     return password;
-  }
-  
-  /**
-   * Función mejorada para convertir una URL de imagen a un archivo
-   * @param url URL de la imagen
-   * @param filename Nombre del archivo
-   */
-  private async urlToFile(url: string, filename: string = 'profile.jpg'): Promise<File> {
-    try {
-      // Crear una petición con encabezados para evitar problemas CORS
-      const headers = new Headers();
-      headers.append('Access-Control-Allow-Origin', '*');
-      
-      const corsProxyUrl = `https://cors-anywhere.herokuapp.com/${url}`;
-      // Intentar primero con la URL directa, sino intentar con un proxy CORS
-      let response: Response;
-      
-      try {
-        response = await fetch(url, { mode: 'cors' });
-      } catch (directError) {
-        console.warn('Error al cargar directamente, intentando con proxy CORS:', directError);
-        try {
-          response = await fetch(corsProxyUrl);
-        } catch (proxyError) {
-          throw new Error('No se pudo acceder a la imagen: ' + (proxyError instanceof Error ? proxyError.message : 'Error desconocido'));
-        }
-      }
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const blob = await response.blob();
-      return new File([blob], filename, { type: blob.type || 'image/jpeg' });
-    } catch (error) {
-      console.error('Error al convertir URL a File:', error);
-      
-      // Si hay un error al descargar la imagen, intentamos con una imagen predeterminada
-      return this.getDefaultProfileImage().toPromise().then(file => {
-        if (!file) {
-          throw new Error('Failed to generate default profile image');
-        }
-        return file;
-      });
-    }
   }
 }
