@@ -24,8 +24,8 @@ import {
   IonBackButton,
   AlertController,
   ToastController,
-  IonInput
-} from '@ionic/angular/standalone';
+  IonInput,
+  IonModal, IonFooter } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   personOutline,
@@ -35,19 +35,27 @@ import {
   helpCircleOutline,
   logOutOutline,
   chevronForwardOutline,
-  cameraOutline
+  cameraOutline,
+  eyeOutline,
+  eyeOffOutline,
+  closeOutline,
+  cropOutline,
+  checkmarkOutline,
+  imageOutline
 } from 'ionicons/icons';
 import { Router } from '@angular/router';
 import { ConfigService, Configuraciones } from '../../services/config.service';
 import { AuthService, User } from '../../services/auth.service';
 import { Subscription } from 'rxjs';
+import { ImageCroppedEvent, ImageCropperComponent, LoadedImage } from 'ngx-image-cropper';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-conf',
   templateUrl: './conf.page.html',
   styleUrls: ['./conf.page.scss'],
   standalone: true,
-  imports: [
+  imports: [IonFooter, 
     IonBackButton, 
     IonButtons,
     IonContent,
@@ -70,11 +78,14 @@ import { Subscription } from 'rxjs';
     IonAvatar,
     IonButton,
     IonItemDivider,
-    IonInput
+    IonInput,
+    IonModal,
+    ImageCropperComponent
   ]
 })
 export class ConfPage implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput!: ElementRef;
+  @ViewChild('cropperModal') cropperModal!: IonModal;
   
   // Datos del usuario
   usuario: User = {
@@ -100,6 +111,14 @@ export class ConfPage implements OnInit, OnDestroy {
   previewImage: string | null = null;
   selectedFile: File | null = null;
   
+  // Variables para el cropper
+  imageChangedEvent: any = '';
+  croppedImage: any = '';
+  showCropper = false;
+  originalFileName = '';
+  originalFileType = '';
+  cropperHeight = 300; // Altura por defecto del cropper
+  
   private userSubscription: Subscription | null = null;
   
   // Configuraciones
@@ -119,7 +138,8 @@ export class ConfPage implements OnInit, OnDestroy {
     private configService: ConfigService,
     private authService: AuthService,
     private alertController: AlertController,
-    private toastController: ToastController
+    private toastController: ToastController,
+    private sanitizer: DomSanitizer
   ) {
     addIcons({
       personOutline,
@@ -129,7 +149,13 @@ export class ConfPage implements OnInit, OnDestroy {
       helpCircleOutline,
       logOutOutline,
       chevronForwardOutline,
-      cameraOutline
+      cameraOutline,
+      eyeOutline,
+      eyeOffOutline,
+      closeOutline,
+      cropOutline,
+      checkmarkOutline,
+      imageOutline
     });
     
     // Inicializar con valores por defecto
@@ -252,15 +278,147 @@ export class ConfPage implements OnInit, OnDestroy {
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      this.selectedFile = input.files[0];
+      const file = input.files[0];
       
-      // Mostrar vista previa
-      const reader = new FileReader();
-      reader.onload = (e: any) => {
-        this.previewImage = e.target.result;
-      };
-      reader.readAsDataURL(this.selectedFile);
+      // Validar tipo de archivo
+      if (!file.type.match(/image\/(jpeg|jpg|png|gif|webp)/)) {
+        this.mostrarToast('Por favor, selecciona una imagen válida (JPEG, PNG, GIF o WEBP)', 'warning');
+        return;
+      }
+
+      // Validar tamaño máximo (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        this.mostrarToast('La imagen no debe exceder los 5MB', 'warning');
+        return;
+      }
+
+      // Guardar el nombre y tipo del archivo original
+      this.originalFileName = file.name;
+      this.originalFileType = file.type;
+      
+      // Iniciar el proceso de recorte
+      this.imageChangedEvent = event;
+      this.showCropper = true;
+      
+      // Presentar el modal después de un breve retraso para asegurar que el DOM esté listo
+      setTimeout(() => {
+        this.cropperModal.present();
+      }, 100);
     }
+  }
+
+  imageCropped(event: ImageCroppedEvent) {
+    // Guardar la imagen recortada y sanitizar el objectUrl para mayor seguridad
+    if (event.objectUrl) {
+      this.croppedImage = event.objectUrl;
+    } else if (event.base64) {
+      // Respaldo si no hay objectUrl
+      this.croppedImage = event.base64;
+    }
+  }
+
+  imageLoaded(image: LoadedImage) {
+    // Imagen cargada en el cropper
+    console.log('Imagen cargada en el cropper', image);
+    
+    // Ajustar altura según la imagen cargada
+    const imgElement = image.original.image as HTMLImageElement;
+    if (imgElement) {
+      // Calcular una altura razonable basada en las dimensiones de la imagen
+      // pero manteniéndola dentro de límites razonables para la UI
+      const aspectRatio = imgElement.naturalWidth / imgElement.naturalHeight;
+      this.cropperHeight = Math.min(400, Math.round(300 / aspectRatio));
+    }
+  }
+
+  cropperReady() {
+    // El cropper está listo
+    console.log('Cropper listo');
+  }
+
+  loadImageFailed() {
+    // Error al cargar la imagen
+    this.mostrarToast('Error al cargar la imagen', 'danger');
+    this.showCropper = false;
+    this.cropperModal.dismiss();
+  }
+
+  async confirmCrop() {
+    if (!this.croppedImage) {
+      this.mostrarToast('Error al procesar la imagen', 'danger');
+      return;
+    }
+
+    try {
+      // Si tenemos un objectUrl, usarlo para crear un Blob/File
+      if (this.croppedImage.startsWith('blob:')) {
+        // Actualizar la vista previa (sanitizada)
+        this.previewImage = this.croppedImage;
+        
+        // Obtener el blob desde el objectUrl
+        const response = await fetch(this.croppedImage);
+        const blob = await response.blob();
+        
+        // Crear un File a partir del Blob
+        this.selectedFile = new File([blob], this.originalFileName, { 
+          type: this.originalFileType || blob.type 
+        });
+      } 
+      // Si tenemos un base64, convertirlo a File
+      else if (this.croppedImage.startsWith('data:')) {
+        // Actualizar la vista previa (sanitizada)
+        this.previewImage = this.croppedImage;
+        
+        // Convertir base64 a File
+        const file = await this.base64ToFile(
+          this.croppedImage, 
+          this.originalFileName, 
+          this.originalFileType
+        );
+        
+        this.selectedFile = file;
+      }
+      
+      // Cerrar el modal
+      this.cropperModal.dismiss();
+      this.showCropper = false;
+    } catch (error) {
+      console.error('Error al procesar la imagen recortada:', error);
+      this.mostrarToast('Error al procesar la imagen recortada', 'danger');
+    }
+  }
+
+  cancelCrop() {
+    this.cropperModal.dismiss();
+    this.showCropper = false;
+    this.imageChangedEvent = '';
+    this.croppedImage = '';
+  }
+
+  base64ToFile(
+    dataUrl: string,
+    filename: string,
+    mimeType: string
+  ): Promise<File> {
+    // Extraer la parte de datos del base64 (eliminar el prefijo data:image/xyz;base64,)
+    const base64Data = dataUrl.split(',')[1];
+    const byteCharacters = atob(base64Data);
+    const byteArrays = [];
+    
+    for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+      const slice = byteCharacters.slice(offset, offset + 1024);
+      
+      const byteNumbers = new Array(slice.length);
+      for (let i = 0; i < slice.length; i++) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
+      
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+    
+    const blob = new Blob(byteArrays, { type: mimeType || 'image/png' });
+    return Promise.resolve(new File([blob], filename, { type: mimeType || 'image/png' }));
   }
 
   async guardarCambios() {

@@ -14,15 +14,12 @@
           <p class="mb-1"><span class="font-medium">Usuario:</span> {{googleCredentials.username}}</p>
           <p><span class="font-medium">Contraseña:</span> {{googleCredentials.password}}</p>
         </div>
-        <button
-          (click)="copyCredentialsToClipboard()"
+        <button (click)="copyCredentialsToClipboard()"
           class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors">
           Copiar credenciales
         </button>
         <div class="mt-3 text-center">
-          <button
-            (click)="navigateToLogin()"
-            class="text-green-700 hover:text-green-900 font-medium underline text-sm">
+          <button (click)="navigateToLogin()" class="text-green-700 hover:text-green-900 font-medium underline text-sm">
             Ir a iniciar sesión
           </button>
         </div>
@@ -30,9 +27,7 @@
       <!-- Opciones de registro -->
       <div *ngIf="!googleCredentials" class="mb-6">
         <div class="grid grid-cols-1 gap-3">
-          <button
-            (click)="registerWithGoogle()"
-            [disabled]="isGoogleSubmitting"
+          <button (click)="registerWithGoogle()" [disabled]="isGoogleSubmitting"
             class="flex justify-center items-center py-3 px-4 border border-ionic-medium rounded-lg shadow-sm bg-ionic-light hover:bg-ionic-medium">
             <ion-spinner *ngIf="isGoogleSubmitting" name="crescent" class="mr-2 text-sm"></ion-spinner>
             <ion-icon *ngIf="!isGoogleSubmitting" name="logo-google" class="text-xl text-red-500 mr-2"></ion-icon>
@@ -54,88 +49,83 @@
           <label for="nombre" class="block text-sm font-medium text-ionic-medium mb-1">Nombre</label>
           <div class="relative">
             <ion-icon name="person-outline" class="absolute left-3 top-3 text-ionic-medium"></ion-icon>
-            <input type="text" 
-                  id="nombre" 
-                  formControlName="nombre"
-                  class="block w-full pl-10 pr-3 py-2 border border-ionic-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-ionic-primary"
-                  placeholder="Tu nombre">
-            <div *ngIf="signinForm.get('nombre')?.touched && signinForm.get('nombre')?.invalid" class="text-red-500 text-xs mt-1">
+            <input type="text" id="nombre" formControlName="nombre"
+              class="block w-full pl-10 pr-3 py-2 border border-ionic-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-ionic-primary"
+              placeholder="Tu nombre">
+            <div *ngIf="signinForm.get('nombre')?.touched && signinForm.get('nombre')?.invalid"
+              class="text-red-500 text-xs mt-1">
               El nombre es requerido
             </div>
           </div>
         </div>
-        
+
         <!-- Apellidos -->
         <div class="mb-4">
           <label for="apellidos" class="block text-sm font-medium text-ionic-medium mb-1">Apellidos</label>
           <div class="relative">
             <ion-icon name="person-outline" class="absolute left-3 top-3 text-ionic-medium"></ion-icon>
-            <input type="text" 
-                  id="apellidos" 
-                  formControlName="apellidos"
-                  class="block w-full pl-10 pr-3 py-2 border border-ionic-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-ionic-primary"
-                  placeholder="Tus apellidos">
-            <div *ngIf="signinForm.get('apellidos')?.touched && signinForm.get('apellidos')?.invalid" class="text-red-500 text-xs mt-1">
+            <input type="text" id="apellidos" formControlName="apellidos"
+              class="block w-full pl-10 pr-3 py-2 border border-ionic-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-ionic-primary"
+              placeholder="Tus apellidos">
+            <div *ngIf="signinForm.get('apellidos')?.touched && signinForm.get('apellidos')?.invalid"
+              class="text-red-500 text-xs mt-1">
               Los apellidos son requeridos
             </div>
           </div>
         </div>
-        
+
         <!-- Email -->
         <div class="mb-4">
           <label for="email" class="block text-sm font-medium text-ionic-medium mb-1">Email</label>
           <div class="relative">
             <ion-icon name="mail-outline" class="absolute left-3 top-3 text-ionic-medium"></ion-icon>
-            <input type="email" 
-                  id="email" 
-                  formControlName="email"
-                  class="block w-full pl-10 pr-3 py-2 border border-ionic-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-ionic-primary"
-                  placeholder="tucorreo@ejemplo.com">
-            <div *ngIf="signinForm.get('email')?.touched && signinForm.get('email')?.invalid" class="text-red-500 text-xs mt-1">
+            <input type="email" id="email" formControlName="email"
+              class="block w-full pl-10 pr-3 py-2 border border-ionic-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-ionic-primary"
+              placeholder="tucorreo@ejemplo.com">
+            <div *ngIf="signinForm.get('email')?.touched && signinForm.get('email')?.invalid"
+              class="text-red-500 text-xs mt-1">
               <span *ngIf="signinForm.get('email')?.errors?.['required']">El email es requerido</span>
               <span *ngIf="signinForm.get('email')?.errors?.['email']">Ingresa un email válido</span>
             </div>
           </div>
         </div>
-        
+
         <!-- Username -->
         <div class="mb-4">
           <label for="username" class="block text-sm font-medium text-ionic-medium mb-1">Nombre de usuario</label>
           <div class="relative">
             <ion-icon name="person-outline" class="absolute left-3 top-3 text-ionic-medium"></ion-icon>
-            <input type="text" 
-                  id="username" 
-                  formControlName="username"
-                  class="block w-full pl-10 pr-3 py-2 border border-ionic-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-ionic-primary"
-                  placeholder="Nombre de usuario">
-            <div *ngIf="signinForm.get('username')?.touched && signinForm.get('username')?.invalid" class="text-red-500 text-xs mt-1">
+            <input type="text" id="username" formControlName="username"
+              class="block w-full pl-10 pr-3 py-2 border border-ionic-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-ionic-primary"
+              placeholder="Nombre de usuario">
+            <div *ngIf="signinForm.get('username')?.touched && signinForm.get('username')?.invalid"
+              class="text-red-500 text-xs mt-1">
               El nombre de usuario es requerido
             </div>
           </div>
         </div>
-        
+
         <!-- Password -->
         <div class="mb-4">
           <label for="password" class="block text-sm font-medium text-ionic-medium mb-1">Contraseña</label>
           <div class="relative">
             <ion-icon name="lock-closed-outline" class="absolute left-3 top-3 text-ionic-medium"></ion-icon>
-            <input [type]="showPassword ? 'text' : 'password'" 
-                  id="password" 
-                  formControlName="password"
-                  class="block w-full pl-10 pr-12 py-2 border border-ionic-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-ionic-primary"
-                  placeholder="Mínimo 6 caracteres">
-            <button type="button" 
-                    (click)="togglePasswordVisibility()" 
-                    class="absolute inset-y-0 right-0 px-3 flex items-center">
+            <input [type]="showPassword ? 'text' : 'password'" id="password" formControlName="password"
+              class="block w-full pl-10 pr-12 py-2 border border-ionic-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-ionic-primary"
+              placeholder="Mínimo 6 caracteres">
+            <button type="button" (click)="togglePasswordVisibility()"
+              class="absolute inset-y-0 right-0 px-3 flex items-center">
               <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'" class="text-ionic-medium"></ion-icon>
             </button>
-            <div *ngIf="signinForm.get('password')?.touched && signinForm.get('password')?.invalid" class="text-red-500 text-xs mt-1">
+            <div *ngIf="signinForm.get('password')?.touched && signinForm.get('password')?.invalid"
+              class="text-red-500 text-xs mt-1">
               <span *ngIf="signinForm.get('password')?.errors?.['required']">La contraseña es requerida</span>
-              <span *ngIf="signinForm.get('password')?.errors?.['minlength']">La contraseña debe tener al menos 6 caracteres</span>
+              <span *ngIf="signinForm.get('password')?.errors?.['minlength']">La contraseña debe tener al menos 6
+                caracteres</span>
             </div>
           </div>
         </div>
-        
+
         <!-- Profile Picture -->
         <div class="mb-6">
           <label for="pfp" class="block text-sm font-medium text-ionic-medium mb-1">Foto de perfil</label>
@@ -148,38 +138,37 @@
             </div>
             <div class="flex-1">
               <label class="cursor-pointer w-full">
-                <div class="flex items-center justify-center px-4 py-2 border border-ionic-medium rounded-lg bg-ionic-light hover:bg-ionic-medium transition-colors">
+                <div
+                  class="flex items-center justify-center px-4 py-2 border border-ionic-medium rounded-lg bg-ionic-light hover:bg-ionic-medium transition-colors">
                   <ion-icon name="image-outline" class="mr-2 text-ionic-dark"></ion-icon>
                   <span class="text-sm font-medium text-ionic-dark">Seleccionar foto</span>
                 </div>
-                <input type="file" 
-                      (change)="onFileChange($event)" 
-                      accept="image/jpeg,image/png,image/gif,image/webp"
-                      class="hidden">
+                <input type="file" (change)="onFileChange($event)" accept="image/jpeg,image/png,image/gif,image/webp"
+                  class="hidden">
               </label>
-              <div *ngIf="signinForm.get('pfp')?.touched && signinForm.get('pfp')?.invalid" class="text-red-500 text-xs mt-1">
+              <div *ngIf="signinForm.get('pfp')?.touched && signinForm.get('pfp')?.invalid"
+                class="text-red-500 text-xs mt-1">
                 La foto de perfil es requerida
               </div>
             </div>
           </div>
           <p class="text-xs text-ionic-medium mt-2">Formatos permitidos: JPG, PNG, GIF, WebP (máx. 5MB)</p>
         </div>
-        
+
         <!-- Submit Button -->
         <div class="mb-6">
-          <button type="submit" 
-                  [disabled]="isSubmitting" 
-                  class="w-full flex justify-center items-center py-3 px-4 bg-ionic-primary hover:bg-opacity-90 text-white rounded-lg font-medium transition-colors">
+          <button type="submit" [disabled]="isSubmitting"
+            class="w-full flex justify-center items-center py-3 px-4 bg-ionic-primary hover:bg-opacity-90 text-white rounded-lg font-medium transition-colors">
             <ion-spinner *ngIf="isSubmitting" name="crescent" class="mr-2 text-sm"></ion-spinner>
             <span>Crear cuenta</span>
           </button>
         </div>
       </form>
-      
+
       <!-- Login Link -->
       <div *ngIf="!googleCredentials" class="text-center">
         <p class="text-sm text-ionic-medium">
-          ¿Ya tienes una cuenta? 
+          ¿Ya tienes una cuenta?
           <button (click)="navigateToLogin()" class="text-ionic-primary hover:underline font-medium">
             Iniciar sesión
           </button>
@@ -187,4 +176,46 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal para el recorte de imagen -->
+  <ion-modal #cropperModal [isOpen]="showCropper" [backdropDismiss]="false" class="cropper-modal">
+    <ng-template>
+      <div class="flex flex-col h-full">
+        <!-- Header fijo -->
+        <div class="p-4 border-b border-ionic-medium bg-ionic-light">
+          <div class="flex justify-between items-center">
+            <h3 class="text-lg font-semibold text-ionic-dark">Recortar imagen</h3>
+            <button (click)="cancelCrop()" class="text-ionic-medium">
+              <ion-icon name="close-outline" class="text-2xl"></ion-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- Contenido con scroll -->
+        <div class="flex-grow overflow-auto">
+          <div class="p-4">
+            <image-cropper [imageChangedEvent]="imageChangedEvent" [maintainAspectRatio]="true" [aspectRatio]="1"
+              [roundCropper]="true" format="png" output="blob" (imageCropped)="imageCropped($event)"
+              (imageLoaded)="imageLoaded($event)" (cropperReady)="cropperReady()" (loadImageFailed)="loadImageFailed()"
+              class="w-full"></image-cropper>
+          </div>
+        </div>
+
+        <!-- Footer fijo con botones -->
+        <div class="p-4 border-t border-ionic-medium bg-ionic-light">
+          <div class="flex justify-end space-x-3">
+            <button (click)="cancelCrop()"
+              class="py-2 px-4 border border-ionic-medium rounded-lg text-ionic-dark hover:bg-ionic-medium transition-colors">
+              Cancelar
+            </button>
+            <button (click)="confirmCrop()"
+              class="py-2 px-4 bg-ionic-primary text-white rounded-lg hover:bg-opacity-90 transition-colors flex items-center">
+              <ion-icon name="checkmark-outline" class="mr-1"></ion-icon>
+              Aceptar
+            </button>
+          </div>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
 </ion-content>

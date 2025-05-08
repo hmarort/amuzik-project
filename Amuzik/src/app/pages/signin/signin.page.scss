@@ -1,0 +1,33 @@
+/* Estilos para el modal de recorte */
+.cropper-modal::part(content) {
+    --height: 90%;
+    --width: 90%;
+    --max-height: 600px;
+    --max-width: 500px;
+    --border-radius: 12px;
+    --box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Asegurar que el contenedor es lo suficientemente alto para mostrar el cropper */
+  :host ::ng-deep .cropper-container {
+    max-height: calc(100vh - 180px);
+  }
+  
+  /* Estilos para cuando la imagen es demasiado grande */
+  @media (max-height: 700px) {
+    .cropper-modal::part(content) {
+      --height: 95%;
+      --max-height: 95vh;
+    }
+  }
+  
+  /* Estilos responsivos para móviles */
+  @media (max-width: 576px) {
+    .cropper-modal::part(content) {
+      --width: 95%;
+      --max-width: 95vw;
+    }
+  }

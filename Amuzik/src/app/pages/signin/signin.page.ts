@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -8,6 +8,7 @@ import {
   IonContent,
   IonIcon,
   IonSpinner,
+  IonModal,
 } from '@ionic/angular/standalone';
 import { ToastController } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -21,8 +22,12 @@ import {
   personAdd,
   closeOutline,
   logoGoogle,
+  cropOutline,
+  checkmarkOutline,
 } from 'ionicons/icons';
 import { AuthService } from '../../services/auth.service';
+import { ImageCroppedEvent, ImageCropperComponent, LoadedImage } from 'ngx-image-cropper';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-signin',
@@ -33,26 +38,40 @@ import { AuthService } from '../../services/auth.service';
     IonContent,
     IonIcon,
     IonSpinner,
+    IonModal,
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    HttpClientModule
-],
+    HttpClientModule,
+    ImageCropperComponent
+  ],
 })
 export class SigninPage implements OnInit {
+  @ViewChild('cropperModal')
+  cropperModal!: IonModal;
+  
   signinForm: FormGroup;
   isSubmitting = false;
   isGoogleSubmitting = false;
   showPassword = false;
   selectedFile: File | null = null;
-  previewUrl: string | ArrayBuffer | null = null;
+  previewUrl: SafeUrl | null = null;
   googleCredentials: {username: string, password: string} | null = null;
+  
+  // Variables para el cropper
+  imageChangedEvent: any = '';
+  croppedImage: any = '';
+  showCropper = false;
+  originalFileName = '';
+  originalFileType = '';
+  cropperHeight = 300; // Altura por defecto del cropper
 
   constructor(
     private formBuilder: FormBuilder,
     private router: Router,
     private authService: AuthService,
-    private toastController: ToastController
+    private toastController: ToastController,
+    private sanitizer: DomSanitizer
   ) {
     // Añadir iconos
     addIcons({
@@ -65,6 +84,8 @@ export class SigninPage implements OnInit {
       eyeOffOutline,
       closeOutline,
       logoGoogle,
+      cropOutline,
+      checkmarkOutline,
     });
 
     this.signinForm = this.formBuilder.group({
@@ -99,75 +120,121 @@ export class SigninPage implements OnInit {
         return;
       }
 
-      // Procesar la imagen (redimensionar)
-      this.processImage(file);
+      // Guardar el nombre y tipo del archivo original
+      this.originalFileName = file.name;
+      this.originalFileType = file.type;
+      
+      // Iniciar el proceso de recorte
+      this.imageChangedEvent = event;
+      this.showCropper = true;
+      
+      // Presentar el modal después de un breve retraso para asegurar que el DOM esté listo
+      setTimeout(() => {
+        this.cropperModal.present();
+      }, 100);
     }
   }
 
-  processImage(file: File) {
-    const reader = new FileReader();
-    reader.onload = (e: any) => {
-      // Crear una imagen para obtener las dimensiones
-      const img = new Image();
-      img.onload = () => {
-        // Crear canvas para redimensionar
-        const canvas = document.createElement('canvas');
+  imageCropped(event: ImageCroppedEvent) {
+    // Guardar la imagen recortada y sanitizar el objectUrl para mayor seguridad
+    if (event.objectUrl) {
+      this.croppedImage = event.objectUrl;
+    } else if (event.base64) {
+      // Respaldo si no hay objectUrl
+      this.croppedImage = event.base64;
+    }
+  }
 
-        // Tamaño deseado para la foto de perfil (300x300)
-        const maxSize = 300;
+  imageLoaded(image: LoadedImage) {
+    // Imagen cargada en el cropper
+    console.log('Imagen cargada en el cropper', image);
+    
+    // Ajustar altura según la imagen cargada
+    const imgElement = image.original.image as HTMLImageElement;
+    if (imgElement) {
+      // Calcular una altura razonable basada en las dimensiones de la imagen
+      // pero manteniéndola dentro de límites razonables para la UI
+      const aspectRatio = imgElement.naturalWidth / imgElement.naturalHeight;
+      this.cropperHeight = Math.min(400, Math.round(300 / aspectRatio));
+    }
+  }
 
-        // Calcular el nuevo tamaño manteniendo la proporción
-        let width = img.width;
-        let height = img.height;
+  cropperReady() {
+    // El cropper está listo
+    console.log('Cropper listo');
+  }
 
-        // Determinar la dimensión más grande
-        if (width > height) {
-          if (width > maxSize) {
-            height = Math.round(height * (maxSize / width));
-            width = maxSize;
-          }
-        } else {
-          if (height > maxSize) {
-            width = Math.round(width * (maxSize / height));
-            height = maxSize;
-          }
-        }
+  loadImageFailed() {
+    // Error al cargar la imagen
+    this.showToast('Error al cargar la imagen', 'danger');
+    this.showCropper = false;
+    this.cropperModal.dismiss();
+  }
 
-        // Configurar el canvas y dibujar la imagen redimensionada
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-        } else {
-          console.error('No se pudo obtener el contexto del canvas');
-          return;
-        }
+  async confirmCrop() {
+    if (!this.croppedImage) {
+      this.showToast('Error al procesar la imagen', 'danger');
+      return;
+    }
 
-        // Convertir a formato base64
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-
-        // Actualizar la vista previa
-        this.previewUrl = dataUrl;
-
-        // Convertir base64 a Blob/File para el formulario
-        this.base64ToFile(dataUrl, file.name, file.type).then((resizedFile) => {
-          // Establecer el archivo redimensionado en el formulario
-          this.selectedFile = resizedFile;
-          const pfpControl = this.signinForm.get('pfp');
-          if (pfpControl) {
-            pfpControl.setValue(resizedFile);
-            pfpControl.updateValueAndValidity();
-            pfpControl.markAsDirty();
-          }
+    try {
+      // Si tenemos un objectUrl, usarlo para crear un Blob/File
+      if (this.croppedImage.startsWith('blob:')) {
+        // Actualizar la vista previa (sanitizada)
+        this.previewUrl = this.sanitizer.bypassSecurityTrustUrl(this.croppedImage);
+        
+        // Obtener el blob desde el objectUrl
+        const response = await fetch(this.croppedImage);
+        const blob = await response.blob();
+        
+        // Crear un File a partir del Blob
+        this.selectedFile = new File([blob], this.originalFileName, { 
+          type: this.originalFileType || blob.type 
         });
-      };
+        
+        // Establecer el archivo en el formulario
+        const pfpControl = this.signinForm.get('pfp');
+        if (pfpControl) {
+          pfpControl.setValue(this.selectedFile);
+          pfpControl.updateValueAndValidity();
+          pfpControl.markAsDirty();
+        }
+      } 
+      // Si tenemos un base64, convertirlo a File
+      else if (this.croppedImage.startsWith('data:')) {
+        // Actualizar la vista previa (sanitizada)
+        this.previewUrl = this.sanitizer.bypassSecurityTrustUrl(this.croppedImage);
+        
+        // Convertir base64 a File
+        const file = await this.base64ToFile(
+          this.croppedImage, 
+          this.originalFileName, 
+          this.originalFileType
+        );
+        
+        this.selectedFile = file;
+        const pfpControl = this.signinForm.get('pfp');
+        if (pfpControl) {
+          pfpControl.setValue(file);
+          pfpControl.updateValueAndValidity();
+          pfpControl.markAsDirty();
+        }
+      }
+      
+      // Cerrar el modal
+      this.cropperModal.dismiss();
+      this.showCropper = false;
+    } catch (error) {
+      console.error('Error al procesar la imagen recortada:', error);
+      this.showToast('Error al procesar la imagen recortada', 'danger');
+    }
+  }
 
-      // Cargar la imagen
-      img.src = e.target.result;
-    };
-
-    reader.readAsDataURL(file);
+  cancelCrop() {
+    this.cropperModal.dismiss();
+    this.showCropper = false;
+    this.imageChangedEvent = '';
+    this.croppedImage = '';
   }
 
   base64ToFile(
@@ -175,9 +242,25 @@ export class SigninPage implements OnInit {
     filename: string,
     mimeType: string
   ): Promise<File> {
-    return fetch(dataUrl)
-      .then((res) => res.arrayBuffer())
-      .then((buf) => new File([buf], filename, { type: mimeType }));
+    // Extraer la parte de datos del base64 (eliminar el prefijo data:image/xyz;base64,)
+    const base64Data = dataUrl.split(',')[1];
+    const byteCharacters = atob(base64Data);
+    const byteArrays = [];
+    
+    for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+      const slice = byteCharacters.slice(offset, offset + 1024);
+      
+      const byteNumbers = new Array(slice.length);
+      for (let i = 0; i < slice.length; i++) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
+      
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+    
+    const blob = new Blob(byteArrays, { type: mimeType || 'image/png' });
+    return Promise.resolve(new File([blob], filename, { type: mimeType || 'image/png' }));
   }
 
   togglePasswordVisibility() {
@@ -242,9 +325,6 @@ export class SigninPage implements OnInit {
     }
   }
 
-  /**
-   * Método para registrarse con Google
-   */
   registerWithGoogle() {
     this.isGoogleSubmitting = true;
     this.googleCredentials = null;
@@ -278,16 +358,10 @@ export class SigninPage implements OnInit {
     });
   }
 
-  /**
-   * Navegar a la página de login
-   */
   navigateToLogin() {
     this.router.navigate(['/login']);
   }
 
-  /**
-   * Copiar las credenciales al portapapeles
-   */
   copyCredentialsToClipboard() {
     if (!this.googleCredentials) return;
     
