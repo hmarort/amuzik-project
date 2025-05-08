@@ -22,11 +22,14 @@ import {
 } from 'ionicons/icons';
 import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { importProvidersFrom } from '@angular/core';
-import { AuthInterceptor} from './app/services/interceptors/auth.interceptor'
+import { AuthInterceptor } from './app/services/interceptors/auth.interceptor';
 import { environment } from './environments/environment';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { getAuth, provideAuth } from '@angular/fire/auth';
 import { getMessaging, provideMessaging } from '@angular/fire/messaging';
+
+// 🔑 Importa el plugin de teclado de Capacitor
+import { Keyboard } from '@capacitor/keyboard';
 
 addIcons({
   'lock-closed': lockClosed,
@@ -39,11 +42,21 @@ addIcons({
 bootstrapApplication(AppComponent, {
   providers: [
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
-    // Agregar el interceptor HTTP para autenticación
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
     provideIonicAngular(),
     provideRouter(routes, withPreloading(PreloadAllModules)),
-    importProvidersFrom(HttpClientModule), provideFirebaseApp(() => initializeApp(environment.firebaseConfig)),
-     provideAuth(() => getAuth()), provideMessaging(() => getMessaging()),
+    importProvidersFrom(HttpClientModule),
+    provideFirebaseApp(() => initializeApp(environment.firebaseConfig)),
+    provideAuth(() => getAuth()),
+    provideMessaging(() => getMessaging()),
   ],
+}).then(() => {
+  // ✅ Configura eventos del teclado
+  Keyboard.addListener('keyboardWillShow', () => {
+    document.body.classList.add('keyboard-is-open');
+  });
+
+  Keyboard.addListener('keyboardWillHide', () => {
+    document.body.classList.remove('keyboard-is-open');
+  });
 });
