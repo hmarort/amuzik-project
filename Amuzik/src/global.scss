@@ -1106,3 +1106,832 @@ ion-toolbar,
 ion-item {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+/* Particularidades de la web */
+/* Variables para breakpoints responsive */
+$breakpoint-sm: 576px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 992px;
+$breakpoint-xl: 1200px;
+
+/* Estilos generales */
+:root {
+  --avatar-size-sm: 40px;
+  --avatar-size-md: 50px;
+  --avatar-size-lg: 80px;
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 20px;
+  --spacing-xl: 24px;
+}
+
+/* Eliminar bordes de las listas y establecer background transparente */
+ion-list {
+  background: transparent;
+  padding: 0;
+}
+
+/* Añadir padding al contenido para espacio del reproductor */
+ion-content {
+  --padding-bottom: 72px;
+}
+
+/* Estilos comunes para elementos flex */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+/* Estilos para carrusel de tracks */
+.tracks-carousel {
+  width: 100%;
+  margin-bottom: var(--spacing-md);
+  
+  .scroll-container {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 10px 0;
+    
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+  
+  .track-card {
+    scroll-snap-align: start;
+    flex: 0 0 auto;
+    width: 150px;
+    margin-right: 12px;
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    transition: transform 0.2s;
+    position: relative;
+    
+    @media (max-width: $breakpoint-sm) {
+      width: 120px;
+    }
+    
+    &.active {
+      transform: scale(1.03);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    &:active {
+      transform: scale(0.98);
+    }
+    
+    .track-artwork {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1/1;
+      
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      
+      .play-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.3);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+        
+        ion-icon {
+          font-size: 32px;
+          color: white;
+        }
+      }
+      
+      &:hover .play-overlay {
+        opacity: 1;
+      }
+    }
+    
+    .track-info {
+      padding: var(--spacing-sm);
+      background: var(--ion-color-medium);
+      
+      h4 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+      }
+      
+      p {
+        margin: 4px 0 0;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+}
+
+/* Estilos para playlists */
+.playlist-container {
+  .playlist-header {
+    display: flex;
+    align-items: flex-start;
+    position: relative;
+    
+    .playlist-artwork {
+      width: 100px;
+      height: 100px;
+      flex-shrink: 0;
+      margin-right: 12px;
+      border-radius: var(--border-radius-md);
+      overflow: hidden;
+      
+      @media (max-width: $breakpoint-sm) {
+        width: 80px;
+        height: 80px;
+      }
+      
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+    
+    .playlist-info {
+      flex: 1;
+      
+      h3 {
+        margin: 0 0 4px;
+        font-size: 18px;
+        font-weight: 700;
+      }
+      
+      p {
+        margin: 2px 0;
+        
+        &.description {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+      }
+    }
+    
+    .expand-icon {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      
+      ion-icon {
+        font-size: 24px;
+        transition: transform 0.3s ease;
+        
+        &.rotated {
+          transform: rotate(180deg);
+        }
+      }
+    }
+  }
+  
+  .playlist-tracks {
+    border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+    overflow: hidden;
+    margin-top: -16px;
+    
+    .track-item {
+      --padding-start: var(--spacing-sm);
+      --padding-end: var(--spacing-sm);
+      --inner-padding-end: var(--spacing-sm);
+      margin-bottom: 2px;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+      
+      ion-thumbnail {
+        width: 50px;
+        height: 50px;
+        --border-radius: var(--border-radius-sm);
+      }
+      
+      .track-status {
+        display: flex;
+        align-items: center;
+        
+        ion-icon {
+          font-size: 24px;
+          animation: pulse 1.5s infinite;
+        }
+      }
+    }
+  }
+}
+
+/* Animación para el icono de reproducción */
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
+}
+
+/* Estilo para las cards expandibles */
+ion-card {
+  margin: var(--spacing-sm) 0;
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s;
+  
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+/* Estilo para el reproductor inferior */
+ion-footer {
+  ion-toolbar {
+    --border-width: 0;
+    --background: var(--ion-color-medium);
+    
+    ion-item {
+      --padding-start: var(--spacing-sm);
+      --padding-end: var(--spacing-sm);
+      --min-height: 64px;
+      
+      ion-buttons {
+        margin-right: 0;
+      }
+    }
+  }
+}
+
+/* Contenedor de resultados de búsqueda */
+.search-results-container {
+  position: fixed;
+  top: 56px;
+  inset-inline: 0;
+  bottom: 0;
+  background-color: var(--ion-color-light);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  
+  &.with-player {
+    bottom: 56px;
+  }
+}
+
+.search-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--ion-color-medium);
+  border-bottom: 1px solid var(--ion-color-medium-shade);
+}
+
+.search-results-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Progreso de la canción en el mini reproductor */
+.progress-bar-container {
+  height: 3px;
+  width: 100%;
+}
+
+/* Estilos para el reproductor expandido */
+.expanded-player {
+  background-color: var(--ion-color-medium);
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.player-header {
+  display: flex;
+  justify-content: center;
+  padding-top: 10px;
+}
+
+.player-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding-bottom: 40px;
+}
+
+.artwork-container {
+  display: flex;
+  justify-content: center;
+  margin: var(--spacing-lg) 0;
+}
+
+.large-artwork {
+  width: min(240px, 80vw);
+  aspect-ratio: 1/1;
+  object-fit: cover;
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.track-progress {
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+}
+
+.current-time, .total-time {
+  font-size: 12px;
+  color: var(--ion-color-light);
+}
+
+.track-seeker {
+  --bar-height: 3px;
+  --knob-size: 15px;
+  margin: 0 10px;
+}
+
+.player-buttons {
+  margin: 15px 0;
+}
+
+.play-button {
+  font-size: 36px;
+}
+
+.volume-control {
+  display: flex;
+  align-items: center;
+  margin-top: var(--spacing-lg);
+}
+
+.volume-icon {
+  margin-right: 10px;
+  color: var(--ion-color-light);
+}
+
+/* Estilos para el reproductor mini */
+ion-footer ion-thumbnail {
+  width: 48px;
+  height: 48px;
+  --border-radius: var(--border-radius-sm);
+}
+
+/* Estilos para chips y avatares */
+.chip-style {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xs);
+  border-radius: 50%;
+  background-color: var(--ion-color-primary);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+  
+  ion-avatar {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+ion-avatar {
+  width: var(--avatar-size-sm);
+  height: var(--avatar-size-sm);
+  border-radius: 50%;
+}
+
+/* Estado vacío */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  padding: var(--spacing-lg) var(--spacing-lg);
+  text-align: center;
+  color: var(--ion-color-medium);
+  
+  ion-icon {
+    font-size: 64px;
+    margin-bottom: var(--spacing-lg);
+  }
+  
+  h3 {
+    margin: 0 0 var(--spacing-xs);
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--ion-color-dark);
+  }
+  
+  p {
+    margin: var(--spacing-sm) 0 0;
+    font-size: 14px;
+  }
+}
+
+/* Formulario para añadir amigos */
+.add-friend-form {
+  padding: var(--spacing-md);
+  
+  .avatar-preview {
+    display: flex;
+    justify-content: center;
+    padding: var(--spacing-lg) 0;
+    
+    ion-avatar {
+      width: var(--avatar-size-lg);
+      height: var(--avatar-size-lg);
+    }
+  }
+  
+  .button-group {
+    display: flex;
+    justify-content: space-between;
+    margin-top: var(--spacing-lg);
+  }
+}
+
+/* Contenedor de amigos */
+.friends-container {
+  padding: var(--spacing-md);
+  
+  .section-title {
+    margin-bottom: var(--spacing-md);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+    padding-left: 5px;
+  }
+}
+
+/* Lista de amigos */
+.friend-list {
+  background: transparent;
+  
+  ion-item-sliding {
+    margin-bottom: 10px;
+    --border-radius: 10px;
+    overflow: hidden;
+  }
+  
+  .friend-item {
+    --padding-start: 12px;
+    --padding-end: 12px;
+    --padding-top: 8px;
+    --padding-bottom: 8px;
+    --border-radius: 10px;
+    --background: var(--ion-color-light);
+    
+    ion-avatar {
+      width: var(--avatar-size-md);
+      height: var(--avatar-size-md);
+      border: 2px solid var(--ion-color-primary);
+    }
+    
+    h2 {
+      font-size: 16px;
+      font-weight: 500;
+    }
+  }
+}
+
+/* Estilos para el botón flotante */
+ion-fab {
+  margin-bottom: var(--spacing-md);
+  margin-right: var(--spacing-md);
+}
+
+/* Contenedor de búsqueda */
+.search-container {
+  margin-bottom: var(--spacing-md);
+}
+
+/* Resultados de búsqueda */
+.search-results {
+  margin-top: 1.5rem;
+  
+  h4 {
+    margin-bottom: var(--spacing-md);
+    font-weight: 500;
+  }
+  
+  .search-result-item {
+    --border-radius: var(--border-radius-md);
+    margin-bottom: var(--spacing-xs);
+  }
+}
+
+/* Contenedor del spinner */
+.spinner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 0;
+  
+  p {
+    margin-top: var(--spacing-md);
+    color: var(--ion-color-medium);
+  }
+}
+
+/* Estilos de perfil */
+.perfil-container {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) 0;
+  
+  ion-avatar {
+    width: var(--avatar-size-lg);
+    height: var(--avatar-size-lg);
+  }
+  
+  .perfil-info {
+    flex: 1;
+    
+    h2 {
+      margin: 0 0 var(--spacing-xs);
+      font-weight: 600;
+    }
+    
+    p {
+      margin: var(--spacing-xs) 0;
+      color: var(--ion-color-medium);
+      font-size: 14px;
+    }
+  }
+}
+
+/* Contenedor de edición de perfil */
+.perfil-edit-container {
+  .edit-avatar {
+    width: var(--avatar-size-lg);
+    height: var(--avatar-size-lg);
+    margin-right: var(--spacing-md);
+  }
+  
+  .avatar-button {
+    margin-left: 10px;
+  }
+  
+  .botones-edicion {
+    display: flex;
+    gap: 10px;
+    margin-top: var(--spacing-lg);
+    justify-content: space-between;
+  }
+}
+
+/* Título de sección */
+.seccion-titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  
+  ion-icon {
+    font-size: 18px;
+  }
+}
+
+/* Contenedor de acción */
+.accion-container {
+  margin-top: var(--spacing-md);
+}
+
+/* Divider de ítems */
+ion-item-divider {
+  margin-top: var(--spacing-md);
+  --background: transparent;
+  --padding-top: var(--spacing-sm);
+  --padding-bottom: var(--spacing-sm);
+  
+  ion-label {
+    margin: 0;
+    font-weight: 600;
+    color: var(--ion-color-primary);
+  }
+}
+
+/* Contenedores de carga y error */
+.loading-container, .error-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: var(--spacing-lg);
+  text-align: center;
+}
+
+/* Contenedor de chat */
+.chat-container {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Estado vacío del chat */
+.empty-chat {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: var(--ion-color-medium);
+  text-align: center;
+  padding: var(--spacing-lg);
+}
+
+/* Mensajes enviados y recibidos */
+.message-sent, .message-received {
+  display: flex;
+  margin-bottom: 10px;
+  max-width: 80%;
+  
+  @media (max-width: $breakpoint-sm) {
+    max-width: 90%;
+  }
+}
+
+.message-sent {
+  align-self: flex-end;
+  justify-content: flex-end;
+}
+
+.message-received {
+  align-self: flex-start;
+}
+
+.message-bubble {
+  padding: 8px 12px;
+  border-radius: 16px;
+  position: relative;
+  
+  p {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+
+.message-sent .message-bubble {
+  background-color: var(--ion-color-primary);
+  color: white;
+  border-bottom-right-radius: 2px;
+}
+
+.message-received .message-bubble {
+  background-color: var(--ion-color-light);
+  color: var(--ion-color-dark);
+  border-bottom-left-radius: 2px;
+}
+
+.message-time {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  display: block;
+  text-align: right;
+  margin-top: 2px;
+}
+
+/* Contenedor de entrada de mensaje */
+.message-input-container {
+  display: flex;
+  align-items: center;
+  background-color: var(--ion-color-light);
+  border-radius: 24px;
+  padding: 4px 8px;
+  margin: var(--spacing-sm);
+  
+  ion-input {
+    --padding-start: var(--spacing-sm);
+    --padding-end: var(--spacing-sm);
+  }
+}
+
+/* Estilos para temas */
+.tema-preview {
+  width: 100%;
+  height: 60px;
+  border-radius: 10px;
+  margin-bottom: var(--spacing-sm);
+  position: relative;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  
+  &.selected {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+  
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+/* Clases para cada tema (versión light) */
+.theme-standard-light { background-color: #3880ff; }
+.theme-neutral-light { background-color: #666666; }
+.theme-pastel-green-light { background-color: #7acb7a; }
+.theme-pastel-blue-light { background-color: #7fb2d9; }
+.theme-pastel-purple-light { background-color: #c17fd9; }
+.theme-pastel-red-light { background-color: #e78787; }
+.theme-pastel-orange-light { background-color: #f2a76c; }
+
+/* Clases para cada tema (versión dark) */
+.theme-standard-dark { background-color: #3171e0; }
+.theme-neutral-dark { background-color: #444444; }
+.theme-pastel-green-dark { background-color: #5a9d5a; }
+.theme-pastel-blue-dark { background-color: #5992b9; }
+.theme-pastel-purple-dark { background-color: #9f5fb9; }
+.theme-pastel-red-dark { background-color: #c76767; }
+.theme-pastel-orange-dark { background-color: #d28b4c; }
+
+.check-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  
+  ion-icon {
+    font-size: 28px;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 50%;
+  }
+}
+
+/* Media queries para responsividad */
+@media (min-width: $breakpoint-md) {
+  .large-artwork {
+    width: 280px;
+  }
+  
+  .track-card {
+    width: 180px;
+  }
+}
+
+@media (min-width: $breakpoint-lg) {
+  .large-artwork {
+    width: 320px;
+  }
+  
+  .message-sent, .message-received {
+    max-width: 70%;
+  }
+}
