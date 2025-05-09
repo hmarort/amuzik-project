@@ -148,7 +148,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   constructor(
     private audiusFacade: AudiusFacade,
-    private authService: AuthService // Add this line
+    private authService: AuthService
   ) {
     addIcons({
       personCircleOutline,

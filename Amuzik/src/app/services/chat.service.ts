@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { AuthService } from './auth.service';
+import { TrackMetadata, MusicEvent } from '../services/facades/audius.facade';
 
 export interface Message {
   id: number;
@@ -11,6 +12,29 @@ export interface Message {
   status?: 'sent' | 'delivered' | 'read';
 }
 
+export interface MusicEventMessage extends MusicEvent {
+  senderId: string;
+  roomId: string;
+}
+
+export interface SyncRequest {
+  type: 'sync_request';
+  roomId: string;
+  senderId: string;
+  timestamp: number;
+}
+
+export interface SyncState {
+  type: 'sync_state';
+  roomId: string;
+  trackId: string | null;
+  isPlaying: boolean;
+  position: number;
+  senderId: string;
+  timestamp: number;
+  metadata?: TrackMetadata;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -19,10 +43,19 @@ export class ChatService {
   private messagesSubject = new BehaviorSubject<Message[]>([]);
   public messages$ = this.messagesSubject.asObservable();
   
+  // Subjects para eventos musicales
+  private musicEventsSubject = new Subject<MusicEventMessage>();
+  public musicEvents$ = this.musicEventsSubject.asObservable();
+  
+  // Subject para respuestas a sync_request
+  private syncStateSubject = new Subject<SyncState>();
+  public syncState$ = this.syncStateSubject.asObservable();
+  
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectTimeout: any;
   private currentConversationId: string | null = null;
+  private currentRoomId: string | null = null;
   
   constructor(private authService: AuthService) {}
 
@@ -52,6 +85,11 @@ export class ChatService {
         if (this.currentConversationId) {
           this.requestHistoricalMessages(this.currentConversationId);
         }
+        
+        // Si estamos en una sala, enviar un sync_request
+        if (this.currentRoomId) {
+          this.sendSyncRequest(this.currentRoomId);
+        }
       };
       
       this.socket.onmessage = (event) => {
@@ -69,6 +107,16 @@ export class ChatService {
             this.messagesSubject.next(messages);
             console.log('Historial cargado:', messages.length, 'mensajes');
           } 
+          // Manejo de eventos musicales
+          else if (data.type === 'music_event') {
+            console.log('Evento musical recibido:', data);
+            this.musicEventsSubject.next(data);
+          }
+          // Manejo de respuesta a sync_request
+          else if (data.type === 'sync_state') {
+            console.log('Estado de sincronización recibido:', data);
+            this.syncStateSubject.next(data);
+          }
           // Mensaje normal recibido - añadir al historial actual
           else if (data.senderId && data.receiverId && data.text) {
             const message: Message = {
@@ -233,6 +281,7 @@ export class ChatService {
     }
     
     this.currentConversationId = friendId;
+    this.currentRoomId = null; // Limpia la sala actual
     
     // Intentar cargar mensajes del localStorage
     const storageKey = `messages_${friendId}`;
@@ -288,7 +337,7 @@ export class ChatService {
     }
   }
 
-  // Guarda un mensaje en el almacenamiento local
+  // Guardar un mensaje en el almacenamiento local
   private saveMessageToStorage(message: Message): void {
     const userId = this.getCurrentUserId();
     if (!userId) return;
@@ -364,7 +413,7 @@ export class ChatService {
     if (!userId) return;
     
     try {
-      this.socket.send(JSON.stringify({
+      this.socket?.send(JSON.stringify({
         type: 'messages_read',
         readerId: userId,
         senderId: friendId,
@@ -372,6 +421,118 @@ export class ChatService {
       }));
     } catch (error) {
       console.error('Error al notificar mensajes leídos:', error);
+    }
+  }
+
+  // NUEVOS MÉTODOS PARA LA FUNCIONALIDAD MUSICAL
+
+  // Unirse a una sala musical
+  joinMusicRoom(roomId: string): void {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket no está conectado');
+      this.connect();
+    }
+
+    const userId = this.getCurrentUserId();
+    if (!userId) return;
+
+    this.currentRoomId = roomId;
+    this.currentConversationId = null; // Limpia la conversación actual
+
+    try {
+      // Notificar que nos unimos a la sala
+      this.socket?.send(JSON.stringify({
+        type: 'join_room',
+        roomId,
+        userId,
+        timestamp: Date.now()
+      }));
+
+      // Solicitar sincronización inmediatamente
+      this.sendSyncRequest(roomId);
+    } catch (error) {
+      console.error('Error al unirse a la sala:', error);
+    }
+  }
+
+  // Enviar un evento musical
+  sendMusicEvent(event: MusicEvent): void {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket no está conectado');
+      this.connect();
+      return;
+    }
+
+    const userId = this.getCurrentUserId();
+    if (!userId || !this.currentRoomId) return;
+
+    const musicEventMessage = {
+      type: 'music_event',
+      senderId: userId,
+      roomId: this.currentRoomId,
+      ...event
+    };
+
+    try {
+      this.socket.send(JSON.stringify(musicEventMessage));
+      console.log('Evento musical enviado:', musicEventMessage);
+    } catch (error) {
+      console.error('Error al enviar evento musical:', error);
+    }
+  }
+
+  // Enviar solicitud de sincronización
+  sendSyncRequest(roomId: string): void {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket no está conectado');
+      this.connect();
+      return;
+    }
+
+    const userId = this.getCurrentUserId();
+    if (!userId) return;
+
+    const syncRequest: SyncRequest = {
+      type: 'sync_request',
+      roomId,
+      senderId: userId,
+      timestamp: Date.now()
+    };
+
+    try {
+      this.socket.send(JSON.stringify(syncRequest));
+      console.log('Solicitud de sincronización enviada para sala:', roomId);
+    } catch (error) {
+      console.error('Error al enviar solicitud de sincronización:', error);
+    }
+  }
+
+  // Enviar estado de sincronización (respuesta a sync_request)
+  sendSyncState(trackId: string | null, isPlaying: boolean, position: number, metadata?: TrackMetadata): void {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket no está conectado');
+      return;
+    }
+
+    const userId = this.getCurrentUserId();
+    if (!userId || !this.currentRoomId) return;
+
+    const syncState: SyncState = {
+      type: 'sync_state',
+      roomId: this.currentRoomId,
+      trackId,
+      isPlaying,
+      position,
+      senderId: userId,
+      timestamp: Date.now(),
+      metadata
+    };
+
+    try {
+      this.socket.send(JSON.stringify(syncState));
+      console.log('Estado de sincronización enviado:', syncState);
+    } catch (error) {
+      console.error('Error al enviar estado de sincronización:', error);
     }
   }
 
@@ -383,6 +544,7 @@ export class ChatService {
     }
     
     this.currentConversationId = null;
+    this.currentRoomId = null;
     clearTimeout(this.reconnectTimeout);
   }
 }
