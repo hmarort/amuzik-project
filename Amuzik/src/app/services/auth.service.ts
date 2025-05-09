@@ -1,16 +1,15 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, throwError, from, of } from 'rxjs';
-import { tap, catchError, switchMap, map, finalize } from 'rxjs/operators';
+import { tap, catchError, switchMap, map } from 'rxjs/operators';
 import { UserRequest } from './requests/users.request';
 import { Router } from '@angular/router';
-import { 
-  Auth, 
-  GoogleAuthProvider, 
-  signInWithPopup, 
-  UserCredential 
-} from '@angular/fire/auth';
 import { Platform } from '@ionic/angular/standalone';
 import { BiometricService } from './biometric.service';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { environment } from '../../environments/environment';
+
+// Importamos el SDK de Google Identity para web
+declare const google: any;
 
 export interface User {
   id: string;
@@ -33,15 +32,72 @@ export class AuthService {
   private userDataKey = 'userData';
   private rememberMeKey = 'rememberMe';
   private biometricEnabledKey = 'biometricEnabled';
+  private googleClient: any = null;
   
   constructor(
     private userRequest: UserRequest,
     private router: Router,
-    private auth: Auth,
     private platform: Platform,
     public biometricService: BiometricService
   ) {
     this.loadUserFromStorage();
+    
+    this.platform.ready().then(() => {
+      if (this.platform.is('capacitor')) {
+        // Inicializar GoogleAuth de Capacitor para dispositivos móviles
+        GoogleAuth.initialize({
+          clientId: '142614205335-r748a0d0k3ofo4n3if7dprbql67hor8u.apps.googleusercontent.com',
+          scopes: ['profile', 'email'],
+          grantOfflineAccess: true,
+        }).catch(error => {
+          console.warn('Google Auth already initialized or failed:', error);
+        });
+      } else {
+        // Inicializar Google Identity API para web
+        this.initGoogleWebAuth();
+      }
+    });
+  }
+  
+  /**
+   * Inicializa la API de Google Identity para entornos web
+   */
+  private initGoogleWebAuth(): void {
+    // Verificar si ya existe el script de Google
+    if (typeof google !== 'undefined' && google.accounts) {
+      this.setupGoogleClient();
+      return;
+    }
+    
+    // Cargar el script de Google Identity API si no está cargado
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      this.setupGoogleClient();
+    };
+    document.body.appendChild(script);
+  }
+  
+  /**
+   * Configura el cliente de Google Identity API
+   */
+  private setupGoogleClient(): void {
+    if (typeof google === 'undefined' || !google.accounts) {
+      console.error('Google Identity API not available');
+      return;
+    }
+    
+    // Inicializar el cliente de Google (versión web)
+    this.googleClient = google.accounts.oauth2.initTokenClient({
+      client_id: '142614205335-r748a0d0k3ofo4n3if7dprbql67hor8u.apps.googleusercontent.com',
+      scope: 'email profile',
+      callback: (tokenResponse: any) => {
+        // Este callback se utiliza internamente por el método registerWithGoogleWeb
+        console.log('Token obtenido correctamente');
+      }
+    });
   }
   
   /**
@@ -235,9 +291,11 @@ export class AuthService {
     localStorage.removeItem(this.tokenKey);
     sessionStorage.removeItem(this.tokenKey);
     
-    // Desconectar de Firebase si está autenticado
-    if (this.auth.currentUser) {
-      this.auth.signOut();
+    // Si estamos en una plataforma capacitor, desconectar de Google Auth
+    if (this.platform.is('capacitor')) {
+      GoogleAuth.signOut().catch(error => {
+        console.error('Error signing out from Google Auth:', error);
+      });
     }
     
     // Resetear el estado
@@ -320,41 +378,102 @@ export class AuthService {
   }
   
   /**
-   * Detecta si estamos en Android
+   * Método para registrarse con Google usando el método apropiado para la plataforma
    */
-  private isAndroid(): boolean {
-    return this.platform.is('android');
+  registerWithGoogle(): Observable<any> {
+    // Verificar si estamos en una plataforma Capacitor (móvil)
+    if (this.platform.is('capacitor')) {
+      return this.registerWithGoogleMobile();
+    } else {
+      return this.registerWithGoogleWeb();
+    }
   }
   
   /**
-   * Método para registrarse con Google
-   * (Modificado para solo usar en registro y no en login)
+   * Método para autenticación con Google en dispositivos móviles usando Capacitor
    */
-  registerWithGoogle(): Observable<any> {
-    const provider = new GoogleAuthProvider();
-    
-    // Solo usamos el Popup para el registro con Google
-    return from(signInWithPopup(this.auth, provider)).pipe(
-      switchMap((result: UserCredential) => {
-        return this.processGoogleUserRegistration(result.user);
+  private registerWithGoogleMobile(): Observable<any> {
+    // Usamos el plugin de Capacitor para autenticar con Google
+    return from(GoogleAuth.signIn()).pipe(
+      switchMap(googleUser => {
+        console.log('Google Auth successful (mobile):', googleUser);
+        return this.processGoogleUserRegistration(googleUser);
       }),
       catchError(error => {
-        console.error('Error durante el registro con Google:', error);
+        console.error('Error durante el registro con Google (mobile):', error);
         return throwError(() => error);
       })
     );
   }
   
   /**
+   * Versión web del registro con Google utilizando Google Identity API
+   */
+  private registerWithGoogleWeb(): Observable<any> {
+    if (!this.googleClient) {
+      return throwError(() => new Error('Cliente de Google Identity no inicializado'));
+    }
+    
+    return new Observable(observer => {
+      // Solicitamos el token de acceso
+      this.googleClient.callback = async (tokenResponse: any) => {
+        if (tokenResponse.error) {
+          observer.error(new Error('Error de autenticación: ' + tokenResponse.error));
+          return;
+        }
+        
+        try {
+          // Obtener información del usuario usando el token de acceso
+          const accessToken = tokenResponse.access_token;
+          const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: {
+              Authorization: `Bearer ${accessToken}`
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error('Error al obtener información del usuario');
+          }
+          
+          const userInfo = await response.json();
+          console.log('Google Auth Web successful:', userInfo);
+          
+          // Adaptar el formato al mismo que usa Capacitor Google Auth
+          const googleUser = {
+            email: userInfo.email,
+            familyName: userInfo.family_name,
+            givenName: userInfo.given_name,
+            name: userInfo.name,
+            imageUrl: userInfo.picture
+          };
+          
+          // Procesar el registro con los datos obtenidos
+          this.processGoogleUserRegistration(googleUser).subscribe({
+            next: (result) => observer.next(result),
+            error: (error) => observer.error(error),
+            complete: () => observer.complete()
+          });
+        } catch (error) {
+          console.error('Error procesando respuesta de Google:', error);
+          observer.error(error);
+        }
+      };
+      
+      // Solicitar token de acceso
+      this.googleClient.requestAccessToken();
+    });
+  }
+  
+  /**
    * Procesa el usuario de Google después de la autenticación para registro
    */
-  private processGoogleUserRegistration(user: any): Observable<any> {
-    if (!user.email) {
+  private processGoogleUserRegistration(googleUser: any): Observable<any> {
+    if (!googleUser.email) {
       return throwError(() => new Error('No se pudo obtener el email del usuario de Google'));
     }
     
     // Extraemos el username del email
-    const username = user.email.split('@')[0];
+    const username = googleUser.email.split('@')[0];
     
     // Verificamos si el usuario ya existe
     return this.userRequest.getUserByUsername(username).pipe(
@@ -364,14 +483,14 @@ export class AuthService {
           return throwError(() => new Error('Este usuario ya existe. Por favor inicia sesión con tu nombre de usuario y contraseña.'));
         } else {
           // Usuario no encontrado, registrarlo
-          return this.registerGoogleUser(user);
+          return this.registerGoogleUser(googleUser);
         }
       }),
       catchError(error => {
         // Error al buscar el usuario, intentamos registrarlo
         if (error.status === 404) {
           console.log('Usuario no encontrado, procediendo a registrar');
-          return this.registerGoogleUser(user);
+          return this.registerGoogleUser(googleUser);
         }
         return throwError(() => error);
       })
@@ -380,18 +499,27 @@ export class AuthService {
   
   /**
    * Registra un nuevo usuario que viene de Google Auth
-   * @param user Usuario de Firebase
+   * @param googleUser Usuario de Google Auth
    */
-  private registerGoogleUser(user: any): Observable<any> {
-    // Usamos directamente una imagen predeterminada local
-    return this.getDefaultProfileImage().pipe(
-      switchMap(defaultImageFile => {
-        return this.registerGoogleUserWithProfileImage(user, defaultImageFile);
+  private registerGoogleUser(googleUser: any): Observable<any> {
+    // Primero intentamos obtener la imagen de perfil de Google
+    return this.getGoogleProfileImage(googleUser).pipe(
+      switchMap(profileImage => {
+        if (profileImage) {
+          return this.registerGoogleUserWithProfileImage(googleUser, profileImage);
+        } else {
+          // Si no pudimos obtener la imagen de perfil, usamos una predeterminada
+          return this.getDefaultProfileImage().pipe(
+            switchMap(defaultImage => {
+              return this.registerGoogleUserWithProfileImage(googleUser, defaultImage);
+            })
+          );
+        }
       }),
       catchError(error => {
-        console.error('Error al obtener imagen predeterminada:', error);
+        console.error('Error al obtener imagen:', error);
         // Como último recurso, intentamos registrar sin imagen
-        return this.registerGoogleUserWithoutImage(user);
+        return this.registerGoogleUserWithoutImage(googleUser);
       })
     );
   }
@@ -400,7 +528,7 @@ export class AuthService {
    * Método alternativo para registrar sin imagen de perfil
    * Solo para casos donde no se puede obtener ninguna imagen
    */
-  private registerGoogleUserWithoutImage(user: any): Observable<any> {
+  private registerGoogleUserWithoutImage(googleUser: any): Observable<any> {
     console.warn('Intentando registro sin imagen de perfil - esto podría fallar si el backend requiere pfp');
     
     // Crear datos básicos para el registro
@@ -410,14 +538,17 @@ export class AuthService {
     let nombre = '';
     let apellidos = '';
     
-    if (user.displayName) {
-      const nameParts = user.displayName.split(' ');
+    if (googleUser.givenName || googleUser.familyName) {
+      nombre = googleUser.givenName || '';
+      apellidos = googleUser.familyName || '';
+    } else if (googleUser.name) {
+      const nameParts = googleUser.name.split(' ');
       nombre = nameParts[0] || '';
       apellidos = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
     }
     
-    const username = user.email?.split('@')[0] || `user_${Date.now()}`;
-    const email = user.email || '';
+    const username = googleUser.email?.split('@')[0] || `user_${Date.now()}`;
+    const email = googleUser.email || '';
     nombre = nombre || 'Usuario';
     apellidos = apellidos || 'Google';
     const password = this.generateRandomPassword();
@@ -449,29 +580,32 @@ export class AuthService {
       })
     );
   }
-
+  
   /**
    * Completar el registro de Google con la imagen de perfil
-   * @param user Usuario de Firebase
+   * @param googleUser Usuario de Google Auth
    * @param profileImage Archivo de imagen de perfil
    */
-  private registerGoogleUserWithProfileImage(user: any, profileImage: File): Observable<any> {
+  private registerGoogleUserWithProfileImage(googleUser: any, profileImage: File): Observable<any> {
     // Crear FormData para mantener consistencia con el método de registro normal
     const formData = new FormData();
     
-    // Extraer nombre y apellidos del displayName
+    // Extraer nombre y apellidos de los campos adecuados
     let nombre = '';
     let apellidos = '';
     
-    if (user.displayName) {
-      const nameParts = user.displayName.split(' ');
+    if (googleUser.givenName || googleUser.familyName) {
+      nombre = googleUser.givenName || '';
+      apellidos = googleUser.familyName || '';
+    } else if (googleUser.name) {
+      const nameParts = googleUser.name.split(' ');
       nombre = nameParts[0] || '';
       apellidos = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
     }
     
     // Asegurar que se envíen valores no vacíos (requisitos de la tabla)
-    const username = user.email?.split('@')[0] || `user_${Date.now()}`;
-    const email = user.email || '';
+    const username = googleUser.email?.split('@')[0] || `user_${Date.now()}`;
+    const email = googleUser.email || '';
     nombre = nombre || 'Usuario';
     apellidos = apellidos || 'Google';
     const password = this.generateRandomPassword();
@@ -502,6 +636,24 @@ export class AuthService {
         return throwError(() => new Error('Error al registrar usuario de Google: ' + (error.message || 'Error desconocido')));
       })
     );
+  }
+  
+  /**
+   * Método para intentar obtener la imagen de perfil del usuario de Google
+   * @param googleUser Usuario de Google Auth
+   * @returns Observable con el archivo de imagen
+   */
+  private getGoogleProfileImage(googleUser: any): Observable<File | null> {
+    // Intentar obtener la URL de la imagen de perfil si está disponible
+    if (googleUser.imageUrl) {
+      return from(fetch(googleUser.imageUrl)
+        .then(response => response.blob())
+        .then(blob => new File([blob], 'google-profile.jpg', { type: 'image/jpeg' }))
+        .catch(() => null)
+      );
+    }
+    
+    return of(null);
   }
   
   /**

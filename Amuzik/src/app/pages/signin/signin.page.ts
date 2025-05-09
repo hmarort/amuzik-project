@@ -351,6 +351,7 @@ export class SigninPage implements OnInit {
           error.message || 'Error al registrar con Google',
           'danger'
         );
+        this.isGoogleSubmitting = false;
       },
       complete: () => {
         this.isGoogleSubmitting = false;

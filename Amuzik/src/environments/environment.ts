@@ -2,20 +2,17 @@
 // `ng build` replaces `environment.ts` with `environment.prod.ts`.
 // The list of file replacements can be found in `angular.json`.
 
+// environment.ts (entorno de desarrollo)
 export const environment = {
   production: false,
+  name: 'development',
   apiUrl: 'https://amuzikapi-3ff2.onrender.com/',
-  firebaseConfig: {
-    apiKey: 'AIzaSyAxqDUI3mkgl9lRctgmqmIfPMv-HRMQ0BE',
-    authDomain: 'amuzik-38d5c.firebaseapp.com',
-    projectId: 'amuzik-38d5c',
-    storageBucket: 'amuzik-38d5c.firebasestorage.app',
-    messagingSenderId: '142614205335',
-    appId: '1:142614205335:web:dea8bb739128384558ead2',
-    measurementId: 'G-4E3V887DQE',
-  },
+  googleAuth: {
+    clientId: '142614205335-r748a0d0k3ofo4n3if7dprbql67hor8u.apps.googleusercontent.com',
+    scopes: ['profile', 'email'],
+    grantOfflineAccess: true
+  }
 };
-
 /*
  * For easier debugging in development mode, you can import the following file
  * to ignore zone related error stack frames such as `zone.run`, `zoneDelegate.invokeTask`.

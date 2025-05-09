@@ -27,10 +27,11 @@ import { environment } from './environments/environment';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { getAuth, provideAuth } from '@angular/fire/auth';
 import { getMessaging, provideMessaging } from '@angular/fire/messaging';
-
-// 🔑 Importa el plugin de teclado de Capacitor
 import { Keyboard } from '@capacitor/keyboard';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
+// use hook after platform dom ready
+GoogleAuth.initialize(environment.googleAuth);
 addIcons({
   'lock-closed': lockClosed,
   mail: mail,
@@ -46,9 +47,6 @@ bootstrapApplication(AppComponent, {
     provideIonicAngular(),
     provideRouter(routes, withPreloading(PreloadAllModules)),
     importProvidersFrom(HttpClientModule),
-    provideFirebaseApp(() => initializeApp(environment.firebaseConfig)),
-    provideAuth(() => getAuth()),
-    provideMessaging(() => getMessaging()),
   ],
 }).then(() => {
   // ✅ Configura eventos del teclado

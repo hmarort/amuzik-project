@@ -14,10 +14,11 @@ const config: CapacitorConfig = {
       splashImmersive: true,
       showSpinner: false,
     },
-    FirebaseAuthentication: {
-      skipNativeAuth: false,
-      providers: ['google.com'],
-    },
+    GoogleAuth: {
+      scopes: ['profile', 'email'],
+      serverClientId: '142614205335-r748a0d0k3ofo4n3if7dprbql67hor8u.apps.googleusercontent.com',
+      forceCodeForRefreshToken: true
+    }
   },
 };
 
