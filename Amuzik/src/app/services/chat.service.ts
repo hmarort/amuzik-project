@@ -117,6 +117,10 @@ export class ChatService {
             console.log('Estado de sincronización recibido:', data);
             this.syncStateSubject.next(data);
           }
+          // Confirmación de registro de token
+          else if (data.type === 'device_token_registered') {
+            console.log('Token de dispositivo registrado exitosamente');
+          }
           // Mensaje normal recibido - añadir al historial actual
           else if (data.senderId && data.receiverId && data.text) {
             const message: Message = {
@@ -150,6 +154,34 @@ export class ChatService {
       };
     } catch (error) {
       console.error('Error al conectar con WebSocket:', error);
+    }
+  }
+
+  // Registrar token de dispositivo para notificaciones push
+  registerDeviceToken(deviceToken: string): void {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket no está conectado');
+      this.connect();
+      // Intentar registrar el token después de reconectar
+      setTimeout(() => this.registerDeviceToken(deviceToken), 1000);
+      return;
+    }
+
+    const userId = this.getCurrentUserId();
+    if (!userId) {
+      console.error('No hay usuario autenticado');
+      return;
+    }
+
+    try {
+      this.socket.send(JSON.stringify({
+        type: 'register_device_token',
+        deviceToken,
+        userId
+      }));
+      console.log('Token de dispositivo enviado para registro');
+    } catch (error) {
+      console.error('Error al registrar token de dispositivo:', error);
     }
   }
 
