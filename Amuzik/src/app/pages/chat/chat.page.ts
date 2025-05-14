@@ -18,7 +18,7 @@ import {
   IonBadge
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { send, arrowBack, checkmarkDone, checkmark } from 'ionicons/icons';
+import { send, arrowBack, checkmarkDone, checkmark, checkmarkDoneSharp } from 'ionicons/icons';
 import { AuthService, User } from 'src/app/services/auth.service';
 import { ChatService, Message } from 'src/app/services/chat.service';
 import { Subscription } from 'rxjs';
@@ -69,6 +69,7 @@ export class ChatPage implements OnInit, OnDestroy {
       send,
       arrowBack,
       checkmarkDone,
+      checkmarkDoneSharp,
       checkmark
     });
   }
@@ -219,8 +220,8 @@ export class ChatPage implements OnInit, OnDestroy {
     
     switch (message.status) {
       case 'sent': return 'checkmark';
-      case 'delivered': return 'checkmarkDone';
-      case 'read': return 'checkmarkDone'; // Mismo icono pero podría tener diferente estilo CSS
+      case 'delivered': return 'checkmark-done-outline';
+      case 'read': return 'checkmark-done-sharp'; // Mismo icono pero podría tener diferente estilo CSS
       default: return '';
     }
   }

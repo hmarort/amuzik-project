@@ -34,6 +34,11 @@ export class PushNotificationService {
 
     try {
       // Verificar permisos
+      PushNotifications.requestPermissions().then(result => {
+        if (result.receive === 'granted') {
+          PushNotifications.register();
+        }
+      });
       const permStatus = await PushNotifications.checkPermissions();
       
       if (permStatus.receive === 'prompt') {

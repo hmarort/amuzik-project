@@ -45,9 +45,9 @@ bootstrapApplication(AppComponent, {
     provideIonicAngular(),
     provideRouter(routes, withPreloading(PreloadAllModules)),
     importProvidersFrom(HttpClientModule),
+    provideMessaging(() => getMessaging()),
   ],
 }).then(() => {
-  // ✅ Configura eventos del teclado
   Keyboard.addListener('keyboardWillShow', () => {
     document.body.classList.add('keyboard-is-open');
   });

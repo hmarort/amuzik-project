@@ -47,6 +47,7 @@ import {
   playSkipBackOutline,
   menuOutline,
   volumeHighOutline,
+  push,
 } from 'ionicons/icons';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Subject, takeUntil, finalize, forkJoin, of, from } from 'rxjs';
@@ -59,7 +60,7 @@ import {
   concatMap,
   filter,
 } from 'rxjs/operators';
-
+import { PushNotificationService } from 'src/app/services/push-notifications.service';
 interface Track {
   id: string;
   title: string;
@@ -148,7 +149,8 @@ export class HomePage implements OnInit, OnDestroy {
 
   constructor(
     private audiusFacade: AudiusFacade,
-    private authService: AuthService
+    private authService: AuthService,
+    private pushNotificationService: PushNotificationService
   ) {
     addIcons({
       personCircleOutline,
@@ -166,6 +168,7 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.pushNotificationService.initialize();
     this.authService.currentUser$
     .pipe(takeUntil(this.destroy$))
     .subscribe(user => {
