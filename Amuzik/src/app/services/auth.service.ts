@@ -45,11 +45,7 @@ export class AuthService {
     this.platform.ready().then(() => {
       if (this.platform.is('capacitor')) {
         // Inicializar GoogleAuth de Capacitor para dispositivos móviles
-        GoogleAuth.initialize({
-          clientId: '142614205335-r748a0d0k3ofo4n3if7dprbql67hor8u.apps.googleusercontent.com',
-          scopes: ['profile', 'email'],
-          grantOfflineAccess: true,
-        }).catch(error => {
+        GoogleAuth.initialize(environment.googleAuth).catch(error => {
           console.warn('Google Auth already initialized or failed:', error);
         });
       } else {
