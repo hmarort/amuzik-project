@@ -87,8 +87,8 @@ export class AuthService {
     
     // Inicializar el cliente de Google (versión web)
     this.googleClient = google.accounts.oauth2.initTokenClient({
-      client_id: '142614205335-r748a0d0k3ofo4n3if7dprbql67hor8u.apps.googleusercontent.com',
-      scope: 'email profile',
+      client_id: environment.googleAuth.clientId,
+      scope: environment.googleAuth.scopes.join(' '),
       callback: (tokenResponse: any) => {
         // Este callback se utiliza internamente por el método registerWithGoogleWeb
         console.log('Token obtenido correctamente');
