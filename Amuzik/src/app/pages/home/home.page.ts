@@ -168,13 +168,14 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.pushNotificationService.initialize();
     this.authService.currentUser$
     .pipe(takeUntil(this.destroy$))
     .subscribe(user => {
       this.currentUser = user;
     });
-    
+    if (this.currentUser) {
+      this.pushNotificationService.initialize(this.currentUser.username);
+    }
     SplashScreen.show({
       autoHide: false,
     });

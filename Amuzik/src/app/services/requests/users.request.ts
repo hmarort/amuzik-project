@@ -19,7 +19,7 @@ export interface GoogleUserData {
 })
 export class UserRequest {
   private apiUrl = environment.apiUrl;
-  private token = 'W66jQhYGGzEIuCcAXfpTJkt7uH6GBGpcJLCSXo6O2WF1AZkxiMXpypFaKEfA';
+  private token = environment.JWT_SECRET;
 
   constructor(private http: HttpClient) {}
 

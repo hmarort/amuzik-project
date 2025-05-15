@@ -13,6 +13,7 @@ export const environment = {
     scopes: ['profile', 'email'],
     grantOfflineAccess: true,
   },
+  JWT_SECRET:'W66jQhYGGzEIuCcAXfpTJkt7uH6GBGpcJLCSXo6O2WF1AZkxiMXpypFaKEfA',
 };
 /*
  * For easier debugging in development mode, you can import the following file

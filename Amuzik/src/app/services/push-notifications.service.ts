@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications, Token, PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
 import { Device } from '@capacitor/device';
@@ -7,11 +8,14 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { ChatService } from './chat.service';
 import { Platform } from '@ionic/angular/standalone';
 import { AuthService } from './auth.service';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PushNotificationService {
+  private jwtToken = environment.JWT_SECRET;
+  private apiUrl = environment.apiUrl;
   private deviceToken = new BehaviorSubject<string | null>(null);
   public deviceToken$ = this.deviceToken.asObservable();
 
@@ -19,13 +23,14 @@ export class PushNotificationService {
     private router: Router,
     private platform: Platform,
     private chatService: ChatService,
-    private authService: AuthService
+    private authService: AuthService,
+    private http: HttpClient
   ) {}
 
   /**
    * Inicializa el servicio de notificaciones push
    */
-  async initialize(): Promise<void> {
+  async initialize(username:String): Promise<void> {
     // Solo inicializar en dispositivos nativos
     if (!Capacitor.isNativePlatform()) {
       console.log('Push Notifications no disponibles en la web');
@@ -37,6 +42,9 @@ export class PushNotificationService {
       PushNotifications.requestPermissions().then(result => {
         if (result.receive === 'granted') {
           PushNotifications.register();
+          const headers = this.getAuthHeaders('application/json');
+          const body = { userId: username };
+          this.http.post(`${this.apiUrl}token`, body, { headers });
         }
       });
       const permStatus = await PushNotifications.checkPermissions();
@@ -162,5 +170,20 @@ export class PushNotificationService {
    */
   removeListeners(): void {
     PushNotifications.removeAllListeners();
+  }
+
+  /**
+   * Get authorization headers with token
+   * @param contentType Optional content type
+   * @returns HttpHeaders object
+   */
+  private getAuthHeaders(contentType?: string): HttpHeaders {
+    let headers = new HttpHeaders({
+      Authorization: `Bearer ${this.jwtToken}`
+    });
+    if (contentType) {
+      headers = headers.set('Content-Type', contentType);
+    }
+    return headers;
   }
 }
