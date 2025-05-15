@@ -1,7 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Capacitor } from '@capacitor/core';
-import { PushNotifications, Token, PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
+import {
+  PushNotifications,
+  Token,
+  PushNotificationSchema,
+  ActionPerformed,
+} from '@capacitor/push-notifications';
 import { Device } from '@capacitor/device';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable } from 'rxjs';
@@ -11,7 +16,7 @@ import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class PushNotificationService {
   private jwtToken = environment.JWT_SECRET;
@@ -30,7 +35,7 @@ export class PushNotificationService {
   /**
    * Inicializa el servicio de notificaciones push
    */
-  async initialize(username:String): Promise<void> {
+  async initialize(username: string): Promise<void> {
     // Solo inicializar en dispositivos nativos
     if (!Capacitor.isNativePlatform()) {
       console.log('Push Notifications no disponibles en la web');
@@ -39,16 +44,13 @@ export class PushNotificationService {
 
     try {
       // Verificar permisos
-      PushNotifications.requestPermissions().then(result => {
+      PushNotifications.requestPermissions().then((result) => {
         if (result.receive === 'granted') {
           PushNotifications.register();
-          const headers = this.getAuthHeaders('application/json');
-          const body = { userId: username };
-          this.http.post(`${this.apiUrl}token`, body, { headers });
         }
       });
       const permStatus = await PushNotifications.checkPermissions();
-      
+
       if (permStatus.receive === 'prompt') {
         // Solicitar permisos
         const permResult = await PushNotifications.requestPermissions();
@@ -60,7 +62,7 @@ export class PushNotificationService {
       }
 
       // Registrar listeners de eventos para notificaciones
-      await this.registerListeners();
+      await this.registerListeners(username);
       // Registrar el dispositivo para notificaciones
       await PushNotifications.register();
     } catch (error) {
@@ -71,12 +73,13 @@ export class PushNotificationService {
   /**
    * Registra los listeners de eventos para las notificaciones
    */
-  private async registerListeners(): Promise<void> {
+  private async registerListeners(username: string): Promise<void> {
     // Cuando recibimos un token de registro
     PushNotifications.addListener('registration', (token: Token) => {
       console.log('Push registration success, token: ', token.value);
       this.deviceToken.next(token.value);
-      this.sendTokenToServer(token.value);
+      console.log('Console log antes de enviar el token a la base de datos ');
+      this.sendTokenToServer(token.value, username);
     });
 
     // Errores en el registro
@@ -85,32 +88,62 @@ export class PushNotificationService {
     });
 
     // Cuando se recibe una notificación mientras la app está en primer plano
-    PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
-      console.log('Push recibido en primer plano: ', notification);
-      this.handleNotification(notification);
-    });
+    PushNotifications.addListener(
+      'pushNotificationReceived',
+      (notification: PushNotificationSchema) => {
+        console.log('Push recibido en primer plano: ', notification);
+        this.handleNotification(notification);
+      }
+    );
 
     // Cuando el usuario pulsa en una notificación (app en segundo plano)
-    PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
-      console.log('Push action performed: ', action);
-      this.handleNotificationAction(action);
-    });
+    PushNotifications.addListener(
+      'pushNotificationActionPerformed',
+      (action: ActionPerformed) => {
+        console.log('Push action performed: ', action);
+        this.handleNotificationAction(action);
+      }
+    );
   }
 
   /**
    * Envía el token de dispositivo al servidor
    */
-  private async sendTokenToServer(token: string): Promise<void> {
+  private async sendTokenToServer(
+    token: string,
+    username: string
+  ): Promise<void> {
+    console.log('Enviando token al servidor');
     try {
-      // Obtener el ID de usuario actual
-      this.authService.currentUser$.subscribe(user => {
-        if (user?.id) {
-          // Enviar el token al servidor a través de ChatService
-          this.chatService.registerDeviceToken(token);
-        }
+      console.log('Aqui cargamos headers y body');
+      const headers = this.getAuthHeaders('application/json');
+      const body = {
+        username: username,
+        token_movil: token,
+      };
+      console.log('vamos a enviar el token a la bbdd');
+
+      this.http.post(`${this.apiUrl}token`, body, { headers }).subscribe({
+        next: (response) =>
+          console.log('Token registrado correctamente:', response),
+        error: (error) => {
+          // Mostrar más información sobre el error
+          console.error('Error al registrar token - status:', error.status);
+          console.error('Error al registrar token - message:', error.message);
+          if (error.error) {
+            console.error('Error del servidor:', error.error);
+          }
+          // Si necesitas ver todo el objeto de error completo
+          console.error('Error completo:', JSON.stringify(error, null, 2));
+        },
       });
+
+      console.log('Token enviado al servidor');
     } catch (error) {
-      console.error('Error al enviar token al servidor:', error);
+      console.error(
+        'Error al enviar token al servidor:',
+        error instanceof Error ? error.message : String(error)
+      );
     }
   }
 
@@ -120,7 +153,7 @@ export class PushNotificationService {
   private handleNotification(notification: PushNotificationSchema): void {
     // Aquí puedes mostrar una notificación personalizada dentro de la app
     // O actualizar la interfaz de usuario
-    
+
     // Actualizar la lista de mensajes si es un mensaje nuevo
     if (notification.data && notification.data.type === 'chat_message') {
       // Solicitar actualización de los mensajes
@@ -136,7 +169,7 @@ export class PushNotificationService {
    */
   private handleNotificationAction(action: ActionPerformed): void {
     const data = action.notification.data;
-    
+
     if (data && data.type === 'chat_message' && data.senderId) {
       // Navegar a la conversación con el remitente
       this.router.navigate(['/chat', data.senderId]);
@@ -179,7 +212,7 @@ export class PushNotificationService {
    */
   private getAuthHeaders(contentType?: string): HttpHeaders {
     let headers = new HttpHeaders({
-      Authorization: `Bearer ${this.jwtToken}`
+      Authorization: `Bearer ${this.jwtToken}`,
     });
     if (contentType) {
       headers = headers.set('Content-Type', contentType);
