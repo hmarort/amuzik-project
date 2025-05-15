@@ -1,9 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, Subject, interval, Subscription } from 'rxjs';
-import { takeWhile } from 'rxjs/operators';
 import { AuthService } from './auth.service';
-import { TrackMetadata, MusicEvent } from '../services/facades/audius.facade';
-import { environment } from '../../environments/environment'; // Asegúrate de importar correctamente tu environment
 
 export interface Message {
   id: number;
@@ -12,29 +9,7 @@ export interface Message {
   receiverId: string;
   timestamp: Date;
   status?: 'sent' | 'delivered' | 'read';
-}
-
-export interface MusicEventMessage extends MusicEvent {
-  senderId: string;
-  roomId: string;
-}
-
-export interface SyncRequest {
-  type: 'sync_request';
-  roomId: string;
-  senderId: string;
-  timestamp: number;
-}
-
-export interface SyncState {
-  type: 'sync_state';
-  roomId: string;
-  trackId: string | null;
-  isPlaying: boolean;
-  position: number;
-  senderId: string;
-  timestamp: number;
-  metadata?: TrackMetadata;
+  read?: boolean; // Campo adicional para compatibilidad con el servidor
 }
 
 export interface ConnectionStatus {
@@ -51,14 +26,6 @@ export class ChatService {
   private messagesSubject = new BehaviorSubject<Message[]>([]);
   public messages$ = this.messagesSubject.asObservable();
   
-  // Subjects para eventos musicales
-  private musicEventsSubject = new Subject<MusicEventMessage>();
-  public musicEvents$ = this.musicEventsSubject.asObservable();
-  
-  // Subject para respuestas a sync_request
-  private syncStateSubject = new Subject<SyncState>();
-  public syncState$ = this.syncStateSubject.asObservable();
-  
   // Subject para el estado de la conexión
   private connectionStatusSubject = new BehaviorSubject<ConnectionStatus>({
     isConnected: false,
@@ -68,13 +35,12 @@ export class ChatService {
   public connectionStatus$ = this.connectionStatusSubject.asObservable();
   
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 10; // Aumentado para mayor tolerancia
+  private maxReconnectAttempts = 10;
   private reconnectTimeout: any;
   private heartbeatInterval: Subscription | null = null;
   private currentConversationId: string | null = null;
-  private currentRoomId: string | null = null;
   
-  // URL del WebSocket - idealmente en environment.ts
+  // URL del WebSocket - asegúrate de que sea la correcta en tu environment.ts
   private wsUrl = 'wss://chat-server-uoyz.onrender.com';
   
   constructor(private authService: AuthService) {
@@ -146,13 +112,11 @@ export class ChatService {
           this.requestHistoricalMessages(this.currentConversationId);
         }
         
-        // Si estamos en una sala, enviar un sync_request
-        if (this.currentRoomId) {
-          this.sendSyncRequest(this.currentRoomId);
-        }
-        
         // Procesar mensajes pendientes
         this.processPendingMessages();
+        
+        // Registrar el token del dispositivo si está disponible
+        this.registerStoredDeviceToken();
       };
       
       this.socket.onmessage = (event) => {
@@ -165,21 +129,13 @@ export class ChatService {
             // Reemplazar mensajes con el historial
             const messages = data.messages.map((msg: any) => ({
               ...msg,
-              timestamp: new Date(msg.timestamp)
+              timestamp: new Date(msg.timestamp),
+              // Compatibilidad con la nueva estructura del servidor
+              status: msg.read ? 'read' : (msg.status || 'delivered')
             }));
             this.messagesSubject.next(messages);
             console.log('📚 Historial cargado:', messages.length, 'mensajes');
           } 
-          // Manejo de eventos musicales
-          else if (data.type === 'music_event') {
-            console.log('🎵 Evento musical recibido:', data.eventType);
-            this.musicEventsSubject.next(data);
-          }
-          // Manejo de respuesta a sync_request
-          else if (data.type === 'sync_state') {
-            console.log('🔄 Estado de sincronización recibido');
-            this.syncStateSubject.next(data);
-          }
           // Confirmación de registro de token
           else if (data.type === 'device_token_registered') {
             console.log('📱 Token de dispositivo registrado exitosamente');
@@ -192,7 +148,9 @@ export class ChatService {
           else if (data.senderId && data.receiverId && data.text) {
             const message: Message = {
               ...data,
-              timestamp: new Date(data.timestamp)
+              timestamp: new Date(data.timestamp),
+              // Compatibilidad con la nueva estructura del servidor
+              status: data.read ? 'read' : (data.status || 'delivered')
             };
             
             const currentMessages = this.messagesSubject.value;
@@ -205,6 +163,18 @@ export class ChatService {
           // Actualización de estado de mensaje
           else if (data.type === 'message_status' && data.messageId) {
             this.updateMessageStatus(data.messageId, data.status);
+          }
+          // Notificación de mensajes leídos
+          else if (data.type === 'messages_read_receipt') {
+            this.handleReadReceipt(data);
+          }
+          // Conexión exitosa (respuesta del servidor)
+          else if (data.type === 'connection_success') {
+            console.log('✅ Conexión establecida, ID de usuario:', data.userId);
+          }
+          // Error
+          else if (data.type === 'error') {
+            console.error('❌ Error del servidor:', data.message);
           }
         } catch (error) {
           console.error('Error al procesar mensaje:', error);
@@ -276,6 +246,14 @@ export class ChatService {
     }
   }
 
+  // Registrar token almacenado tras la conexión
+  private registerStoredDeviceToken(): void {
+    const storedToken = localStorage.getItem('deviceToken');
+    if (storedToken) {
+      this.registerDeviceToken(storedToken);
+    }
+  }
+
   // Registrar token de dispositivo para notificaciones push
   registerDeviceToken(deviceToken: string): void {
     if (!deviceToken) {
@@ -342,7 +320,11 @@ export class ChatService {
     const currentMessages = this.messagesSubject.value;
     const updatedMessages = currentMessages.map(msg => {
       if (msg.id === messageId) {
-        return { ...msg, status };
+        return { 
+          ...msg, 
+          status,
+          read: status === 'read' // Actualizar también la propiedad read para compatibilidad
+        };
       }
       return msg;
     });
@@ -353,6 +335,34 @@ export class ChatService {
     const currentUser = this.getCurrentUserId();
     if (currentUser && this.currentConversationId) {
       localStorage.setItem(`messages_${this.currentConversationId}`, JSON.stringify(updatedMessages));
+    }
+  }
+
+  // Manejar notificación de mensajes leídos
+  private handleReadReceipt(data: any): void {
+    if (!data.readerId) return;
+    
+    const currentMessages = this.messagesSubject.value;
+    let hasChanges = false;
+    
+    // Actualizar el estado de los mensajes enviados a este lector
+    const updatedMessages = currentMessages.map(msg => {
+      if (msg.receiverId === data.readerId && msg.status !== 'read') {
+        hasChanges = true;
+        return { 
+          ...msg, 
+          status: 'read' as Message['status'],
+          read: true // Actualizar también la propiedad read para compatibilidad
+        };
+      }
+      return msg;
+    });
+    
+    if (hasChanges) {
+      this.messagesSubject.next(updatedMessages);
+      if (this.currentConversationId) {
+        localStorage.setItem(`messages_${this.currentConversationId}`, JSON.stringify(updatedMessages));
+      }
     }
   }
 
@@ -383,6 +393,26 @@ export class ChatService {
     pendingMessages.forEach((msg: any) => {
       this.sendMessage(msg.receiverId, msg.text, msg.id);
     });
+
+    // Procesar recibos de lectura pendientes
+    this.processPendingReadReceipts();
+  }
+
+  // Procesar recibos de lectura pendientes
+  private processPendingReadReceipts(): void {
+    const pendingReadReceipts = JSON.parse(localStorage.getItem('pending_read_receipts') || '[]');
+    
+    if (pendingReadReceipts.length === 0) return;
+    
+    console.log(`📖 Procesando ${pendingReadReceipts.length} recibos de lectura pendientes`);
+    
+    // Limpiar la lista pendiente
+    localStorage.removeItem('pending_read_receipts');
+    
+    // Notificar cada recibo pendiente
+    pendingReadReceipts.forEach((friendId: string) => {
+      this.notifyMessagesRead(friendId);
+    });
   }
 
   // Envía un mensaje a través del WebSocket
@@ -405,7 +435,8 @@ export class ChatService {
       receiverId,
       text,
       timestamp: new Date(),
-      status: 'sent' as Message['status']
+      status: 'sent' as Message['status'],
+      read: false // Añadir propiedad read para compatibilidad con el servidor
     };
 
     // Si no estamos conectados, guardar para enviar después
@@ -473,7 +504,6 @@ export class ChatService {
     }
     
     this.currentConversationId = friendId;
-    this.currentRoomId = null; // Limpia la sala actual
     
     // Intentar cargar mensajes del localStorage
     const storageKey = `messages_${friendId}`;
@@ -587,7 +617,11 @@ export class ChatService {
     const updatedMessages = currentMessages.map(msg => {
       if (msg.senderId === friendId && msg.receiverId === userId && msg.status !== 'read') {
         hasChanges = true;
-        return { ...msg, status: 'read' as Message['status'] };
+        return { 
+          ...msg, 
+          status: 'read' as Message['status'],
+          read: true // Actualizar también la propiedad read para compatibilidad
+        };
       }
       return msg;
     });
@@ -629,151 +663,6 @@ export class ChatService {
     }
   }
 
-  // MÉTODOS PARA LA FUNCIONALIDAD MUSICAL
-
-  // Unirse a una sala musical
-  joinMusicRoom(roomId: string): void {
-    if (!roomId) {
-      console.error('ID de sala inválido');
-      return;
-    }
-    
-    this.checkAndConnect();
-
-    const userId = this.getCurrentUserId();
-    if (!userId) return;
-
-    this.currentRoomId = roomId;
-    this.currentConversationId = null; // Limpia la conversación actual
-
-    // Si no estamos conectados, intentar más tarde
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      console.log(`WebSocket no conectado, se unirá a la sala ${roomId} después de conectar`);
-      return;
-    }
-
-    try {
-      // Notificar que nos unimos a la sala
-      this.socket.send(JSON.stringify({
-        type: 'join_room',
-        roomId,
-        userId,
-        timestamp: Date.now()
-      }));
-      console.log(`🎵 Unido a sala musical: ${roomId}`);
-
-      // Solicitar sincronización después de un pequeño retraso
-      setTimeout(() => {
-        this.sendSyncRequest(roomId);
-      }, 500);
-    } catch (error) {
-      console.error('Error al unirse a la sala:', error);
-    }
-  }
-
-  // Enviar un evento musical
-  sendMusicEvent(event: MusicEvent): void {
-    if (!this.currentRoomId) {
-      console.error('No hay sala musical activa');
-      return;
-    }
-    
-    this.checkAndConnect();
-
-    const userId = this.getCurrentUserId();
-    if (!userId) return;
-    
-    // Si no estamos conectados, no enviar el evento
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      console.log('WebSocket no conectado, evento musical no enviado');
-      return;
-    }
-
-    const musicEventMessage = {
-      type: 'music_event',
-      senderId: userId,
-      roomId: this.currentRoomId,
-      ...event
-    };
-
-    try {
-      this.socket.send(JSON.stringify(musicEventMessage));
-      console.log(`🎵 Evento musical enviado: ${event.eventType}`);
-    } catch (error) {
-      console.error('Error al enviar evento musical:', error);
-    }
-  }
-
-  // Enviar solicitud de sincronización
-  sendSyncRequest(roomId: string): void {
-    if (!roomId) {
-      console.error('ID de sala inválido');
-      return;
-    }
-    
-    this.checkAndConnect();
-
-    const userId = this.getCurrentUserId();
-    if (!userId) return;
-    
-    // Si no estamos conectados, no enviar la solicitud
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      console.log('WebSocket no conectado, solicitud de sincronización no enviada');
-      return;
-    }
-
-    const syncRequest: SyncRequest = {
-      type: 'sync_request',
-      roomId,
-      senderId: userId,
-      timestamp: Date.now()
-    };
-
-    try {
-      this.socket.send(JSON.stringify(syncRequest));
-      console.log(`🔄 Solicitud de sincronización enviada para sala: ${roomId}`);
-    } catch (error) {
-      console.error('Error al enviar solicitud de sincronización:', error);
-    }
-  }
-
-  // Enviar estado de sincronización (respuesta a sync_request)
-  sendSyncState(trackId: string | null, isPlaying: boolean, position: number, metadata?: TrackMetadata): void {
-    if (!this.currentRoomId) {
-      console.error('No hay sala musical activa');
-      return;
-    }
-    
-    this.checkAndConnect();
-
-    const userId = this.getCurrentUserId();
-    if (!userId) return;
-    
-    // Si no estamos conectados, no enviar el estado
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      console.log('WebSocket no conectado, estado de sincronización no enviado');
-      return;
-    }
-
-    const syncState: SyncState = {
-      type: 'sync_state',
-      roomId: this.currentRoomId,
-      trackId,
-      isPlaying,
-      position,
-      senderId: userId,
-      timestamp: Date.now(),
-      metadata
-    };
-
-    try {
-      this.socket.send(JSON.stringify(syncState));
-      console.log(`🔄 Estado de sincronización enviado: ${trackId ? 'Track ID: ' + trackId : 'Sin track'}`);
-    } catch (error) {
-      console.error('Error al enviar estado de sincronización:', error);
-    }
-  }
-
   // Desconectar el WebSocket de manera segura
   disconnect(): void {
     this.stopHeartbeat();
@@ -792,7 +681,6 @@ export class ChatService {
     }
     
     this.currentConversationId = null;
-    this.currentRoomId = null;
     clearTimeout(this.reconnectTimeout);
     
     // Actualizar estado
