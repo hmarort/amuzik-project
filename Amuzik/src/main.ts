@@ -27,6 +27,8 @@ import { environment } from './environments/environment';
 import { getMessaging, provideMessaging } from '@angular/fire/messaging';
 import { Keyboard } from '@capacitor/keyboard';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar } from '@capacitor/status-bar';
 
 GoogleAuth.initialize(environment.googleAuth);
 addIcons({
@@ -47,11 +49,15 @@ bootstrapApplication(AppComponent, {
     provideMessaging(() => getMessaging()),
   ],
 }).then(() => {
-  Keyboard.addListener('keyboardWillShow', () => {
-    document.body.classList.add('keyboard-is-open');
-  });
-
-  Keyboard.addListener('keyboardWillHide', () => {
-    document.body.classList.remove('keyboard-is-open');
-  });
+  if(Capacitor.isNativePlatform()){
+    Keyboard.addListener('keyboardWillShow', () => {
+      document.body.classList.add('keyboard-is-open');
+    }
+    );
+    Keyboard.addListener('keyboardWillHide', () => {
+      document.body.classList.remove('keyboard-is-open');
+    }
+    );
+    StatusBar.setOverlaysWebView({ overlay: false });
+  }
 });
