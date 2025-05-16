@@ -15,10 +15,9 @@ import {
   IonIcon,
   IonAvatar,
   IonSpinner,
-  IonBadge
-} from '@ionic/angular/standalone';
+  IonBadge, IonItem, IonText, IonList, IonRow, IonCol, IonGrid } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { send, arrowBack, checkmarkDone, checkmark, checkmarkDoneSharp } from 'ionicons/icons';
+import { send, arrowBack, checkmarkDone, checkmark, checkmarkDoneSharp, alertCircleOutline, arrowBackOutline, chatbubbleOutline } from 'ionicons/icons';
 import { AuthService, User } from 'src/app/services/auth.service';
 import { ChatService, Message } from 'src/app/services/chat.service';
 import { Subscription } from 'rxjs';
@@ -28,7 +27,7 @@ import { Subscription } from 'rxjs';
   templateUrl: './chat.page.html',
   styleUrls: ['./chat.page.scss'],
   standalone: true,
-  imports: [
+  imports: [IonItem,
     CommonModule,
     FormsModule,
     IonContent,
@@ -41,10 +40,7 @@ import { Subscription } from 'rxjs';
     IonInput,
     IonButton,
     IonIcon,
-    IonAvatar,
-    IonSpinner,
-    IonBadge
-  ]
+    IonSpinner]
 })
 export class ChatPage implements OnInit, OnDestroy {
   @ViewChild('content')
@@ -65,13 +61,7 @@ export class ChatPage implements OnInit, OnDestroy {
     private authService: AuthService,
     private chatService: ChatService
   ) {
-    addIcons({
-      send,
-      arrowBack,
-      checkmarkDone,
-      checkmarkDoneSharp,
-      checkmark
-    });
+    addIcons({alertCircleOutline,arrowBackOutline,chatbubbleOutline,send,arrowBack,checkmarkDone,checkmarkDoneSharp,checkmark});
   }
 
   ngOnInit() {

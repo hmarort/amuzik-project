@@ -10,8 +10,6 @@ const config: CapacitorConfig = {
       launchAutoHide: false,
       backgroundColor: '#ffffffff',
       androidScaleType: 'CENTER_CROP',
-      splashFullScreen: true,
-      splashImmersive: true,
       showSpinner: false,
     },
     GoogleAuth: {
@@ -21,6 +19,9 @@ const config: CapacitorConfig = {
     },
     PushNotifications: {
       presentationOptions: ['alert', 'badge', 'sound'],
+    },
+    Keyboard:{
+      resizeOnFullScreen: true,
     }
   },
 };

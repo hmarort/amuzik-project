@@ -1107,7 +1107,6 @@ ion-item {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Particularidades de la web */
 /* Variables para breakpoints responsive */
 $breakpoint-sm: 576px;
 $breakpoint-md: 768px;
@@ -1127,6 +1126,22 @@ $breakpoint-xl: 1200px;
   --spacing-md: 16px;
   --spacing-lg: 20px;
   --spacing-xl: 24px;
+  --header-safe-area: env(safe-area-inset-top, 20px); /* Valor por defecto y respeta safe-area */
+}
+
+/* Estilos para el header principal */
+ion-header {
+  padding-top: var(--header-safe-area);
+}
+
+/* Si usas un toolbar como header principal */
+ion-toolbar.header-toolbar {
+  padding-top: var(--header-safe-area);
+}
+
+/* En caso de que no uses ion-header/ion-toolbar, para cualquier elemento que uses como header */
+.header-principal {
+  padding-top: var(--header-safe-area);
 }
 
 /* Eliminar bordes de las listas y establecer background transparente */
@@ -1852,8 +1867,8 @@ ion-item-divider {
   display: flex;
   align-items: center;
   background-color: var(--ion-color-light);
-  border-radius: 24px;
-  padding: 4px 8px;
+  border-radius: 8px;
+  padding: 8px 8px;
   margin: var(--spacing-sm);
   
   ion-input {

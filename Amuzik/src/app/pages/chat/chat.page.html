@@ -1,58 +1,53 @@
-<div class="ion-page">
-  <ion-header [translucent]="true">
-    <ion-toolbar>
-      <ion-buttons slot="start">
-        <ion-back-button defaultHref="/friends"></ion-back-button>
-      </ion-buttons>
-      <ion-title *ngIf="!friend && isLoading">
-        <ion-spinner name="dots" size="small"></ion-spinner>
-      </ion-title>
-      <ion-title *ngIf="friend">{{ friend.username }}</ion-title>
-    </ion-toolbar>
-  </ion-header>
-  
-  <ion-content [fullscreen]="true" #content>
-    <div *ngIf="isLoading" class="loading-container">
-      <ion-spinner></ion-spinner>
-      <p>Cargando conversación...</p>
+<ion-header mode="md" [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/friends"></ion-back-button>
+    </ion-buttons>
+    <ion-title *ngIf="!friend && isLoading">
+      <ion-spinner name="dots" size="small"></ion-spinner>
+    </ion-title>
+    <ion-title *ngIf="friend">{{ friend.username }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="false" #content>
+  <div *ngIf="isLoading" class="loading-container">
+    <ion-spinner></ion-spinner>
+    <p>Cargando conversación...</p>
+  </div>
+
+  <div *ngIf="!friend && !isLoading" class="error-container">
+    <p>No se encontró el contacto. Vuelve a la lista de amigos e inténtalo de nuevo.</p>
+  </div>
+
+  <div class="chat-container" *ngIf="friend && !isLoading">
+    <!-- Empty state when no messages -->
+    <div *ngIf="messages.length === 0" class="empty-chat">
+      <p>No hay mensajes aún. ¡Empieza la conversación!</p>
     </div>
-    
-    <div *ngIf="!friend && !isLoading" class="error-container">
-      <p>No se encontró el contacto. Vuelve a la lista de amigos e inténtalo de nuevo.</p>
-    </div>
-    
-    <div class="chat-container" *ngIf="friend && !isLoading">
-      <!-- Empty state when no messages -->
-      <div *ngIf="messages.length === 0" class="empty-chat">
-        <p>No hay mensajes aún. ¡Empieza la conversación!</p>
-      </div>
-      
-      <!-- Message list -->
-      <div *ngFor="let message of messages" [ngClass]="{'message-received': !isMyMessage(message), 'message-sent': isMyMessage(message)}">
-        <div class="message-bubble">
-          <p>{{ message.text }}</p>
-          <div class="message-info">
-            <span class="message-time">{{ formatMessageTime(message.timestamp) }}</span>
-            <ion-icon *ngIf="isMyMessage(message)" [name]="getMessageStatusIcon(message)" class="message-status"></ion-icon>
-          </div>
+
+    <!-- Message list -->
+    <div *ngFor="let message of messages"
+      [ngClass]="{'message-received': !isMyMessage(message), 'message-sent': isMyMessage(message)}">
+      <div class="message-bubble">
+        <p>{{ message.text }}</p>
+        <div class="message-info">
+          <span class="message-time">{{ formatMessageTime(message.timestamp) }}</span>
+          <ion-icon *ngIf="isMyMessage(message)" [name]="getMessageStatusIcon(message)"
+            class="message-status"></ion-icon>
         </div>
       </div>
     </div>
-  </ion-content>
-  
-  <ion-footer class="ion-no-border" *ngIf="friend">
-    <ion-toolbar>
-      <div class="message-input-container">
-        <ion-input
-          [(ngModel)]="newMessage"
-          placeholder="Escribe un mensaje..."
-          enterkeyhint="send"
-          (keyup.enter)="sendMessage()">
-        </ion-input>
-        <ion-button fill="clear" (click)="sendMessage()" [disabled]="!newMessage.trim()">
-          <ion-icon name="send"></ion-icon>
-        </ion-button>
-      </div>
-    </ion-toolbar>
-  </ion-footer>
-</div>
+  </div>
+</ion-content>
+
+<ion-footer class="ion-no-border" *ngIf="friend">
+  <ion-item class="message-input-container">
+    <ion-input [(ngModel)]="newMessage" placeholder="Escribe un mensaje..." enterkeyhint="send"
+      (keyup.enter)="sendMessage()">
+    </ion-input>
+    <ion-button fill="clear" (click)="sendMessage()" [disabled]="!newMessage.trim()">
+      <ion-icon name="send"></ion-icon>
+    </ion-button>
+  </ion-item>
+</ion-footer>

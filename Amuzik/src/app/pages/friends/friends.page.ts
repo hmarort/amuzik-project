@@ -28,8 +28,7 @@ import {
   AlertController,
   IonMenuToggle,
   IonSearchbar,
-  IonSpinner
-} from '@ionic/angular/standalone';
+  IonSpinner, IonRow, IonCol, IonGrid, IonText, IonListHeader, IonChip } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { menuOutline, personAdd, peopleOutline, trashOutline, chatbubbleOutline, searchOutline, addOutline } from 'ionicons/icons';
 import { AuthService, User } from 'src/app/services/auth.service';
@@ -66,8 +65,7 @@ import { finalize } from 'rxjs/operators';
     IonFab,
     IonFabButton,
     IonMenuToggle,
-    IonSpinner
-],
+    IonSpinner],
 })
 export class FriendsPage implements OnInit {
   showAddFriendForm = false;

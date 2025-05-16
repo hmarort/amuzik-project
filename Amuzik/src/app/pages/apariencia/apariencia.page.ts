@@ -6,20 +6,12 @@ import {
   IonHeader, 
   IonTitle, 
   IonToolbar, 
-  IonList, 
-  IonItem, 
   IonLabel, 
-  IonToggle, 
   IonIcon, 
-  IonSelect, 
-  IonSelectOption,
-  IonRadioGroup,
-  IonRadio,
   IonCard,
   IonCardContent,
   IonCardHeader,
   IonCardTitle,
-  IonItemDivider,
   IonButton,
   IonGrid,
   IonRow,
@@ -39,7 +31,7 @@ import {
   textOutline, 
   closeOutline,
   desktopOutline } from 'ionicons/icons';
-import { TemaService, TemaConfig, ModoTema } from 'src/app/services/tema.service';
+import { TemaService, ModoTema } from 'src/app/services/tema.service';
 import { Subscription } from 'rxjs';
 
 interface Tema {
@@ -56,8 +48,8 @@ interface Tema {
   styleUrls: ['./apariencia.page.scss'],
   standalone: true,
   imports: [
-    IonButtons, 
-    IonBackButton, 
+    IonButtons,
+    IonBackButton,
     IonRange,
     IonContent,
     IonHeader,
@@ -65,9 +57,7 @@ interface Tema {
     IonToolbar,
     CommonModule,
     FormsModule,
-    IonItem,
     IonLabel,
-    IonToggle,
     IonIcon,
     IonCard,
     IonCardContent,
@@ -79,7 +69,7 @@ interface Tema {
     IonCol,
     IonSegment,
     IonSegmentButton
-  ]
+]
 })
 export class AparienciaPage implements OnInit, OnDestroy {
   temaActual: string = '';
