@@ -78,7 +78,6 @@ export class ChatService {
     
     // Evitar conexiones duplicadas
     if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
-      console.log('WebSocket ya está conectado o conectándose');
       return;
     }
     
@@ -90,11 +89,9 @@ export class ChatService {
     });
 
     try {
-      console.log(`Intentando conectar a: ${this.wsUrl}?userId=${userId}`);
       this.socket = new WebSocket(`${this.wsUrl}?userId=${userId}`);
       
       this.socket.onopen = () => {
-        console.log('✅ WebSocket conectado exitosamente');
         this.reconnectAttempts = 0;
         
         // Actualizar estado
@@ -122,7 +119,6 @@ export class ChatService {
       this.socket.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('📩 Mensaje recibido:', data.type || 'chat');
           
           // Manejar diferentes tipos de mensajes
           if (data.type === 'history_response' && data.messages) {
@@ -134,12 +130,7 @@ export class ChatService {
               status: msg.read ? 'read' : (msg.status || 'delivered')
             }));
             this.messagesSubject.next(messages);
-            console.log('📚 Historial cargado:', messages.length, 'mensajes');
           } 
-          // Confirmación de registro de token
-          else if (data.type === 'device_token_registered') {
-            console.log('📱 Token de dispositivo registrado exitosamente');
-          }
           // Mensaje tipo ping para mantener la conexión
           else if (data.type === 'ping') {
             this.socket?.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
@@ -168,21 +159,12 @@ export class ChatService {
           else if (data.type === 'messages_read_receipt') {
             this.handleReadReceipt(data);
           }
-          // Conexión exitosa (respuesta del servidor)
-          else if (data.type === 'connection_success') {
-            console.log('✅ Conexión establecida, ID de usuario:', data.userId);
-          }
-          // Error
-          else if (data.type === 'error') {
-            console.error('❌ Error del servidor:', data.message);
-          }
         } catch (error) {
           console.error('Error al procesar mensaje:', error);
         }
       };
       
       this.socket.onerror = (error) => {
-        console.error('❌ Error de WebSocket:', error);
         // Actualizar estado
         this.connectionStatusSubject.next({
           isConnected: false,
@@ -192,7 +174,6 @@ export class ChatService {
       };
       
       this.socket.onclose = (event) => {
-        console.log(`WebSocket desconectado - Código: ${event.code}, Razón: ${event.reason}`);
         
         // Detener heartbeat
         this.stopHeartbeat();
@@ -257,16 +238,14 @@ export class ChatService {
   // Registrar token de dispositivo para notificaciones push
   registerDeviceToken(deviceToken: string): void {
     if (!deviceToken) {
-      console.error('Token de dispositivo inválido');
       return;
     }
     
     const userId = this.getCurrentUserId();
     if (!userId) {
-      console.error('No hay usuario autenticado');
       return;
     }
-    
+
     // Si no estamos conectados, conectar primero
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       // Guardar token para registrarlo después de conectar
@@ -281,9 +260,7 @@ export class ChatService {
         deviceToken,
         userId
       }));
-      console.log('📱 Token de dispositivo enviado para registro');
     } catch (error) {
-      console.error('Error al registrar token de dispositivo:', error);
       // Guardar para intentar después
       localStorage.setItem('deviceToken', deviceToken);
     }
@@ -292,7 +269,6 @@ export class ChatService {
   // Intenta reconectar cuando se pierde la conexión con una estrategia exponencial
   private attemptReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Número máximo de intentos de reconexión alcanzado');
       return;
     }
     
@@ -300,7 +276,6 @@ export class ChatService {
     // Estrategia exponencial con un máximo de 60 segundos
     const delay = Math.min(60000, Math.pow(1.5, this.reconnectAttempts) * 1000);
     
-    console.log(`🔄 Intentando reconectar en ${delay / 1000} segundos... (Intento ${this.reconnectAttempts})`);
     
     // Actualizar estado
     this.connectionStatusSubject.next({
@@ -384,7 +359,6 @@ export class ChatService {
     
     if (pendingMessages.length === 0) return;
     
-    console.log(`📤 Procesando ${pendingMessages.length} mensajes pendientes`);
     
     // Limpiar la lista pendiente
     localStorage.removeItem('pending_messages');
@@ -403,9 +377,7 @@ export class ChatService {
     const pendingReadReceipts = JSON.parse(localStorage.getItem('pending_read_receipts') || '[]');
     
     if (pendingReadReceipts.length === 0) return;
-    
-    console.log(`📖 Procesando ${pendingReadReceipts.length} recibos de lectura pendientes`);
-    
+        
     // Limpiar la lista pendiente
     localStorage.removeItem('pending_read_receipts');
     
@@ -418,13 +390,11 @@ export class ChatService {
   // Envía un mensaje a través del WebSocket
   sendMessage(receiverId: string, text: string, tempId?: number): void {
     if (!text.trim()) {
-      console.log('Mensaje vacío, no se envía');
       return;
     }
     
     const senderId = this.getCurrentUserId();
     if (!senderId) {
-      console.error('No hay usuario autenticado');
       return;
     }
 
@@ -441,7 +411,6 @@ export class ChatService {
 
     // Si no estamos conectados, guardar para enviar después
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      console.log('WebSocket no conectado, guardando mensaje para enviar después');
       this.queueMessageForSending(message);
       this.connect(); // Intentar conectar
       return;
@@ -465,9 +434,7 @@ export class ChatService {
         timestamp: message.timestamp
       }));
       
-      console.log('📤 Mensaje enviado al servidor');
     } catch (error) {
-      console.error('Error al enviar mensaje:', error);
       // Si falla el envío, guardarlo para reintento
       this.queueMessageForSending(message);
     }
@@ -491,7 +458,6 @@ export class ChatService {
     if (!pendingMessages.some((m: any) => m.id === message.id)) {
       pendingMessages.push(message);
       localStorage.setItem('pending_messages', JSON.stringify(pendingMessages));
-      console.log(`📝 Mensaje añadido a la cola de pendientes (${pendingMessages.length} total)`);
     }
   }
 
@@ -546,7 +512,6 @@ export class ChatService {
     }
     
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      console.log('WebSocket no conectado, se solicitará historial después de conectar');
       return;
     }
 
@@ -561,7 +526,6 @@ export class ChatService {
 
     try {
       this.socket.send(JSON.stringify(request));
-      console.log(`📜 Solicitando historial de mensajes para: ${friendId}`);
     } catch (error) {
       console.error('Error al solicitar historial:', error);
     }
@@ -657,7 +621,6 @@ export class ChatService {
         senderId: friendId,
         timestamp: new Date()
       }));
-      console.log(`📖 Notificación de lectura enviada para: ${friendId}`);
     } catch (error) {
       console.error('Error al notificar mensajes leídos:', error);
     }
@@ -690,7 +653,6 @@ export class ChatService {
       isReconnecting: false
     });
     
-    console.log('🔌 Desconectado del servicio de chat');
   }
   
   // Ver si el websocket está conectado
