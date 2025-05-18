@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, Subject, interval, Subscription } from 'rxjs';
 import { AuthService } from './auth.service';
+import { environment } from 'src/environments/environment.prod';
 
 export interface Message {
   id: number;
@@ -41,7 +42,7 @@ export class ChatService {
   private currentConversationId: string | null = null;
   
   // URL del WebSocket - asegúrate de que sea la correcta en tu environment.ts
-  private wsUrl = 'wss://chat-server-uoyz.onrender.com';
+  private wsUrl = environment.wsUrl;
   
   constructor(private authService: AuthService) {
     // Intentar conectar cuando el servicio es creado

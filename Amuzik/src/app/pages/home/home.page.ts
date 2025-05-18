@@ -7,6 +7,7 @@ import {
   ElementRef,
 } from '@angular/core';
 import { AuthService, User } from '../../services/auth.service';
+import { ListeningRoomService, ListeningRoom } from '../../services/listening-room.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -47,8 +48,7 @@ import {
   playSkipBackOutline,
   menuOutline,
   volumeHighOutline,
-  push,
-} from 'ionicons/icons';
+  push, peopleOutline, personOutline, personAddOutline, exitOutline, syncOutline, logInOutline, paperPlaneOutline, copyOutline } from 'ionicons/icons';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Subject, takeUntil, finalize, forkJoin, of, from } from 'rxjs';
 import {
@@ -59,6 +59,7 @@ import {
   toArray,
   concatMap,
   filter,
+  pairwise,
 } from 'rxjs/operators';
 import { PushNotificationService } from 'src/app/services/push-notifications.service';
 interface Track {
@@ -112,7 +113,7 @@ interface Playlist {
     IonButtons,
     IonRange,
     IonProgressBar
-],
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './home.page.html',
   styleUrls: ['./home.page.scss'],
@@ -147,32 +148,30 @@ export class HomePage implements OnInit, OnDestroy {
   hasMorePlaylists: boolean = true;
   allPlaylists: Playlist[] = [];
 
+  currentRoom: ListeningRoom | null = null;
+  isHost: boolean = false;
+  roomMembers: string[] = [];
+  syncStatus: 'synced' | 'syncing' | 'out-of-sync' = 'synced';
+  showListeningRoomControls: boolean = false;
+
+  showInviteModal: boolean = false;
+  inviteUserId: string = '';
+  copySuccess: boolean = false;
   constructor(
     private audiusFacade: AudiusFacade,
     private authService: AuthService,
-    private pushNotificationService: PushNotificationService
+    private pushNotificationService: PushNotificationService,
+    private listeningRoomService: ListeningRoomService
   ) {
-    addIcons({
-      personCircleOutline,
-      chevronDownOutline,
-      musicalNotesOutline,
-      closeOutline,
-      playOutline,
-      searchOutline,
-      stopOutline,
-      pauseOutline,
-      menuOutline,
-      playSkipForwardOutline,
-      playSkipBackOutline,
-    });
+    addIcons({peopleOutline,personOutline,personAddOutline,exitOutline,syncOutline,logInOutline,chevronDownOutline,musicalNotesOutline,closeOutline,playOutline,searchOutline,paperPlaneOutline,copyOutline,playSkipBackOutline,playSkipForwardOutline,personCircleOutline,stopOutline,pauseOutline,menuOutline,});
   }
 
   ngOnInit() {
     this.authService.currentUser$
-    .pipe(takeUntil(this.destroy$))
-    .subscribe(user => {
-      this.currentUser = user;
-    });
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        this.currentUser = user;
+      });
     if (this.currentUser) {
       this.pushNotificationService.initialize(this.currentUser.username);
     }
@@ -304,6 +303,64 @@ export class HomePage implements OnInit, OnDestroy {
           SplashScreen.hide();
         },
       });
+
+    this.listeningRoomService.currentRoom$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(room => {
+        this.currentRoom = room;
+        this.showListeningRoomControls = !!room;
+      });
+
+    // Suscribirse al rol de host
+    this.listeningRoomService.isHost$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(isHost => {
+        this.isHost = isHost;
+      });
+
+    // Suscribirse a la lista de miembros
+    this.listeningRoomService.members$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(members => {
+        this.roomMembers = members;
+      });
+
+    // Suscribirse al estado de sincronización
+    this.listeningRoomService.syncStatus$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(status => {
+        this.syncStatus = status;
+      });
+
+  }
+
+  // Métodos para controlar las salas de escucha
+  createListeningRoom(trackId: string) {
+    if (!trackId) {
+      console.error('No se puede crear sala: trackId no válido');
+      return;
+    }
+    this.listeningRoomService.createRoom(trackId);
+  }
+
+  joinListeningRoom(roomId: string) {
+    if (!roomId) {
+      console.error('No se puede unir a la sala: roomId no válido');
+      return;
+    }
+    this.listeningRoomService.joinRoom(roomId);
+  }
+
+  leaveListeningRoom() {
+    this.listeningRoomService.leaveRoom();
+  }
+
+  inviteToRoom(userId: string) {
+    this.listeningRoomService.inviteUser(userId);
+  }
+
+  requestSync() {
+    this.listeningRoomService.requestSync();
   }
 
   private validateAllPlaylists(playlists: Playlist[]) {
@@ -482,22 +539,40 @@ export class HomePage implements OnInit, OnDestroy {
       console.error('Error: track es inválido. No se puede reproducir.');
       return;
     }
-  
+
     const trackId = track.id;
-    
-    // Si se están reproduciendo tracks de una playlist, usar esa playlist
+
+    // Si estamos en una sala de escucha y somos el host, usamos el servicio de sala
+    if (this.currentRoom && this.isHost) {
+      // Si estamos cambiando la canción en la sala
+      if (this.currentRoom.trackId !== trackId) {
+        this.listeningRoomService.changeTrack(trackId);
+        return;
+      }
+
+      // Si solo estamos reproduciendo la canción actual
+      this.listeningRoomService.play();
+      return;
+    }
+
+    // Si no estamos en una sala o no somos el host, usamos la lógica original
     if (playlistTracks && playlistTracks.length) {
       this.audiusFacade.play(trackId, playlistTracks);
     } else if (this.currentPlaylist) {
-      // Mantener la playlist actual si existe
       this.audiusFacade.play(trackId, this.currentPlaylist);
     } else {
-      // Si no hay playlist, crear una con solo este track
       this.audiusFacade.play(trackId, [track]);
     }
   }
 
   pauseTrack() {
+    // Si estamos en una sala de escucha y somos el host, usamos el servicio de sala
+    if (this.currentRoom && this.isHost) {
+      this.listeningRoomService.pause();
+      return;
+    }
+
+    // Si no estamos en una sala o no somos el host, usamos la lógica original
     this.audiusFacade.pause();
   }
 
@@ -526,6 +601,13 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   seekTo(position: number) {
+    // Si estamos en una sala de escucha y somos el host, usamos el servicio de sala
+    if (this.currentRoom && this.isHost) {
+      this.listeningRoomService.seekTo(position);
+      return;
+    }
+
+    // Si no estamos en una sala o no somos el host, usamos la lógica original
     this.audiusFacade.seekTo(position);
   }
 
@@ -774,5 +856,109 @@ export class HomePage implements OnInit, OnDestroy {
       return track.artwork[size];
     }
     return 'assets/default.jpg';
+  }
+
+  showInviteDialog() {
+    this.showInviteModal = true;
+  }
+
+  closeInviteDialog() {
+    this.showInviteModal = false;
+    this.inviteUserId = '';
+    this.copySuccess = false;
+  }
+
+  copyRoomId() {
+    if (!this.currentRoom) return;
+
+    navigator.clipboard.writeText(this.currentRoom.id).then(
+      () => {
+        this.copySuccess = true;
+        // Mostrar un toast o notificación
+        // Se puede implementar con un servicio de Toast o simplemente con un timeout
+        setTimeout(() => {
+          this.copySuccess = false;
+        }, 2000);
+      },
+      (err) => {
+        console.error('No se pudo copiar al portapapeles', err);
+      }
+    );
+  }
+
+  getDisplayName(userId: string): string {
+    // Aquí puedes implementar una lógica para mostrar nombres de usuario más amigables
+    // Por ejemplo, si tienes una caché de usuarios o un servicio para obtener detalles de usuario
+
+    // Versión simplificada: si el usuario es el actual, mostrar "Tú"
+    if (userId === this.currentUser?.id) {
+      return 'Tú';
+    }
+
+    // Aquí podrías consultar a un servicio para obtener nombres de usuario reales
+    // Por ahora, simplemente mostramos un ID corto para mayor legibilidad
+    return userId.substring(0, 8) + '...';
+  }
+
+  // Método para manejar invitaciones recibidas (puede ser llamado desde un servicio de notificaciones)
+  handleRoomInvitation(roomId: string, inviterId: string) {
+    // Aquí puedes implementar la lógica para mostrar una notificación al usuario
+    // Por ejemplo, usando ion-alert
+
+    // Ejemplo básico (no implementa realmente la alerta)
+    console.log(`Invitación recibida para la sala ${roomId} de ${inviterId}`);
+
+    // En una implementación real, mostrarías una alerta y permitirías al usuario
+    // aceptar o rechazar la invitación
+    /*
+    this.alertController.create({
+      header: 'Invitación a sala de escucha',
+      message: `${this.getDisplayName(inviterId)} te ha invitado a unirte a una sala de escucha.`,
+      buttons: [
+        {
+          text: 'Rechazar',
+          role: 'cancel'
+        },
+        {
+          text: 'Aceptar',
+          handler: () => {
+            this.joinListeningRoom(roomId);
+          }
+        }
+      ]
+    }).then(alert => alert.present());
+    */
+  }
+
+  // Implementación de la notificación cuando un usuario entra o sale de la sala
+  private monitorRoomMembersChanges() {
+    this.listeningRoomService.members$
+      .pipe(
+        takeUntil(this.destroy$),
+        // Usamos pairwise para comparar el valor anterior con el actual
+        pairwise()
+      )
+      .subscribe(([prevMembers, currentMembers]) => {
+        // Encontrar miembros nuevos (los que están en currentMembers pero no en prevMembers)
+        const newMembers = currentMembers.filter(id => !prevMembers.includes(id));
+
+        // Encontrar miembros que se fueron (los que están en prevMembers pero no en currentMembers)
+        const leftMembers = prevMembers.filter(id => !currentMembers.includes(id));
+
+        // Notificar sobre miembros nuevos
+        newMembers.forEach(id => {
+          // Mostrar una notificación temporal o toast
+          console.log(`${this.getDisplayName(id)} se ha unido a la sala`);
+
+          // Aquí podrías mostrar un toast o una notificación
+        });
+
+        // Notificar sobre miembros que se fueron
+        leftMembers.forEach(id => {
+          console.log(`${this.getDisplayName(id)} ha abandonado la sala`);
+
+          // Aquí podrías mostrar un toast o una notificación
+        });
+      });
   }
 }
