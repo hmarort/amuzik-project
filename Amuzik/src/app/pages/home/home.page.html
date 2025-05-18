@@ -8,6 +8,8 @@
               <img src="data:image/jpeg;base64,{{currentUser?.base64}}" alt="User Avatar">
             </ion-avatar>
           </div>
+
+
         </ion-menu-toggle>
       </ion-buttons>
       <div class="flex-1 mx-4">
@@ -23,88 +25,6 @@
     <ion-spinner name="circular"></ion-spinner>
     <p>Cargando música...</p>
   </div>
-
-  <!-- Controles de sala de escucha - Solo mostrar cuando esté en una sala -->
-  <ion-card *ngIf="showListeningRoomControls" class="listening-room-card">
-    <ion-card-header>
-      <ion-card-title>
-        <ion-icon name="people-outline"></ion-icon>
-        Sala de escucha
-        <ion-badge color="success" *ngIf="syncStatus === 'synced'">Sincronizado</ion-badge>
-        <ion-badge color="warning" *ngIf="syncStatus === 'syncing'">Sincronizando...</ion-badge>
-        <ion-badge color="danger" *ngIf="syncStatus === 'out-of-sync'">Fuera de sincronía</ion-badge>
-      </ion-card-title>
-      <ion-note *ngIf="currentRoom">ID de sala: {{ currentRoom.id }}</ion-note>
-    </ion-card-header>
-    <ion-card-content>
-      <ion-item lines="none" *ngIf="currentRoom">
-        <ion-label>
-          <h2>{{ isHost ? 'Eres el anfitrión' : 'Estás escuchando con un grupo' }}</h2>
-          <p>Canción actual: {{ currentTrack?.title || 'Ninguna' }}</p>
-          <p>Estado: {{ currentRoom.state === 'playing' ? 'Reproduciendo' : 'Pausado' }}</p>
-          
-          <div class="member-list">
-            <span class="member-count">{{ roomMembers.length }} miembro(s):</span>
-            <div class="member-item" *ngFor="let memberId of roomMembers">
-              <ion-icon name="person-outline"></ion-icon>
-              <span>{{ getDisplayName(memberId) }}</span>
-              <ion-badge *ngIf="currentRoom && currentRoom.creatorId === memberId" class="host-badge" color="primary">Host</ion-badge>
-            </div>
-          </div>
-        </ion-label>
-      </ion-item>
-      <!-- Botón para invitar a otros usuarios -->
-      <ion-item lines="none" *ngIf="currentRoom">
-        <ion-label>Invitar a otros usuarios</ion-label>
-        <ion-button slot="end" fill="clear" (click)="showInviteDialog()">
-          <ion-icon slot="icon-only" name="person-add-outline"></ion-icon>
-        </ion-button>
-      </ion-item>
-      <ion-grid>
-        <ion-row>
-          <ion-col>
-            <ion-button expand="block" color="danger" (click)="leaveListeningRoom()">
-              <ion-icon slot="start" name="exit-outline"></ion-icon>
-              Salir de la sala
-            </ion-button>
-          </ion-col>
-          <ion-col *ngIf="!isHost">
-            <ion-button expand="block" color="warning" (click)="requestSync()">
-              <ion-icon slot="start" name="sync-outline"></ion-icon>
-              Sincronizar
-            </ion-button>
-          </ion-col>
-        </ion-row>
-      </ion-grid>
-    </ion-card-content>
-  </ion-card>
-
-  <!-- Botones para crear o unirse a una sala - Mostrar cuando no esté en una sala -->
-  <ion-card *ngIf="!showListeningRoomControls && currentTrack" class="create-room-card">
-    <ion-card-content>
-      <ion-button expand="block" color="primary" (click)="createListeningRoom(currentTrack.id)">
-        <ion-icon slot="start" name="people-outline"></ion-icon>
-        Crear sala de escucha compartida
-      </ion-button>
-    </ion-card-content>
-  </ion-card>
-
-  <!-- Diálogo para unirse a una sala - Puedes implementar un input para el ID de la sala -->
-  <ion-card *ngIf="!showListeningRoomControls" class="join-room-card">
-    <ion-card-header>
-      <ion-card-title>Unirse a una sala</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <ion-item>
-        <ion-label position="floating">ID de la sala</ion-label>
-        <ion-input type="text" #roomIdInput></ion-input>
-      </ion-item>
-      <ion-button expand="block" (click)="joinListeningRoom(roomIdInput.value ? roomIdInput.value.toString() : '')" [disabled]="!roomIdInput.value">
-        <ion-icon slot="start" name="log-in-outline"></ion-icon>
-        Unirse
-      </ion-button>
-    </ion-card-content>
-  </ion-card>
 
   <div *ngIf="trendingTracks.length > 0" class="ion-padding-horizontal ion-padding-top">
     <h2 class="ion-text-white">Top 10 Trending</h2>
@@ -221,46 +141,6 @@
     </ng-template>
   </div>
 </div>
-
-<!-- Diálogo de invitación (puede ser implementado como un ion-alert o modal) -->
-<ion-modal #inviteModal [isOpen]="showInviteModal">
-  <ng-template>
-    <ion-header>
-      <ion-toolbar>
-        <ion-title>Invitar amigos</ion-title>
-        <ion-buttons slot="end">
-          <ion-button (click)="closeInviteDialog()">
-            <ion-icon slot="icon-only" name="close-outline"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-header>
-    <ion-content>
-      <ion-item>
-        <ion-label position="floating">ID de usuario</ion-label>
-        <ion-input type="text" [(ngModel)]="inviteUserId"></ion-input>
-      </ion-item>
-      
-      <div class="ion-padding">
-        <ion-button expand="block" (click)="inviteToRoom(inviteUserId)" [disabled]="!inviteUserId">
-          <ion-icon slot="start" name="paper-plane-outline"></ion-icon>
-          Enviar invitación
-        </ion-button>
-      </div>
-      
-      <ion-item lines="none">
-        <ion-label>
-          <h2>Compartir ID de sala</h2>
-          <p>Comparte este ID con tus amigos para que puedan unirse:</p>
-          <ion-text color="primary"><b>{{ currentRoom?.id }}</b></ion-text>
-        </ion-label>
-        <ion-button slot="end" fill="clear" (click)="copyRoomId()">
-          <ion-icon slot="icon-only" name="copy-outline"></ion-icon>
-        </ion-button>
-      </ion-item>
-    </ion-content>
-  </ng-template>
-</ion-modal>
 
 <ion-footer *ngIf="currentTrack" class="ion-no-border">
   <!-- Mini Reproductor (compacto) -->

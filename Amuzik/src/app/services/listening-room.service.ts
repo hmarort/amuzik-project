@@ -1,1003 +1,886 @@
 import { Injectable, OnDestroy } from '@angular/core';
-import { AudiusRequest } from './requests/audius.request';
-import { BehaviorSubject, Subject, Observable, interval, Subscription } from 'rxjs';
-import { filter, distinctUntilChanged, takeUntil, debounceTime } from 'rxjs/operators';
-import { environment } from 'src/environments/environment.prod';
+import { BehaviorSubject, Observable, Subject, Subscription, interval } from 'rxjs';
+import { debounceTime, filter, take, takeUntil } from 'rxjs/operators';
+import { ChatService } from './chat.service';
+import { AudiusFacade, PlaybackState, MusicEvent } from './facades/audius.facade';
 import { AuthService } from './auth.service';
 
 export interface ListeningRoom {
   id: string;
   creatorId: string;
-  trackId: string;
+  trackId: string | null;
   state: 'playing' | 'paused';
   progress: number;
   timestamp: number;
   members: string[];
 }
 
-export interface WebSocketMessage {
-  type: string;
-  [key: string]: any;
-}
-
-export interface ConnectionStatus {
-  isConnected: boolean;
-  lastAttempt: Date | null;
-  isReconnecting: boolean;
+export interface RoomMember {
+  id: string;
+  name?: string;
+  isOnline: boolean;
+  isHost: boolean;
 }
 
 @Injectable({
   providedIn: 'root'
 })
-export class ListeningRoomService implements OnDestroy {
-  // Room state observables
-  private currentRoomSubject = new BehaviorSubject<ListeningRoom | null>(null);
-  public currentRoom$ = this.currentRoomSubject.asObservable();
-
-  private isHostSubject = new BehaviorSubject<boolean>(false);
-  public isHost$ = this.isHostSubject.asObservable();
-
-  private membersSubject = new BehaviorSubject<string[]>([]);
-  public members$ = this.membersSubject.asObservable();
-
-  private syncStatusSubject = new BehaviorSubject<'synced' | 'syncing' | 'out-of-sync'>('synced');
-  public syncStatus$ = this.syncStatusSubject.asObservable();
-
-  // WebSocket related
-  private socket: WebSocket | null = null;
-  private messageSubject = new Subject<any>();
-  public message$ = this.messageSubject.asObservable();
-  
-  // Mejorado: Estado de conexión más detallado, similar a ChatService
-  private connectionStatusSubject = new BehaviorSubject<ConnectionStatus>({
-    isConnected: false,
-    lastAttempt: null,
-    isReconnecting: false
-  });
-  public connectionStatus$ = this.connectionStatusSubject.asObservable();
-
-  // Control variables
-  private userId: string | null = null;
-  private syncThreshold = 0.3; // 300ms threshold for sync
-  private syncCheckInterval: Subscription | null = null;
-  private heartbeatInterval: Subscription | null = null;
+export class ListeningService implements OnDestroy {
+  // Subjects for managing observables
   private destroy$ = new Subject<void>();
-  private isLocalUpdate = false;
-  private isSyncing = false;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectTimeout: any = null;
-
+  private currentRoomSubject = new BehaviorSubject<ListeningRoom | null>(null);
+  private roomMembersSubject = new BehaviorSubject<RoomMember[]>([]);
+  private syncStatusSubject = new BehaviorSubject<{inSync: boolean, offset: number}>({inSync: true, offset: 0});
+  private roomsSubject = new BehaviorSubject<ListeningRoom[]>([]);
+  private isJoiningSubject = new BehaviorSubject<boolean>(false);
+  private isLocalUpdateSubject = new BehaviorSubject<boolean>(false);
+  
+  // Observables for components
+  public currentRoom$ = this.currentRoomSubject.asObservable();
+  public roomMembers$ = this.roomMembersSubject.asObservable();
+  public syncStatus$ = this.syncStatusSubject.asObservable();
+  public rooms$ = this.roomsSubject.asObservable();
+  public isJoining$ = this.isJoiningSubject.asObservable();
+  
+  // Subscriptions
+  private musicEventSub: Subscription | null = null;
+  private playbackStateSub: Subscription | null = null;
+  private syncCheckInterval: Subscription | null = null;
+  
+  // Settings
+  private syncThresholdMs = 3000; // Consider out of sync if more than 3 seconds difference
+  private syncCheckIntervalMs = 10000; // Check sync every 10 seconds
+  
   constructor(
-    private audiusService: AudiusRequest,
+    private chatService: ChatService,
+    private audiusService: AudiusFacade,
     private authService: AuthService
   ) {
-    // Subscribir a cambios de autenticación primero
-    this.authService.currentUser$.pipe(
-      takeUntil(this.destroy$)
-    ).subscribe(user => {
-      const previousUserId = this.userId;
-      this.userId = user?.id || null;
-      
-      if (this.userId && this.userId !== previousUserId) {
-        // Usuario inició sesión o cambió, intentar conectar
-        this.checkAndConnect();
-      } else if (!this.userId && previousUserId) {
-        // Usuario cerró sesión, desconectar
-        this.disconnect();
-      }
-    });
-
-    // Escuchar cambios en el estado de la conexión WebSocket
-    this.connectionStatus$.pipe(
-      takeUntil(this.destroy$),
-      filter(status => status.isConnected)
-    ).subscribe(() => {
-      this.initialize();
-    });
-
-    // Configurar monitoreo del estado de audio
-    this.setupAudioMonitoring();
-  }
-
-  /**
-   * Verificar si debemos conectarnos al WebSocket
-   */
-  private checkAndConnect(): void {
-    const userId = this.getUserId();
-    if (!userId) return;
+    // Listen for WebSocket messages
+    this.setupWebSocketListeners();
     
-    if (!this.socket || 
-        (this.socket.readyState !== WebSocket.OPEN && 
-         this.socket.readyState !== WebSocket.CONNECTING)) {
-      this.connectWebSocket();
-    }
-  }
-
-  /**
-   * Connect to the WebSocket server with improved error handling
-   */
-  private connectWebSocket(): void {
-    if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
-      return;
-    }
-
-    const userId = this.getUserId();
-    if (!userId) {
-      console.error('Cannot connect: No authenticated user');
-      return;
-    }
-
-    this.connectionStatusSubject.next({
-      isConnected: false,
-      lastAttempt: new Date(),
-      isReconnecting: this.reconnectAttempts > 0
-    });
-    
-    // Get WebSocket URL from environment
-    const wsUrl = environment.wsUrl;
-    
-    try {
-      // Añadir userId como parámetro de consulta para autenticación inmediata
-      this.socket = new WebSocket(`${wsUrl}?userId=${userId}`);
-      
-      this.socket.onopen = () => {
-        console.log('ListeningRoom WebSocket connection established');
-        this.reconnectAttempts = 0;
-        
-        this.connectionStatusSubject.next({
-          isConnected: true,
-          lastAttempt: new Date(),
-          isReconnecting: false
-        });
-        
-        // Iniciar heartbeat para mantener conexión activa
-        this.startHeartbeat();
-        
-        // Recuperar salas del usuario al conectar
-        this.getUserRooms();
-      };
-      
-      this.socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('ListeningRoom WebSocket message received:', data);
-          this.messageSubject.next(data);
-          
-          // Responder a pings del servidor
-          if (data.type === 'ping') {
-            this.socket?.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
-          }
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      };
-      
-      this.socket.onerror = (error) => {
-        console.error('ListeningRoom WebSocket error:', error);
-        this.connectionStatusSubject.next({
-          isConnected: false,
-          lastAttempt: new Date(),
-          isReconnecting: false
-        });
-      };
-      
-      this.socket.onclose = (event) => {
-        console.log('ListeningRoom WebSocket connection closed:', event.code, event.reason);
-        
-        // Detener heartbeat
-        this.stopHeartbeat();
-        
-        this.connectionStatusSubject.next({
-          isConnected: false,
-          lastAttempt: new Date(),
-          isReconnecting: false
-        });
-        
-        // Intentar reconectar
-        this.attemptReconnect();
-      };
-    } catch (error) {
-      console.error('Error connecting to WebSocket:', error);
-      this.connectionStatusSubject.next({
-        isConnected: false,
-        lastAttempt: new Date(),
-        isReconnecting: false
-      });
-      this.attemptReconnect();
-    }
-  }
-
-  /**
-   * Iniciar heartbeat para mantener la conexión viva
-   */
-  private startHeartbeat(): void {
-    this.stopHeartbeat(); // Detener cualquier heartbeat existente primero
-    
-    this.heartbeatInterval = interval(25000).subscribe(() => {
-      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-        try {
-          this.socket.send(JSON.stringify({ 
-            type: 'ping', 
-            timestamp: Date.now() 
-          }));
-        } catch (error) {
-          console.error('Error sending ping:', error);
-        }
-      } else {
-        this.stopHeartbeat();
-      }
-    });
-  }
-
-  /**
-   * Detener el heartbeat
-   */
-  private stopHeartbeat(): void {
-    if (this.heartbeatInterval) {
-      this.heartbeatInterval.unsubscribe();
-      this.heartbeatInterval = null;
-    }
-  }
-
-  /**
-   * Attempt to reconnect to WebSocket server with exponential backoff
-   */
-  private attemptReconnect(): void {
-    // Don't attempt to reconnect if no user is logged in
-    if (!this.authService.isAuthenticated()) {
-      console.log('Not attempting reconnect - no authenticated user');
-      return;
-    }
-    
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Maximum reconnection attempts reached');
-      return;
-    }
-    
-    // Clear any existing timeout
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-    }
-    
-    // Exponential backoff with a maximum of 30 seconds
-    const delay = Math.min(30000, Math.pow(2, this.reconnectAttempts) * 1000);
-    this.reconnectAttempts++;
-    
-    console.log(`Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`);
-    
-    this.connectionStatusSubject.next({
-      isConnected: false,
-      lastAttempt: new Date(),
-      isReconnecting: true
-    });
-    
-    this.reconnectTimeout = setTimeout(() => {
-      this.connectWebSocket();
-    }, delay);
-  }
-
-  /**
-   * Send a message to the WebSocket server with improved error handling
-   */
-  send(message: WebSocketMessage): void {
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      console.error('WebSocket not connected, unable to send message');
-      // Intentar conectar y luego enviar el mensaje cuando esté conectado
-      this.checkAndConnect();
-      // En un caso real, implementaríamos una cola de mensajes para enviar cuando reconectemos
-      return;
-    }
-    
-    try {
-      this.socket.send(JSON.stringify(message));
-    } catch (error) {
-      console.error('Error sending WebSocket message:', error);
-    }
-  }
-
-  /**
-   * Get the current user ID from AuthService
-   */
-  getUserId(): string | null {
-    const currentUser = this.authService.getCurrentUser();
-    return currentUser?.id || null;
-  }
-
-  /**
-   * Initialize the service with user ID and set up event listeners
-   */
-  initialize(): void {
-    // Get user ID from AuthService
-    this.userId = this.getUserId();
-    
-    if (!this.userId) {
-      console.error('No user ID available for listening service');
-      return;
-    }
-
-    console.log('Initializing listening room service for user:', this.userId);
-
-    // Listen for room-related WebSocket events
-    this.message$.pipe(
-      takeUntil(this.destroy$),
-      filter(msg => msg && typeof msg === 'object')
-    ).subscribe(message => {
-      this.handleWebSocketMessage(message);
-    });
-
-    // Get user's rooms on initialization
+    // Request current user rooms when service initializes
     this.getUserRooms();
   }
-
+  
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.stopSyncChecking();
+    if (this.musicEventSub) {
+      this.musicEventSub.unsubscribe();
+    }
+    if (this.playbackStateSub) {
+      this.playbackStateSub.unsubscribe();
+    }
+  }
+  
   /**
-   * Handle incoming WebSocket messages related to listening rooms
+   * Initialize WebSocket message listeners
    */
-  private handleWebSocketMessage(message: any): void {
-    if (!message || !message.type) return;
-
-    console.log(`Received WebSocket message: ${message.type}`, message);
-
-    switch (message.type) {
+  private setupWebSocketListeners(): void {
+    // Make sure we're connected to WebSocket
+    if (!this.chatService.isConnected()) {
+      this.chatService.connect();
+    }
+    
+    // Listen for WebSocket connection status changes
+    this.chatService.connectionStatus$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(status => {
+      if (status.isConnected) {
+        // When connected, request user rooms
+        this.getUserRooms();
+        
+        // If we're in a room, request sync
+        const currentRoom = this.currentRoomSubject.getValue();
+        if (currentRoom) {
+          this.requestRoomSync(currentRoom.id);
+        }
+      }
+    });
+    
+    // Setup listener for all websocket messages
+    this.setupMessageListener();
+  }
+  
+  /**
+   * Listen for WebSocket messages
+   */
+  private setupMessageListener(): void {
+    // We need to re-implement this with your actual WebSocket listening approach
+    // Since your ChatService doesn't expose a generic message observable,
+    // we need to listen for specific events using your system
+    
+    // Create a listener for WebSocket messages
+    // This is based on your existing websocket infrastructure
+    const onMessageCallback = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        this.handleWebSocketMessage(data);
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    };
+    
+    // Since we don't have direct access to the raw socket events through your ChatService,
+    // we'll need to handle specific room events individually
+    
+    // Override the ChatService's socket.onmessage handler to include our handler
+    // (NOTE: In a real implementation, you should modify ChatService to provide a message$ observable)
+    // This is just a placeholder for the implementation
+    
+    console.log('WebSocket listeners set up');
+  }
+  
+  /**
+   * Handle WebSocket messages related to listening rooms
+   */
+  private handleWebSocketMessage(data: any): void {
+    if (!data || !data.type) return;
+    
+    switch (data.type) {
       case 'room_created':
-        this.handleRoomCreated(message.room);
+        this.handleRoomCreated(data.room);
         break;
-      
+        
       case 'room_joined':
-        this.handleRoomJoined(message.room);
+        this.handleRoomJoined(data.room);
         break;
-      
-      case 'room_updated':
-        this.handleRoomUpdated(message.room, message.initiatorId);
-        break;
-      
-      case 'room_sync':
-        this.handleRoomSync(message);
-        break;
-      
+        
       case 'member_joined':
-        this.handleMemberJoined(message.roomId, message.userId);
+        this.handleMemberJoined(data.roomId, data.userId);
         break;
-      
+        
       case 'member_left':
-        this.handleMemberLeft(message.roomId, message.userId, message.newCreatorId);
+        this.handleMemberLeft(data.roomId, data.userId, data.newCreatorId);
         break;
-      
+        
+      case 'room_updated':
+        this.handleRoomUpdated(data.room);
+        break;
+        
+      case 'room_sync':
+        this.handleRoomSync(data);
+        break;
+        
       case 'user_rooms':
-        this.handleUserRooms(message.rooms);
+        this.handleUserRooms(data.rooms);
         break;
-      
+        
       case 'room_invitation':
-        // Just log for now - would typically show a notification in UI
-        console.log(`Room invitation received for room ${message.roomId} from ${message.inviterId}`);
+        this.handleRoomInvitation(data);
         break;
-      
+        
       case 'room_left':
-        this.handleRoomLeft(message.roomId);
+        this.handleRoomLeft(data.roomId);
         break;
     }
   }
-
-  /**
-   * Check if WebSocket is connected
-   */
-  isConnected(): boolean {
-    return this.socket !== null && this.socket.readyState === WebSocket.OPEN;
-  }
   
-  /**
-   * Get current connection status
-   */
-  getConnectionStatus(): ConnectionStatus {
-    return this.connectionStatusSubject.value;
-  }
-  
-  /**
-   * Force reconnection
-   */
-  forceReconnect(): void {
-    this.disconnect();
-    setTimeout(() => {
-      this.reconnectAttempts = 0;
-      this.connectWebSocket();
-    }, 1000);
-  }
-
   /**
    * Create a new listening room
    */
   createRoom(trackId: string): void {
-    if (!this.authService.isAuthenticated()) {
-      console.error('Cannot create room: not authenticated');
+    if (!this.chatService.isConnected()) {
+      console.error('Cannot create room: WebSocket not connected');
       return;
     }
     
-    // Asegurar conexión antes de enviar
-    if (!this.isConnected()) {
-      this.checkAndConnect();
-      // Idealmente, implementaríamos una cola de comandos para cuando conectemos
-      setTimeout(() => {
-        if (this.isConnected()) {
-          this.send({
-            type: 'create_room',
-            trackId
-          });
-        }
-      }, 1000);
+    const userId = this.getCurrentUserId();
+    if (!userId) {
+      console.error('Cannot create room: User not authenticated');
       return;
     }
     
-    this.send({
+    // Send create room message
+    const message = {
       type: 'create_room',
       trackId
-    });
+    };
+    
+    this.sendWebSocketMessage(message);
   }
-
+  
   /**
-   * Join an existing room
+   * Join an existing listening room
    */
   joinRoom(roomId: string): void {
-    if (!this.authService.isAuthenticated()) {
-      console.error('Cannot join room: not authenticated');
+    if (!this.chatService.isConnected()) {
+      console.error('Cannot join room: WebSocket not connected');
       return;
     }
     
-    // Asegurar conexión antes de enviar
-    if (!this.isConnected()) {
-      this.checkAndConnect();
-      setTimeout(() => {
-        if (this.isConnected()) {
-          this.send({
-            type: 'join_room',
-            roomId
-          });
-        }
-      }, 1000);
-      return;
-    }
+    this.isJoiningSubject.next(true);
     
-    this.send({
+    const message = {
       type: 'join_room',
       roomId
-    });
+    };
+    
+    this.sendWebSocketMessage(message);
   }
-
+  
   /**
-   * Leave the current room
+   * Leave the current listening room
    */
   leaveRoom(): void {
-    const currentRoom = this.currentRoomSubject.value;
+    const currentRoom = this.currentRoomSubject.getValue();
     if (!currentRoom) return;
-
-    this.send({
+    
+    const message = {
       type: 'leave_room',
-      roomId: currentRoom.id
-    });
+      roomId: currentRoom.id,
+      creatorId: currentRoom.creatorId // Include creator ID to handle ownership transfer
+    };
+    
+    this.sendWebSocketMessage(message);
+    
+    // Clean up locally
+    this.cleanupRoom();
   }
-
+  
+  /**
+   * Clean up when leaving a room
+   */
+  private cleanupRoom(): void {
+    // Stop playback
+    this.audiusService.pause();
+    
+    // Clear room data
+    this.currentRoomSubject.next(null);
+    this.roomMembersSubject.next([]);
+    
+    // Stop sync checking
+    this.stopSyncChecking();
+    
+    // Unsubscribe from music events
+    if (this.musicEventSub) {
+      this.musicEventSub.unsubscribe();
+      this.musicEventSub = null;
+    }
+    
+    // Unsubscribe from playback state
+    if (this.playbackStateSub) {
+      this.playbackStateSub.unsubscribe();
+      this.playbackStateSub = null;
+    }
+  }
+  
+  /**
+   * Update the room state (play/pause/seek)
+   */
+  updateRoomState(state?: 'playing' | 'paused', progress?: number, trackId?: string): void {
+    const currentRoom = this.currentRoomSubject.getValue();
+    if (!currentRoom) return;
+    
+    const currentUserId = this.getCurrentUserId();
+    
+    // Only the host can update the room state
+    // Or if it's a new track, any member can update it
+    if (currentRoom.creatorId !== currentUserId && !trackId) {
+      console.warn('Only the host can update the room state');
+      return;
+    }
+    
+    // Mark this as a local update to prevent loop
+    this.isLocalUpdateSubject.next(true);
+    
+    const update: any = {
+      type: 'room_update',
+      roomId: currentRoom.id
+    };
+    
+    if (state !== undefined) update.state = state;
+    if (progress !== undefined) update.progress = progress;
+    if (trackId !== undefined) update.trackId = trackId;
+    
+    this.sendWebSocketMessage(update);
+  }
+  
+  /**
+   * Play the current track
+   */
+  play(): void {
+    const currentRoom = this.currentRoomSubject.getValue();
+    if (!currentRoom || !currentRoom.trackId) return;
+    
+    // If the user is the host, update the room state
+    const isHost = currentRoom.creatorId === this.getCurrentUserId();
+    
+    if (isHost) {
+      const currentPosition = this.audiusService.getPlaybackState().position;
+      this.updateRoomState('playing', currentPosition);
+    }
+    
+    // Directly play the track
+    if (this.audiusService.getPlaybackState().trackId !== currentRoom.trackId) {
+      this.audiusService.play(currentRoom.trackId);
+    } else {
+      this.audiusService.play(currentRoom.trackId);
+    }
+  }
+  
+  /**
+   * Pause the current track
+   */
+  pause(): void {
+    const currentRoom = this.currentRoomSubject.getValue();
+    if (!currentRoom) return;
+    
+    // If the user is the host, update the room state
+    const isHost = currentRoom.creatorId === this.getCurrentUserId();
+    
+    if (isHost) {
+      const currentPosition = this.audiusService.getPlaybackState().position;
+      this.updateRoomState('paused', currentPosition);
+    }
+    
+    // Directly pause the track
+    this.audiusService.pause();
+  }
+  
+  /**
+   * Seek to a specific position
+   */
+  seekTo(position: number): void {
+    const currentRoom = this.currentRoomSubject.getValue();
+    if (!currentRoom) return;
+    
+    // If the user is the host, update the room state
+    const isHost = currentRoom.creatorId === this.getCurrentUserId();
+    
+    if (isHost) {
+      this.updateRoomState(currentRoom.state, position);
+    }
+    
+    // Directly seek to the position
+    this.audiusService.seekTo(position);
+  }
+  
+  /**
+   * Change the track in the current room
+   */
+  changeTrack(trackId: string): void {
+    const currentRoom = this.currentRoomSubject.getValue();
+    if (!currentRoom) return;
+    
+    // Update the room state with the new track
+    this.updateRoomState(undefined, 0, trackId);
+    
+    // Set this flag to prevent loop of updates
+    this.isLocalUpdateSubject.next(true);
+    
+    // Start playing the new track
+    this.audiusService.play(trackId);
+  }
+  
   /**
    * Invite a user to the current room
    */
-  inviteUser(userId: string): void {
-    const currentRoom = this.currentRoomSubject.value;
+  inviteToRoom(userId: string): void {
+    const currentRoom = this.currentRoomSubject.getValue();
     if (!currentRoom) return;
-
-    this.send({
+    
+    const message = {
       type: 'room_invitation',
       roomId: currentRoom.id,
       inviteeId: userId
-    });
+    };
+    
+    this.sendWebSocketMessage(message);
   }
-
+  
   /**
-   * Start playback of the current room's track
-   * If user is host, will broadcast to all members
-   */
-  play(): void {
-    const currentRoom = this.currentRoomSubject.value;
-    if (!currentRoom) return;
-
-    // Set flag to prevent feedback loops
-    this.isLocalUpdate = true;
-
-    // Play the track locally
-    this.audiusService.playTrack(currentRoom.trackId);
-
-    // If user is host, broadcast to room
-    if (this.isHostSubject.value) {
-      this.send({
-        type: 'room_update',
-        roomId: currentRoom.id,
-        state: 'playing',
-        progress: this.audiusService.getCurrentTime()
-      });
-    }
-
-    setTimeout(() => {
-      this.isLocalUpdate = false;
-    }, 100);
-  }
-
-  /**
-   * Pause playback of the current room's track
-   * If user is host, will broadcast to all members
-   */
-  pause(): void {
-    const currentRoom = this.currentRoomSubject.value;
-    if (!currentRoom) return;
-
-    // Set flag to prevent feedback loops
-    this.isLocalUpdate = true;
-
-    // Pause the track locally
-    this.audiusService.pauseTrack();
-
-    // If user is host, broadcast to room
-    if (this.isHostSubject.value) {
-      this.send({
-        type: 'room_update',
-        roomId: currentRoom.id,
-        state: 'paused',
-        progress: this.audiusService.getCurrentTime()
-      });
-    }
-
-    setTimeout(() => {
-      this.isLocalUpdate = false;
-    }, 100);
-  }
-
-  /**
-   * Seek to a specific position in the track
-   * If user is host, will broadcast to all members
-   */
-  seekTo(position: number): void {
-    const currentRoom = this.currentRoomSubject.value;
-    if (!currentRoom) return;
-
-    // Set flag to prevent feedback loops
-    this.isLocalUpdate = true;
-
-    // Seek locally
-    this.audiusService.seekTo(position);
-
-    // If user is host, broadcast to room
-    if (this.isHostSubject.value) {
-      this.send({
-        type: 'room_update',
-        roomId: currentRoom.id,
-        progress: position,
-        state: this.audiusService.isPlaying() ? 'playing' : 'paused'
-      });
-    }
-
-    setTimeout(() => {
-      this.isLocalUpdate = false;
-    }, 100);
-  }
-
-  /**
-   * Change the track in the room
-   * Only the host can do this
-   */
-  changeTrack(trackId: string): void {
-    const currentRoom = this.currentRoomSubject.value;
-    if (!currentRoom || !this.isHostSubject.value) return;
-
-    // Update locally
-    this.audiusService.stopCurrentTrack();
-    this.audiusService.playTrack(trackId);
-
-    // Broadcast to room
-    this.send({
-      type: 'room_update',
-      roomId: currentRoom.id,
-      trackId: trackId,
-      state: 'playing',
-      progress: 0
-    });
-  }
-
-  /**
-   * Get the rooms the user is part of
+   * Get all rooms the current user is in
    */
   getUserRooms(): void {
-    if (!this.authService.isAuthenticated()) {
-      console.error('Cannot get user rooms: not authenticated');
+    if (!this.chatService.isConnected()) {
+      console.warn('Cannot get user rooms: WebSocket not connected');
       return;
     }
     
-    // Asegurar conexión antes de enviar
-    if (!this.isConnected()) {
-      this.checkAndConnect();
-      return; // Intentaremos de nuevo cuando estemos conectados
+    const message = {
+      type: 'get_user_rooms'
+    };
+    
+    this.sendWebSocketMessage(message);
+  }
+  
+  /**
+   * Request sync information for a room
+   */
+  requestRoomSync(roomId: string): void {
+    if (!this.chatService.isConnected()) {
+      console.warn('Cannot request sync: WebSocket not connected');
+      return;
     }
     
-    this.send({
-      type: 'get_user_rooms'
-    });
-  }
-
-  /**
-   * Request sync from the server for the current room
-   */
-  requestSync(): void {
-    const currentRoom = this.currentRoomSubject.value;
-    if (!currentRoom) return;
-
-    this.syncStatusSubject.next('syncing');
-    this.isSyncing = true;
-
-    this.send({
+    const message = {
       type: 'sync_request',
-      roomId: currentRoom.id
-    });
-  }
-
-  /**
-   * Setup monitoring of local audio playback to maintain sync with room
-   */
-  private setupAudioMonitoring(): void {
-    // Track when local audio play state changes
-    this.audiusService.isPlaying$.pipe(
-      takeUntil(this.destroy$),
-      distinctUntilChanged(),
-      filter(() => !this.isLocalUpdate)  // Ignore if update was triggered locally
-    ).subscribe(isPlaying => {
-      // Only react to playback changes if we're in a room and not the host
-      const currentRoom = this.currentRoomSubject.value;
-      if (!currentRoom || this.isHostSubject.value) return;
-
-      // Check if we need to sync with room state
-      if (isPlaying && currentRoom.state === 'paused') {
-        // Room is paused but we're playing - pause locally
-        this.audiusService.pauseTrack();
-      } else if (!isPlaying && currentRoom.state === 'playing') {
-        // Room is playing but we're paused - resume locally
-        this.audiusService.playTrack(currentRoom.trackId);
-      }
-    });
-
-    // Track when current playing track changes
-    this.audiusService.currentTrackId$.pipe(
-      takeUntil(this.destroy$),
-      distinctUntilChanged(),
-      filter(id => !!id && !this.isLocalUpdate)  // Ignore if update was triggered locally
-    ).subscribe(trackId => {
-      // Only react if we're in a room and are the host
-      const currentRoom = this.currentRoomSubject.value;
-      if (!currentRoom || !this.isHostSubject.value || !trackId) return;
-
-      // If host changed track, update room
-      if (trackId !== currentRoom.trackId) {
-        this.send({
-          type: 'room_update',
-          roomId: currentRoom.id,
-          trackId: trackId,
-          state: 'playing',
-          progress: 0
-        });
-      }
-    });
-
-    // Set up sync check interval when in a room
-    this.currentRoom$.pipe(
-      takeUntil(this.destroy$)
-    ).subscribe(room => {
-      // Clean up existing interval if any
-      if (this.syncCheckInterval) {
-        this.syncCheckInterval.unsubscribe();
-        this.syncCheckInterval = null;
-      }
-
-      // If we're in a room and not the host, start sync checks
-      if (room && !this.isHostSubject.value) {
-        this.syncCheckInterval = interval(5000).pipe(
-          takeUntil(this.destroy$)
-        ).subscribe(() => this.checkSync());
-      }
-    });
-  }
-
-  /**
-   * Check if local playback is in sync with room
-   */
-  private checkSync(): void {
-    const currentRoom = this.currentRoomSubject.value;
-    if (!currentRoom || this.isHostSubject.value || this.isSyncing) return;
-
-    const isPlaying = this.audiusService.isPlaying();
-    const currentTime = this.audiusService.getCurrentTime();
+      roomId
+    };
     
-    // Calculate expected progress based on room state
+    this.sendWebSocketMessage(message);
+  }
+  
+  /**
+   * Handle room created event
+   */
+  private handleRoomCreated(room: ListeningRoom): void {
+    console.log('Room created:', room);
+    
+    // Update the current room
+    this.currentRoomSubject.next(room);
+    
+    // Add room to rooms list
+    const currentRooms = this.roomsSubject.getValue();
+    this.roomsSubject.next([...currentRooms, room]);
+    
+    // Setup room members
+    this.updateRoomMembers(room);
+    
+    // Start sync checking
+    this.startSyncChecking();
+    
+    // Start listening for music events
+    this.listenForMusicEvents();
+    
+    // Start listening for playback state changes
+    this.listenForPlaybackChanges();
+    
+    // Start playing the track
+    if (room.trackId) {
+      this.audiusService.play(room.trackId);
+      
+      // If the room is paused, we should also pause
+      if (room.state === 'paused') {
+        this.audiusService.pause();
+      }
+    }
+    
+    // Reset joining state
+    this.isJoiningSubject.next(false);
+  }
+  
+  /**
+   * Handle room joined event
+   */
+  private handleRoomJoined(room: ListeningRoom): void {
+    console.log('Room joined:', room);
+    
+    // Update the current room
+    this.currentRoomSubject.next(room);
+    
+    // Update room members
+    this.updateRoomMembers(room);
+    
+    // Start sync checking
+    this.startSyncChecking();
+    
+    // Start listening for music events
+    this.listenForMusicEvents();
+    
+    // Start listening for playback state changes
+    this.listenForPlaybackChanges();
+    
+    // Sync with the room state
+    this.syncWithRoomState(room);
+    
+    // Reset joining state
+    this.isJoiningSubject.next(false);
+  }
+  
+  /**
+   * Handle member joined event
+   */
+  private handleMemberJoined(roomId: string, userId: string): void {
+    console.log('Member joined:', userId, 'to room:', roomId);
+    
+    const currentRoom = this.currentRoomSubject.getValue();
+    if (!currentRoom || currentRoom.id !== roomId) return;
+    
+    // Update the room with the new member
+    const updatedRoom = {
+      ...currentRoom,
+      members: [...currentRoom.members, userId]
+    };
+    
+    // Update current room
+    this.currentRoomSubject.next(updatedRoom);
+    
+    // Update room members
+    this.updateRoomMembers(updatedRoom);
+  }
+  
+  /**
+   * Handle member left event
+   */
+  private handleMemberLeft(roomId: string, userId: string, newCreatorId?: string): void {
+    console.log('Member left:', userId, 'from room:', roomId);
+    
+    const currentRoom = this.currentRoomSubject.getValue();
+    if (!currentRoom || currentRoom.id !== roomId) return;
+    
+    // Update the room by removing the member
+    const updatedRoom = {
+      ...currentRoom,
+      members: currentRoom.members.filter(id => id !== userId),
+      // If there was a creator change, update that too
+      creatorId: newCreatorId || currentRoom.creatorId
+    };
+    
+    // Update current room
+    this.currentRoomSubject.next(updatedRoom);
+    
+    // Update room members
+    this.updateRoomMembers(updatedRoom);
+  }
+  
+  /**
+   * Handle room updated event
+   */
+  private handleRoomUpdated(room: ListeningRoom): void {
+    console.log('Room updated:', room);
+    
+    const currentRoom = this.currentRoomSubject.getValue();
+    if (!currentRoom || currentRoom.id !== room.id) return;
+    
+    // Check if this is a local update (we initiated the change)
+    const isLocalUpdate = this.isLocalUpdateSubject.getValue();
+    if (isLocalUpdate) {
+      // Reset the flag
+      this.isLocalUpdateSubject.next(false);
+      return;
+    }
+    
+    // Update room state
+    this.currentRoomSubject.next(room);
+    
+    // Sync with the new room state
+    this.syncWithRoomState(room);
+  }
+  
+  /**
+   * Handle room sync event
+   */
+  private handleRoomSync(data: any): void {
+    console.log('Room sync:', data);
+    
+    const currentRoom = this.currentRoomSubject.getValue();
+    if (!currentRoom || currentRoom.id !== data.roomId) return;
+    
+    // Create a room object from sync data
+    const roomFromSync: ListeningRoom = {
+      id: data.roomId,
+      creatorId: currentRoom.creatorId, // Keep existing creator ID
+      trackId: data.trackId || currentRoom.trackId,
+      state: data.state || currentRoom.state,
+      progress: data.progress || 0,
+      timestamp: new Date().getTime(),
+      members: currentRoom.members // Keep existing members
+    };
+    
+    // Update room state
+    this.currentRoomSubject.next(roomFromSync);
+    
+    // Sync with the room state
+    this.syncWithRoomState(roomFromSync);
+  }
+  
+  /**
+   * Handle user rooms event
+   */
+  private handleUserRooms(rooms: ListeningRoom[]): void {
+    console.log('User rooms:', rooms);
+    
+    // Update rooms list
+    this.roomsSubject.next(rooms);
+  }
+  
+  /**
+   * Handle room invitation event
+   */
+  private handleRoomInvitation(data: any): void {
+    console.log('Room invitation:', data);
+    
+    // Here you could show a notification to the user
+    // For now we'll just log it
+  }
+  
+  /**
+   * Handle room left event
+   */
+  private handleRoomLeft(roomId: string): void {
+    console.log('Left room:', roomId);
+    
+    const currentRoom = this.currentRoomSubject.getValue();
+    if (!currentRoom || currentRoom.id !== roomId) return;
+    
+    // Clean up when leaving a room
+    this.cleanupRoom();
+  }
+  
+  /**
+   * Sync the local player with the room state
+   */
+  private syncWithRoomState(room: ListeningRoom): void {
+    if (!room.trackId) return;
+    
+    const currentPlaybackState = this.audiusService.getPlaybackState();
+    
+    // Check if we need to change tracks
+    if (currentPlaybackState.trackId !== room.trackId) {
+      console.log('Changing track to:', room.trackId);
+      this.audiusService.play(room.trackId);
+    }
+    
+    // Calculate current progress based on timestamp
+    let adjustedProgress = room.progress;
+    if (room.state === 'playing') {
+      const elapsedSeconds = (Date.now() - room.timestamp) / 1000;
+      adjustedProgress = room.progress + elapsedSeconds;
+    }
+    
+    // Check if we need to seek
+    const progressDiff = Math.abs(currentPlaybackState.position - adjustedProgress);
+    if (progressDiff > 3) { // More than 3 seconds difference
+      console.log('Seeking to:', adjustedProgress);
+      this.audiusService.seekTo(adjustedProgress);
+    }
+    
+    // Check if we need to change playback state
+    if (room.state === 'playing' && !currentPlaybackState.isPlaying) {
+      console.log('Playing');
+      this.audiusService.play(room.trackId);
+    } else if (room.state === 'paused' && currentPlaybackState.isPlaying) {
+      console.log('Pausing');
+      this.audiusService.pause();
+    }
+  }
+  
+  /**
+   * Check synchronization status
+   */
+  private checkSyncStatus(): void {
+    const currentRoom = this.currentRoomSubject.getValue();
+    if (!currentRoom) return;
+    
+    const currentPlaybackState = this.audiusService.getPlaybackState();
+    
+    // Calculate expected progress
     let expectedProgress = currentRoom.progress;
     if (currentRoom.state === 'playing') {
       const elapsedSeconds = (Date.now() - currentRoom.timestamp) / 1000;
       expectedProgress = currentRoom.progress + elapsedSeconds;
     }
-
-    // Check if we're out of sync
-    const syncDiff = Math.abs(currentTime - expectedProgress);
     
-    if (syncDiff > this.syncThreshold) {
-      console.log(`Out of sync: local=${currentTime}, expected=${expectedProgress}, diff=${syncDiff}`);
-      this.syncStatusSubject.next('out-of-sync');
-
-      // Request sync if difference is significant
-      if (syncDiff > 1.0) {
-        this.requestSync();
-      }
-    } else {
-      this.syncStatusSubject.next('synced');
-    }
-  }
-
-  /**
-   * Handle a newly created room
-   */
-  private handleRoomCreated(room: ListeningRoom): void {
-    console.log('Room created:', room);
+    // Calculate difference
+    const progressDiff = Math.abs(currentPlaybackState.position - expectedProgress);
     
-    // Store room state
-    this.currentRoomSubject.next(room);
-    
-    // Set user as host
-    this.isHostSubject.next(room.creatorId === this.userId);
-    
-    // Update members list
-    this.membersSubject.next(room.members);
-    
-    // Load and play the track if we're in the room
-    this.audiusService.playTrack(room.trackId);
-  }
-
-  /**
-   * Handle joining a room
-   */
-  private handleRoomJoined(room: ListeningRoom): void {
-    console.log('Room joined:', room);
-    
-    // Store room state
-    this.currentRoomSubject.next(room);
-    
-    // Set user as host or not
-    this.isHostSubject.next(room.creatorId === this.userId);
-    
-    // Update members list
-    this.membersSubject.next(room.members);
-    
-    // Request immediate sync
-    this.requestSync();
-  }
-
-  /**
-   * Handle room state updates
-   */
-  private handleRoomUpdated(room: ListeningRoom, initiatorId: string): void {
-    console.log('Room updated:', room, 'by', initiatorId);
-    
-    // If we initiated the update, don't react to it
-    if (initiatorId === this.userId && this.isLocalUpdate) {
-      return;
-    }
-    
-    const currentRoom = this.currentRoomSubject.value;
-    if (!currentRoom || currentRoom.id !== room.id) return;
-    
-    // Update local room state
-    this.currentRoomSubject.next(room);
-    
-    // Update local playback to match room state
-    
-    // Track changed
-    if (room.trackId !== currentRoom.trackId) {
-      this.isLocalUpdate = true;
-      this.audiusService.playTrack(room.trackId);
-      setTimeout(() => {
-        this.isLocalUpdate = false;
-      }, 100);
-    }
-    
-    // Playing state changed
-    if (room.state !== currentRoom.state) {
-      this.isLocalUpdate = true;
-      if (room.state === 'playing') {
-        this.audiusService.playTrack(room.trackId);
-        // Seek to expected position
-        const elapsedSeconds = (Date.now() - room.timestamp) / 1000;
-        this.audiusService.seekTo(room.progress + elapsedSeconds);
-      } else {
-        this.audiusService.pauseTrack();
-      }
-      setTimeout(() => {
-        this.isLocalUpdate = false;
-      }, 100);
-    }
-    
-    // Progress changed significantly
-    if (Math.abs(room.progress - currentRoom.progress) > this.syncThreshold) {
-      this.isLocalUpdate = true;
-      // Calculate current expected position
-      let targetPosition = room.progress;
-      if (room.state === 'playing') {
-        const elapsedSeconds = (Date.now() - room.timestamp) / 1000;
-        targetPosition += elapsedSeconds;
-      }
-      this.audiusService.seekTo(targetPosition);
-      setTimeout(() => {
-        this.isLocalUpdate = false;
-      }, 100);
-    }
-  }
-
-  /**
-   * Handle room sync response
-   */
-  private handleRoomSync(message: any): void {
-    console.log('Room sync received:', message);
-    
-    this.isSyncing = false;
-    this.syncStatusSubject.next('synced');
-    
-    const { roomId, state, progress, trackId } = message;
-    const currentRoom = this.currentRoomSubject.value;
-    
-    if (!currentRoom || currentRoom.id !== roomId) return;
-    
-    this.isLocalUpdate = true;
-    
-    // Calculate current expected position
-    let targetPosition = progress;
-    if (state === 'playing') {
-      const elapsedSeconds = (Date.now() - message.timestamp) / 1000;
-      targetPosition += elapsedSeconds;
-    }
-    
-    // Apply sync
-    if (trackId !== this.audiusService.getCurrentTrackId()) {
-      this.audiusService.playTrack(trackId);
-    }
-    
-    this.audiusService.seekTo(targetPosition);
-    
-    if (state === 'playing' && !this.audiusService.isPlaying()) {
-      this.audiusService.playTrack(trackId);
-    } else if (state === 'paused' && this.audiusService.isPlaying()) {
-      this.audiusService.pauseTrack();
-    }
-    
-    // Update room state
-    this.currentRoomSubject.next({
-      ...currentRoom, 
-      state, 
-      progress, 
-      trackId,
-      timestamp: message.timestamp
+    // Update sync status
+    const inSync = progressDiff < (this.syncThresholdMs / 1000); // Convert ms to seconds
+    this.syncStatusSubject.next({
+      inSync,
+      offset: progressDiff
     });
     
-    setTimeout(() => {
-      this.isLocalUpdate = false;
-    }, 100);
+    // Auto-sync if needed
+    if (!inSync) {
+      console.log('Out of sync, difference:', progressDiff, 'seconds. Re-syncing...');
+      this.syncWithRoomState(currentRoom);
+    }
   }
-
+  
   /**
-   * Handle a member joining the room
+   * Start checking sync status periodically
    */
-  private handleMemberJoined(roomId: string, userId: string): void {
-    console.log(`Member ${userId} joined room ${roomId}`);
+  private startSyncChecking(): void {
+    this.stopSyncChecking(); // Clean up existing interval if any
     
-    const currentRoom = this.currentRoomSubject.value;
-    if (!currentRoom || currentRoom.id !== roomId) return;
-    
-    // Update members list
-    const updatedMembers = [...currentRoom.members, userId];
-    this.membersSubject.next(updatedMembers);
-    
-    // Update room state
-    this.currentRoomSubject.next({
-      ...currentRoom,
-      members: updatedMembers
+    this.syncCheckInterval = interval(this.syncCheckIntervalMs).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      this.checkSyncStatus();
     });
   }
-
+  
   /**
-   * Handle a member leaving the room
+   * Stop checking sync status
    */
-  private handleMemberLeft(roomId: string, userId: string, newCreatorId?: string): void {
-    console.log(`Member ${userId} left room ${roomId}`, newCreatorId ? `New creator: ${newCreatorId}` : '');
-    
-    const currentRoom = this.currentRoomSubject.value;
-    if (!currentRoom || currentRoom.id !== roomId) return;
-    
-    // Update members list
-    const updatedMembers = currentRoom.members.filter(id => id !== userId);
-    this.membersSubject.next(updatedMembers);
-    
-    // Update room state
-    const updatedRoom = {
-      ...currentRoom,
-      members: updatedMembers
-    };
-    
-    // If creator changed and it's us, update host status
-    if (newCreatorId) {
-      updatedRoom.creatorId = newCreatorId;
-      if (newCreatorId === this.userId) {
-        this.isHostSubject.next(true);
-        console.log('You are now the host of this room');
-      }
-    }
-    
-    this.currentRoomSubject.next(updatedRoom);
-  }
-
-  /**
-   * Handle user rooms response
-   */
-  private handleUserRooms(rooms: ListeningRoom[]): void {
-    console.log('User rooms:', rooms);
-    
-    // If user is already in a room, set it as the current room
-    if (rooms.length > 0) {
-      const currentRoom = rooms[0]; // Pick the first room
-      this.currentRoomSubject.next(currentRoom);
-      this.isHostSubject.next(currentRoom.creatorId === this.userId);
-      this.membersSubject.next(currentRoom.members);
-      
-      // Request sync to get current state
-      this.requestSync();
-    }
-  }
-
-  /**
-   * Handle leaving a room
-   */
-  private handleRoomLeft(roomId: string): void {
-    console.log(`Left room ${roomId}`);
-    
-    const currentRoom = this.currentRoomSubject.value;
-    if (!currentRoom || currentRoom.id !== roomId) return;
-    
-    // Reset room state
-    this.currentRoomSubject.next(null);
-    this.isHostSubject.next(false);
-    this.membersSubject.next([]);
-    
-    // Stop the audio
-    this.audiusService.pauseTrack();
-  }
-
-  /**
-   * Clean up resources on service destruction
-   */
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-    
+  private stopSyncChecking(): void {
     if (this.syncCheckInterval) {
       this.syncCheckInterval.unsubscribe();
-    }
-    
-    // Close WebSocket connection
-    if (this.socket) {
-      this.socket.close();
-      this.socket = null;
-    }
-    
-    // Clear any reconnect timeout
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-      this.reconnectTimeout = null;
+      this.syncCheckInterval = null;
     }
   }
-
+  
   /**
-   * Disconnect WebSocket manually
+   * Update room members
    */
-  disconnect(): void {
-    if (this.socket) {
-      this.socket.close();
-      this.socket = null;
+  private updateRoomMembers(room: ListeningRoom): void {
+    if (!room) return;
+    
+    // Convert member IDs to member objects
+    const members: RoomMember[] = room.members.map(memberId => ({
+      id: memberId,
+      isOnline: true, // Assume all members are online
+      isHost: memberId === room.creatorId
+    }));
+    
+    this.roomMembersSubject.next(members);
+  }
+  
+  /**
+   * Listen for music events (play, pause, seek) from the local player
+   */
+  private listenForMusicEvents(): void {
+    if (this.musicEventSub) {
+      this.musicEventSub.unsubscribe();
     }
+    
+    this.musicEventSub = this.audiusService.musicEvent$.pipe(
+      takeUntil(this.destroy$),
+      debounceTime(200) // Debounce to prevent rapid firing
+    ).subscribe(event => {
+      const currentRoom = this.currentRoomSubject.getValue();
+      if (!currentRoom) return;
+      
+      // Only the room creator can update the room state
+      const isCreator = currentRoom.creatorId === this.getCurrentUserId();
+      if (!isCreator) return;
+      
+      // Skip if this was triggered by a remote update
+      const isLocalUpdate = this.isLocalUpdateSubject.getValue();
+      if (isLocalUpdate) {
+        this.isLocalUpdateSubject.next(false);
+        return;
+      }
+      
+      // Update room state based on event
+      switch (event.eventType) {
+        case 'play':
+          this.updateRoomState('playing', event.position);
+          break;
+          
+        case 'pause':
+          this.updateRoomState('paused', event.position);
+          break;
+          
+        case 'seek':
+          this.updateRoomState(currentRoom.state, event.position);
+          break;
+      }
+    });
+  }
+  
+  /**
+   * Listen for playback state changes
+   */
+  private listenForPlaybackChanges(): void {
+    if (this.playbackStateSub) {
+      this.playbackStateSub.unsubscribe();
+    }
+    
+    this.playbackStateSub = this.audiusService.playbackState$.pipe(
+      takeUntil(this.destroy$),
+      debounceTime(300) // Debounce to prevent rapid firing
+    ).subscribe(state => {
+      const currentRoom = this.currentRoomSubject.getValue();
+      if (!currentRoom) return;
+      
+      // Only the room creator can update the room state
+      const isCreator = currentRoom.creatorId === this.getCurrentUserId();
+      if (!isCreator) return;
+      
+      // Skip if this was triggered by a remote update
+      const isLocalUpdate = this.isLocalUpdateSubject.getValue();
+      if (isLocalUpdate) {
+        this.isLocalUpdateSubject.next(false);
+        return;
+      }
+      
+      // Update room state if track changed
+      if (state.trackId && state.trackId !== currentRoom.trackId) {
+        this.updateRoomState(state.isPlaying ? 'playing' : 'paused', state.position, state.trackId);
+      }
+    });
+  }
+  
+  /**
+   * Send a message through the WebSocket
+   */
+  private sendWebSocketMessage(message: any): void {
+    // We don't have direct access to your websocket.send() method,
+    // so we need to use your ChatService's approach
+    
+    // THIS NEEDS TO BE REPLACED WITH YOUR ACTUAL WEBSOCKET SEND METHOD
+    // For example, if your ChatService has a method to send custom messages:
+    
+    const socket = this.getWebSocketInstance();
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(message));
+    } else {
+      console.error('Cannot send message: WebSocket not connected');
+    }
+  }
+  
+  /**
+   * Get the WebSocket instance
+   * This is a placeholder and needs to be replaced with your actual implementation
+   */
+  private getWebSocketInstance(): WebSocket | null {
+    // This function should return the WebSocket instance from your ChatService
+    // Since we don't have direct access to it based on your provided code,
+    // we need a way to access the underlying WebSocket
+    
+    // PLACEHOLDER: Replace with your actual method to get the WebSocket
+    return null;
+  }
+  
+  /**
+   * Get the current user ID
+   */
+  private getCurrentUserId(): string | null {
+    let userId: string | null = null;
+    
+    // Get user ID from AuthService
+    this.authService.currentUser$.pipe(
+      take(1)
+    ).subscribe(user => {
+      userId = user?.id || null;
+    });
+    
+    return userId;
+  }
+  
+  /**
+   * Check if the current user is the host
+   */
+  isHost(): boolean {
+    const currentRoom = this.currentRoomSubject.getValue();
+    if (!currentRoom) return false;
+    
+    const userId = this.getCurrentUserId();
+    return currentRoom.creatorId === userId;
+  }
+  
+  /**
+   * Get a more accurate room state that takes into account elapsed time
+   */
+  getCurrentRoomState(): ListeningRoom | null {
+    const room = this.currentRoomSubject.getValue();
+    if (!room) return null;
+    
+    // If the room is playing, calculate the current progress
+    if (room.state === 'playing') {
+      const elapsedSeconds = (Date.now() - room.timestamp) / 1000;
+      return {
+        ...room,
+        progress: room.progress + elapsedSeconds
+      };
+    }
+    
+    return room;
   }
 }
