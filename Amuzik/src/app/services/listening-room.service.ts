@@ -1,7 +1,11 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { ChatService } from './chat.service';
-import { AudiusFacade, MusicEvent, TrackMetadata } from '../services/facades/audius.facade';
+import {
+  AudiusFacade,
+  MusicEvent,
+  TrackMetadata,
+} from '../services/facades/audius.facade';
 
 // Interfaces para room
 export interface ListeningRoom {
@@ -15,7 +19,14 @@ export interface ListeningRoom {
 }
 
 export interface RoomEvent {
-  type: 'created' | 'joined' | 'left' | 'updated' | 'member_joined' | 'member_left' | 'invitation';
+  type:
+    | 'created'
+    | 'joined'
+    | 'left'
+    | 'updated'
+    | 'member_joined'
+    | 'member_left'
+    | 'invitation';
   room?: ListeningRoom;
   userId?: string;
   inviterId?: string;
@@ -25,7 +36,7 @@ export interface RoomEvent {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ListeningRoomService {
   // BehaviorSubject para salas activas
@@ -55,7 +66,7 @@ export class ListeningRoomService {
   ) {
     // Escuchar mensajes del WebSocket relacionados con rooms
     this.setupWebSocketListeners();
-    
+
     // Suscribirse a eventos de música para sincronizar
     this.setupMusicEventListeners();
 
@@ -69,11 +80,11 @@ export class ListeningRoomService {
   private setupWebSocketListeners(): void {
     // Asegurarnos de que tenemos acceso al socket
     const socket = this.chatService.getSocket();
-    
+
     if (!socket) {
       console.error('No hay conexión WebSocket disponible');
       // Intentar reconectar y configurar después
-      this.chatService.connectionStatus$.subscribe(status => {
+      this.chatService.connectionStatus$.subscribe((status) => {
         if (status.isConnected) {
           // Cuando se conecte, intentar configurar de nuevo
           this.setupWebSocketListeners();
@@ -86,41 +97,41 @@ export class ListeningRoomService {
     socket.addEventListener('message', (event) => {
       try {
         const data = JSON.parse(event.data);
-        
+
         // Solo procesar mensajes relacionados con salas de escucha
         switch (data.type) {
           case 'room_created':
             this.handleRoomCreated(data.room);
             break;
-          
+
           case 'room_joined':
             this.handleRoomJoined(data.room);
             break;
-          
+
           case 'room_left':
             this.handleRoomLeft(data.roomId);
             break;
-          
+
           case 'room_updated':
             this.handleRoomUpdated(data.room);
             break;
-          
+
           case 'member_joined':
             this.handleMemberJoined(data.roomId, data.userId);
             break;
-          
+
           case 'member_left':
             this.handleMemberLeft(data.roomId, data.userId, data.newCreatorId);
             break;
-          
+
           case 'room_invitation':
             this.handleRoomInvitation(data);
             break;
-          
+
           case 'room_sync':
             this.handleRoomSync(data);
             break;
-          
+
           case 'user_rooms':
             this.handleUserRoomsResponse(data.rooms);
             break;
@@ -146,19 +157,23 @@ export class ListeningRoomService {
         case 'play':
           this.updateRoomState(currentRoom.id, 'playing', event.position);
           break;
-        
+
         case 'pause':
           this.updateRoomState(currentRoom.id, 'paused', event.position);
           break;
-        
+
         case 'seek':
-          this.updateRoomState(currentRoom.id, currentRoom.state, event.position);
+          this.updateRoomState(
+            currentRoom.id,
+            currentRoom.state,
+            event.position
+          );
           break;
       }
     });
 
     // Escuchar cambios de pista para actualizar la sala
-    this.audiusFacade.getCurrentTrackId().subscribe(trackId => {
+    this.audiusFacade.getCurrentTrackId().subscribe((trackId) => {
       const currentRoom = this.currentRoomSubject.getValue();
       if (!currentRoom || this.isSyncing || !trackId) return;
 
@@ -180,7 +195,7 @@ export class ListeningRoomService {
 
     this.chatService.sendCustomMessage({
       channel: 'room',
-      type: 'get_user_rooms'
+      type: 'get_user_rooms',
     });
   }
 
@@ -196,7 +211,7 @@ export class ListeningRoomService {
     this.chatService.sendCustomMessage({
       channel: 'room',
       type: 'create',
-      trackId
+      trackId,
     });
   }
 
@@ -213,7 +228,7 @@ export class ListeningRoomService {
       channel: 'room',
       type: 'invite',
       roomId,
-      inviteeId
+      inviteeId,
     });
   }
 
@@ -229,7 +244,7 @@ export class ListeningRoomService {
     this.chatService.sendCustomMessage({
       channel: 'room',
       type: 'join',
-      roomId
+      roomId,
     });
   }
 
@@ -243,12 +258,12 @@ export class ListeningRoomService {
     }
 
     const currentRoom = this.currentRoomSubject.getValue();
-    
+
     this.chatService.sendCustomMessage({
       channel: 'room',
       type: 'leave',
       roomId,
-      creatorId: currentRoom?.creatorId
+      creatorId: currentRoom?.creatorId,
     });
 
     // Si la sala actual es la que estamos dejando, limpiar estado
@@ -260,7 +275,11 @@ export class ListeningRoomService {
   /**
    * Actualiza el estado de reproducción de una sala
    */
-  updateRoomState(roomId: string, state: 'playing' | 'paused', progress: number): void {
+  updateRoomState(
+    roomId: string,
+    state: 'playing' | 'paused',
+    progress: number
+  ): void {
     if (!this.chatService.isConnected()) {
       console.error('No hay conexión WebSocket');
       return;
@@ -271,7 +290,7 @@ export class ListeningRoomService {
       type: 'update',
       roomId,
       state,
-      progress
+      progress,
     });
   }
 
@@ -288,7 +307,7 @@ export class ListeningRoomService {
       channel: 'room',
       type: 'update',
       roomId,
-      trackId
+      trackId,
     });
   }
 
@@ -304,7 +323,7 @@ export class ListeningRoomService {
     this.chatService.sendCustomMessage({
       channel: 'room',
       type: 'sync',
-      roomId
+      roomId,
     });
   }
 
@@ -314,7 +333,7 @@ export class ListeningRoomService {
   acceptInvitation(invitation: RoomEvent): void {
     // Primero, unirse a la sala
     this.joinRoom(invitation.room!.id);
-    
+
     // Eliminar la invitación de las pendientes
     this.removePendingInvitation(invitation);
   }
@@ -333,8 +352,11 @@ export class ListeningRoomService {
   private removePendingInvitation(invitation: RoomEvent): void {
     const currentInvitations = this.pendingInvitationsSubject.getValue();
     const updatedInvitations = currentInvitations.filter(
-      inv => !(inv.room?.id === invitation.room?.id && 
-              inv.inviterId === invitation.inviterId)
+      (inv) =>
+        !(
+          inv.room?.id === invitation.room?.id &&
+          inv.inviterId === invitation.inviterId
+        )
     );
     this.pendingInvitationsSubject.next(updatedInvitations);
   }
@@ -372,15 +394,15 @@ export class ListeningRoomService {
     // Actualizar lista de salas
     const currentRooms = this.activeRoomsSubject.getValue();
     this.activeRoomsSubject.next([...currentRooms, room]);
-    
+
     // Establecer como sala actual
     this.currentRoomSubject.next(room);
-    
+
     // Emitir evento
     this.roomEventSubject.next({
       type: 'created',
       room,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -390,8 +412,8 @@ export class ListeningRoomService {
   private handleRoomJoined(room: ListeningRoom): void {
     // Actualizar lista de salas
     const currentRooms = this.activeRoomsSubject.getValue();
-    const roomIndex = currentRooms.findIndex(r => r.id === room.id);
-    
+    const roomIndex = currentRooms.findIndex((r) => r.id === room.id);
+
     if (roomIndex >= 0) {
       // Actualizar sala existente
       const updatedRooms = [...currentRooms];
@@ -401,15 +423,15 @@ export class ListeningRoomService {
       // Añadir nueva sala
       this.activeRoomsSubject.next([...currentRooms, room]);
     }
-    
+
     // Establecer como sala actual
     this.currentRoomSubject.next(room);
-    
+
     // Emitir evento
     this.roomEventSubject.next({
       type: 'joined',
       room,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // Sincronizar reproducción con la sala
@@ -422,20 +444,20 @@ export class ListeningRoomService {
   private handleRoomLeft(roomId: string): void {
     // Actualizar lista de salas
     const currentRooms = this.activeRoomsSubject.getValue();
-    const updatedRooms = currentRooms.filter(r => r.id !== roomId);
+    const updatedRooms = currentRooms.filter((r) => r.id !== roomId);
     this.activeRoomsSubject.next(updatedRooms);
-    
+
     // Si era la sala actual, limpiar estado
     const currentRoom = this.currentRoomSubject.getValue();
     if (currentRoom && currentRoom.id === roomId) {
       this.currentRoomSubject.next(null);
     }
-    
+
     // Emitir evento
     this.roomEventSubject.next({
       type: 'left',
       timestamp: Date.now(),
-      message: `Has salido de la sala ${roomId}`
+      message: `Has salido de la sala ${roomId}`,
     });
   }
 
@@ -445,23 +467,23 @@ export class ListeningRoomService {
   private handleRoomUpdated(room: ListeningRoom): void {
     // Actualizar lista de salas
     const currentRooms = this.activeRoomsSubject.getValue();
-    const updatedRooms = currentRooms.map(r => r.id === room.id ? room : r);
+    const updatedRooms = currentRooms.map((r) => (r.id === room.id ? room : r));
     this.activeRoomsSubject.next(updatedRooms);
-    
+
     // Si es la sala actual, actualizar
     const currentRoom = this.currentRoomSubject.getValue();
     if (currentRoom && currentRoom.id === room.id) {
       this.currentRoomSubject.next(room);
-      
+
       // Sincronizar reproducción con la sala actualizada
       this.handleSyncWithRoom(room);
     }
-    
+
     // Emitir evento
     this.roomEventSubject.next({
       type: 'updated',
       room,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -471,67 +493,73 @@ export class ListeningRoomService {
   private handleMemberJoined(roomId: string, userId: string): void {
     // Actualizar lista de salas
     const currentRooms = this.activeRoomsSubject.getValue();
-    const updatedRooms = currentRooms.map(room => {
+    const updatedRooms = currentRooms.map((room) => {
       if (room.id === roomId && !room.members.includes(userId)) {
         return {
           ...room,
-          members: [...room.members, userId]
+          members: [...room.members, userId],
         };
       }
       return room;
     });
-    
+
     this.activeRoomsSubject.next(updatedRooms);
-    
+
     // Actualizar sala actual si corresponde
     const currentRoom = this.currentRoomSubject.getValue();
     if (currentRoom && currentRoom.id === roomId) {
-      const updatedRoom = updatedRooms.find(r => r.id === roomId);
+      const updatedRoom = updatedRooms.find((r) => r.id === roomId);
       if (updatedRoom) {
         this.currentRoomSubject.next(updatedRoom);
       }
     }
-    
+
     // Emitir evento
     this.roomEventSubject.next({
       type: 'member_joined',
       userId,
       timestamp: Date.now(),
-      message: `${userId} se unió a la sala`
+      message: `${userId} se unió a la sala`,
     });
   }
 
   /**
    * Maneja cuando un miembro deja la sala
    */
-  private handleMemberLeft(roomId: string, userId: string, newCreatorId?: string): void {
+  private handleMemberLeft(
+    roomId: string,
+    userId: string,
+    newCreatorId?: string
+  ): void {
     // Actualizar lista de salas
     const currentRooms = this.activeRoomsSubject.getValue();
-    const updatedRooms = currentRooms.map(room => {
+    const updatedRooms = currentRooms.map((room) => {
       if (room.id === roomId) {
         const updatedRoom = {
           ...room,
-          members: room.members.filter(id => id !== userId)
+          members: room.members.filter((id) => id !== userId),
         };
-        
+
         // Actualizar creador si cambió
         if (newCreatorId && room.creatorId === userId) {
           updatedRoom.creatorId = newCreatorId;
         }
-        
+
         return updatedRoom;
       }
       return room;
     });
-    
+
     // Filtrar salas vacías
-    const filteredRooms = updatedRooms.filter(room => room.members.length > 0);
+    const filteredRooms = updatedRooms.filter(
+      (room) => room.members.length > 0
+    );
     this.activeRoomsSubject.next(filteredRooms);
-    
+
     // Actualizar sala actual si corresponde
     const currentRoom = this.currentRoomSubject.getValue();
     if (currentRoom && currentRoom.id === roomId) {
-      const updatedRoom = filteredRooms.find(r => r.id === roomId);
+      const updatedRoom = filteredRooms.find((r) => r.id === roomId);
       if (updatedRoom) {
         this.currentRoomSubject.next(updatedRoom);
       } else {
@@ -539,13 +567,13 @@ export class ListeningRoomService {
         this.currentRoomSubject.next(null);
       }
     }
-    
+
     // Emitir evento
     this.roomEventSubject.next({
       type: 'member_left',
       userId,
       timestamp: Date.now(),
-      message: `${userId} abandonó la sala`
+      message: `${userId} abandonó la sala`,
     });
   }
 
@@ -564,16 +592,16 @@ export class ListeningRoomService {
         state: 'paused',
         progress: 0,
         timestamp: data.timestamp,
-        members: []  // Se rellenará cuando se una
+        members: [], // Se rellenará cuando se una
       },
       timestamp: data.timestamp,
-      message: `Has recibido una invitación para unirte a una sala de escucha`
+      message: `Has recibido una invitación para unirte a una sala de escucha`,
     };
-    
+
     // Añadir a invitaciones pendientes
     const currentInvitations = this.pendingInvitationsSubject.getValue();
     this.pendingInvitationsSubject.next([...currentInvitations, invitation]);
-    
+
     // Emitir evento
     this.roomEventSubject.next(invitation);
   }
@@ -583,20 +611,20 @@ export class ListeningRoomService {
    */
   private handleRoomSync(data: any): void {
     const { roomId, state, progress, trackId } = data;
-    
+
     // Buscar la sala en las salas activas
     const currentRooms = this.activeRoomsSubject.getValue();
-    const room = currentRooms.find(r => r.id === roomId);
-    
+    const room = currentRooms.find((r) => r.id === roomId);
+
     if (room) {
       const updatedRoom: ListeningRoom = {
         ...room,
         state,
         progress,
         trackId,
-        timestamp: data.timestamp
+        timestamp: data.timestamp,
       };
-      
+
       // Actualizar sala en la lista
       this.handleRoomUpdated(updatedRoom);
     }
@@ -610,7 +638,7 @@ export class ListeningRoomService {
       console.error('Formato incorrecto de respuesta de salas');
       return;
     }
-    
+
     // Actualizar lista de salas
     this.activeRoomsSubject.next(rooms);
   }
@@ -622,34 +650,40 @@ export class ListeningRoomService {
     if (!this.shouldSync()) {
       return;
     }
-    
+
     this.isSyncing = true;
     this.lastSyncTimestamp = Date.now();
-    
+
     try {
       // Verificar si la pista actual es diferente
       const currentTrackId = this.audiusFacade.getPlaybackState().trackId;
-      
+
       // Si la pista es diferente, reproducir la nueva
       if (currentTrackId !== room.trackId) {
         // Cargar y reproducir la pista
         this.audiusFacade.play(room.trackId);
       }
-      
+
       // Calcular el progreso actual considerando el tiempo transcurrido
       let adjustedProgress = room.progress;
       if (room.state === 'playing') {
         const elapsedSeconds = (Date.now() - room.timestamp) / 1000;
         adjustedProgress = room.progress + elapsedSeconds;
       }
-      
+
       // Sincronizar posición
       this.audiusFacade.seekTo(adjustedProgress);
-      
+
       // Sincronizar estado (play/pause)
-      if (room.state === 'playing' && !this.audiusFacade.getPlaybackState().isPlaying) {
+      if (
+        room.state === 'playing' &&
+        !this.audiusFacade.getPlaybackState().isPlaying
+      ) {
         setTimeout(() => this.audiusFacade.play(room.trackId), 100);
-      } else if (room.state === 'paused' && this.audiusFacade.getPlaybackState().isPlaying) {
+      } else if (
+        room.state === 'paused' &&
+        this.audiusFacade.getPlaybackState().isPlaying
+      ) {
         setTimeout(() => this.audiusFacade.pause(), 100);
       }
     } catch (error) {

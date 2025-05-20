@@ -47,7 +47,12 @@ import {
   playSkipBackOutline,
   menuOutline,
   volumeHighOutline,
-  push, exitOutline, personAddOutline, checkmarkOutline, peopleOutline } from 'ionicons/icons';
+  push,
+  exitOutline,
+  personAddOutline,
+  checkmarkOutline,
+  peopleOutline,
+} from 'ionicons/icons';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Subject, takeUntil, finalize, forkJoin, of, from } from 'rxjs';
 import {
@@ -158,7 +163,7 @@ export class HomePage implements OnInit, OnDestroy {
   filteredUsers: User[] = [];
   isSearchingUsers = false;
   selectedUsers: User[] = [];
-  
+
   constructor(
     private audiusFacade: AudiusFacade,
     private authService: AuthService,
@@ -166,7 +171,23 @@ export class HomePage implements OnInit, OnDestroy {
     protected listeningRoomService: ListeningRoomService,
     private userFacade: UserFacade
   ) {
-    addIcons({exitOutline,personAddOutline,checkmarkOutline,closeOutline,peopleOutline,chevronDownOutline,musicalNotesOutline,playOutline,searchOutline,playSkipBackOutline,playSkipForwardOutline,personCircleOutline,stopOutline,pauseOutline,menuOutline,});
+    addIcons({
+      exitOutline,
+      personAddOutline,
+      checkmarkOutline,
+      closeOutline,
+      peopleOutline,
+      chevronDownOutline,
+      musicalNotesOutline,
+      playOutline,
+      searchOutline,
+      playSkipBackOutline,
+      playSkipForwardOutline,
+      personCircleOutline,
+      stopOutline,
+      pauseOutline,
+      menuOutline,
+    });
   }
 
   ngOnInit() {
@@ -877,49 +898,55 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   // Métodos para gestionar el modal de invitaciones
-inviteUserDialog() {
-  this.showInviteModal = true;
-  this.loadUsers();
-}
-
-closeInviteDialog() {
-  this.showInviteModal = false;
-  this.userSearchTerm = '';
-  this.filteredUsers = [];
-  this.selectedUsers = [];
-}
-
-
-searchUsers(event: any) {
-  const query = event.target.value.toLowerCase().trim();
-  this.userSearchTerm = query;
-  
-  if (!query) {
-    // Si no hay término de búsqueda, mostrar todos los amigos
+  inviteUserDialog() {
+    this.showInviteModal = true;
     this.loadUsers();
-    return;
   }
-  
-  this.isSearchingUsers = true;
-  
-  // Filtra los amigos localmente
-  if (this.currentUser && this.currentUser.friends) {
-    this.filteredUsers = this.currentUser.friends.filter(friend => 
-      friend.username.toLowerCase().includes(query) || 
-      (friend.nombre && friend.nombre.toLowerCase().includes(query)) ||
-      (friend.apellidos && friend.apellidos.toLowerCase().includes(query))
-    );
-    this.isSearchingUsers = false;
-  } else {
-    // Si no hay amigos cargados, intentar refrescar datos del usuario
-    this.authService.refreshUserData()
-      .subscribe({
+
+  closeInviteDialog() {
+    this.showInviteModal = false;
+    this.userSearchTerm = '';
+    this.filteredUsers = [];
+    this.selectedUsers = [];
+  }
+
+  searchUsers(event: any) {
+    const query = event.target.value.toLowerCase().trim();
+    this.userSearchTerm = query;
+
+    if (!query) {
+      // Si no hay término de búsqueda, mostrar todos los amigos
+      this.loadUsers();
+      return;
+    }
+
+    this.isSearchingUsers = true;
+
+    // Filtra los amigos localmente
+    if (this.currentUser && this.currentUser.friends) {
+      this.filteredUsers = this.currentUser.friends.filter(
+        (friend) =>
+          friend.username.toLowerCase().includes(query) ||
+          (friend.nombre && friend.nombre.toLowerCase().includes(query)) ||
+          (friend.apellidos && friend.apellidos.toLowerCase().includes(query))
+      );
+      this.isSearchingUsers = false;
+    } else {
+      // Si no hay amigos cargados, intentar refrescar datos del usuario
+      this.authService.refreshUserData().subscribe({
         next: (user) => {
           if (user && user.friends) {
-            this.filteredUsers = user.friends.filter((friend: { username: string; nombre: string; apellidos: string; }) => 
-              friend.username.toLowerCase().includes(query) || 
-              (friend.nombre && friend.nombre.toLowerCase().includes(query)) ||
-              (friend.apellidos && friend.apellidos.toLowerCase().includes(query))
+            this.filteredUsers = user.friends.filter(
+              (friend: {
+                username: string;
+                nombre: string;
+                apellidos: string;
+              }) =>
+                friend.username.toLowerCase().includes(query) ||
+                (friend.nombre &&
+                  friend.nombre.toLowerCase().includes(query)) ||
+                (friend.apellidos &&
+                  friend.apellidos.toLowerCase().includes(query))
             );
           } else {
             this.filteredUsers = [];
@@ -930,78 +957,80 @@ searchUsers(event: any) {
           console.error('Error al cargar amigos:', error);
           this.filteredUsers = [];
           this.isSearchingUsers = false;
-        }
+        },
       });
-  }
-}
-
-
-
-loadUsers() {
-  if (this.currentUser && this.currentUser.friends && this.currentUser.friends.length > 0) {
-    this.filteredUsers = [...this.currentUser.friends];
-  } else {
-    this.filteredUsers = [];
-  }
-}
-
-// 6. Método para seleccionar un usuario para invitar
-selectUserForInvitation(user: User) {
-  if (!this.selectedUsers.some(u => u.id === user.id)) {
-    this.selectedUsers.push(user);
-  }
-}
-
-// 7. Método para quitar un usuario seleccionado
-removeSelectedUser(user: User) {
-  this.selectedUsers = this.selectedUsers.filter(u => u.id !== user.id);
-}
-
-// 8. Método para enviar invitaciones a los usuarios seleccionados
-sendInvitations() {
-  const currentRoom = this.listeningRoomService.getCurrentRoom();
-  if (!currentRoom) {
-    // Si no hay sala, crear una nueva con la canción actual
-    if (this.currentTrack) {
-      // Suponiendo que createRoom es síncrono y retorna void, esperar a que la sala esté creada y luego obtener el room actualizado
-      this.listeningRoomService.createRoom(this.currentTrack.id);
-      // Esperar a que el estado se actualice antes de invitar
-      setTimeout(() => {
-        const newRoom = this.listeningRoomService.getCurrentRoom();
-        if (newRoom && newRoom.id) {
-          this.inviteSelectedUsers(newRoom.id);
-        } else {
-          console.error('Error al crear sala de escucha: roomId no válido');
-        }
-      }, 300);
-    } else {
-      console.error('No hay track actual para crear una sala de escucha');
     }
-  } else {
-    // Si ya hay una sala, invitar a los usuarios seleccionados
-    this.inviteSelectedUsers(currentRoom.id);
   }
-}
 
-// 9. Método auxiliar para invitar a los usuarios seleccionados
-private inviteSelectedUsers(roomId: string) {
-  if (this.selectedUsers.length === 0) {
-    return;
+  loadUsers() {
+    if (
+      this.currentUser &&
+      this.currentUser.friends &&
+      this.currentUser.friends.length > 0
+    ) {
+      this.filteredUsers = [...this.currentUser.friends];
+    } else {
+      this.filteredUsers = [];
+    }
   }
-  
-  // Enviar invitaciones a todos los usuarios seleccionados
-  this.selectedUsers.forEach(user => {
-    this.listeningRoomService.inviteToRoom(roomId, user.id);
-  });
-  
-  // Limpiar selección y cerrar modal
-  this.selectedUsers = [];
-  this.closeInviteDialog();
-}
 
-// Método auxiliar para obtener artwork de track por ID
-getTrackArtwork(trackId: string): string | null {
-  const track = this.findTrackInData(trackId);
-  return track?.artwork?.['150x150'] || null;
-}
+  // 6. Método para seleccionar un usuario para invitar
+  selectUserForInvitation(user: User) {
+    if (!this.selectedUsers.some((u) => u.id === user.id)) {
+      this.selectedUsers.push(user);
+    }
+  }
+
+  // 7. Método para quitar un usuario seleccionado
+  removeSelectedUser(user: User) {
+    this.selectedUsers = this.selectedUsers.filter((u) => u.id !== user.id);
+  }
+
+  // 8. Método para enviar invitaciones a los usuarios seleccionados
+  sendInvitations() {
+    const currentRoom = this.listeningRoomService.getCurrentRoom();
+    if (!currentRoom) {
+      // Si no hay sala, crear una nueva con la canción actual
+      if (this.currentTrack) {
+        // Suponiendo que createRoom es síncrono y retorna void, esperar a que la sala esté creada y luego obtener el room actualizado
+        this.listeningRoomService.createRoom(this.currentTrack.id);
+        // Esperar a que el estado se actualice antes de invitar
+        setTimeout(() => {
+          const newRoom = this.listeningRoomService.getCurrentRoom();
+          if (newRoom && newRoom.id) {
+            this.inviteSelectedUsers(newRoom.id);
+          } else {
+            console.error('Error al crear sala de escucha: roomId no válido');
+          }
+        }, 300);
+      } else {
+        console.error('No hay track actual para crear una sala de escucha');
+      }
+    } else {
+      // Si ya hay una sala, invitar a los usuarios seleccionados
+      this.inviteSelectedUsers(currentRoom.id);
+    }
+  }
+
+  // 9. Método auxiliar para invitar a los usuarios seleccionados
+  private inviteSelectedUsers(roomId: string) {
+    if (this.selectedUsers.length === 0) {
+      return;
+    }
+
+    // Enviar invitaciones a todos los usuarios seleccionados
+    this.selectedUsers.forEach((user) => {
+      this.listeningRoomService.inviteToRoom(roomId, user.id);
+    });
+
+    // Limpiar selección y cerrar modal
+    this.selectedUsers = [];
+    this.closeInviteDialog();
+  }
+
+  // Método auxiliar para obtener artwork de track por ID
+  getTrackArtwork(trackId: string): string | null {
+    const track = this.findTrackInData(trackId);
+    return track?.artwork?.['150x150'] || null;
+  }
 }

@@ -26,7 +26,7 @@
         <div class="listening-room-header">
           <div>
             <h3>Sala de escucha: {{currentRoom.id}}</h3>
-            <p>{{currentRoom.members?.length || 1}} oyentes</p>
+            <p>{{currentRoom.members.length || 1}} oyentes</p>
           </div>
           <ion-buttons>
             <ion-button fill="clear" (click)="leaveCurrentRoom()">
@@ -80,7 +80,8 @@
             </div>
             <!-- Botón para crear sala de escucha -->
             <div class="room-action-button">
-              <ion-button fill="clear" size="small" color="light" (click)="$event.stopPropagation(); createListeningRoom(track.id)">
+              <ion-button fill="clear" size="small" color="light"
+                (click)="$event.stopPropagation(); createListeningRoom(track.id)">
                 <ion-icon name="people-outline"></ion-icon>
               </ion-button>
             </div>
@@ -95,18 +96,20 @@
   </div>
 
   <!-- Salas de escucha disponibles -->
-  <div *ngIf="((listeningRoomService.activeRooms$ | async) || []).length > 0" class="ion-padding-horizontal ion-padding-top">
+  <div *ngIf="((listeningRoomService.activeRooms$ | async) || []).length > 0"
+    class="ion-padding-horizontal ion-padding-top">
     <h2 class="ion-text-white">Salas de escucha disponibles</h2>
-    
+
     <ion-list>
-      <ion-item *ngFor="let room of listeningRoomService.activeRooms$ | async" lines="full" color="medium" class="room-item" button (click)="joinListeningRoom(room.id)">
+      <ion-item *ngFor="let room of listeningRoomService.activeRooms$ | async" lines="full" color="medium"
+        class="room-item" button (click)="joinListeningRoom(room.id)">
         <ion-thumbnail slot="start" *ngIf="room.trackId">
           <img [src]="getTrackArtwork(room.trackId) || 'assets/default.jpg'">
         </ion-thumbnail>
         <ion-label>
           <h3 class="ion-text-white">{{room.id || 'Sala ' + room.id.substring(0, 6)}}</h3>
           <p>Creada por: {{room.creatorId || 'Usuario desconocido'}}</p>
-          <p>{{room.members?.length || 1}} oyentes</p>
+          <p>{{room.members.length || 1}} oyentes</p>
         </ion-label>
         <ion-note slot="end" color="success" *ngIf="room.state === 'playing'">En vivo</ion-note>
         <ion-note slot="end" color="warning" *ngIf="room.state === 'paused'">Pausado</ion-note>
@@ -141,8 +144,8 @@
 
       <div *ngIf="playlist.expanded" class="playlist-tracks">
         <ion-list>
-          <ion-item *ngFor="let item of playlist.playlist_contents; let i = index" lines="none" class="track-item" color="light"
-            (click)="playTrack({
+          <ion-item *ngFor="let item of playlist.playlist_contents; let i = index" lines="none" class="track-item"
+            color="light" (click)="playTrack({
               id: item.track_id || item.id,
               title: item.title || 'Canción ' + (item.track_id || item.id),
               user: { name: item.user?.name || 'Artista desconocido' },
@@ -158,7 +161,8 @@
             <div slot="end" class="track-actions">
               <ion-icon *ngIf="currentTrack?.id === (item.track_id || item.id) && isPlaying"
                 name="musical-notes-outline" color="primary"></ion-icon>
-              <ion-button fill="clear" size="small" color="light" (click)="$event.stopPropagation(); createListeningRoom(item.track_id || item.id)">
+              <ion-button fill="clear" size="small" color="light"
+                (click)="$event.stopPropagation(); createListeningRoom(item.track_id || item.id)">
                 <ion-icon name="people-outline"></ion-icon>
               </ion-button>
             </div>
@@ -194,7 +198,8 @@
           <p *ngIf="item.type === 'track'">Track · {{ item.playCount || 0 }} plays</p>
           <p *ngIf="item.type === 'playlist'">Playlist · {{ item.trackCount || 0 }} tracks</p>
         </ion-label>
-        <ion-button slot="end" fill="clear" color="light" (click)="$event.stopPropagation(); createListeningRoom(item.id)">
+        <ion-button slot="end" fill="clear" color="light"
+          (click)="$event.stopPropagation(); createListeningRoom(item.id)">
           <ion-icon name="people-outline"></ion-icon>
         </ion-button>
         <ion-icon slot="end" name="play-outline"></ion-icon>
@@ -223,12 +228,13 @@
       </ion-button>
     </div>
     <div class="invite-modal-body">
-      <ion-searchbar placeholder="Buscar usuarios..." [(ngModel)]="userSearchTerm" (ionInput)="searchUsers($event)"></ion-searchbar>
+      <ion-searchbar placeholder="Buscar usuarios..." [(ngModel)]="userSearchTerm"
+        (ionInput)="searchUsers($event)"></ion-searchbar>
       <div class="user-list">
         <ion-list>
           <ion-item *ngFor="let user of filteredUsers" button (click)="inviteUserToRoom(user.id)">
             <ion-avatar slot="start">
-              <img [src]="user.base64">
+              <img src="data:image/jpeg;base64,{{user.base64}}">
             </ion-avatar>
             <ion-label>
               <h3>{{user.username}}</h3>
@@ -258,11 +264,11 @@
       </ion-label>
       <div slot="end" class="current-room-indicator" *ngIf="listeningRoomService.currentRoom$ | async as room">
         <ion-icon name="people-outline" color="tertiary"></ion-icon>
-        <span class="room-member-count">{{room.members?.length || 1}}</span>
+        <span class="room-member-count">{{room.members.length || 1}}</span>
       </div>
       <ion-buttons slot="end">
-        <ion-button fill="clear" color="light" *ngIf="!(listeningRoomService.currentRoom$ | async)" 
-            (click)="createListeningRoom(currentTrack.id); $event.stopPropagation()">
+        <ion-button fill="clear" color="light" *ngIf="!(listeningRoomService.currentRoom$ | async)"
+          (click)="createListeningRoom(currentTrack.id); $event.stopPropagation()">
           <ion-icon name="people-outline" slot="icon-only"></ion-icon>
         </ion-button>
         <ion-button fill="clear" color="light" (click)="previousTrack(); $event.stopPropagation()">
@@ -299,7 +305,8 @@
             </ion-button>
           </ion-buttons>
         </div>
-        <ion-button *ngIf="!(listeningRoomService.currentRoom$ | async)" fill="clear" color="light" (click)="createListeningRoom(currentTrack.id)">
+        <ion-button *ngIf="!(listeningRoomService.currentRoom$ | async)" fill="clear" color="light"
+          (click)="createListeningRoom(currentTrack.id)">
           <ion-icon name="people-outline" slot="start"></ion-icon>
           Crear sala
         </ion-button>
