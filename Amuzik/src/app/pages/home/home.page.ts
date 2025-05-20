@@ -47,8 +47,7 @@ import {
   playSkipBackOutline,
   menuOutline,
   volumeHighOutline,
-  push,
-} from 'ionicons/icons';
+  push, exitOutline, personAddOutline, checkmarkOutline, peopleOutline } from 'ionicons/icons';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Subject, takeUntil, finalize, forkJoin, of, from } from 'rxjs';
 import {
@@ -61,7 +60,12 @@ import {
   filter,
 } from 'rxjs/operators';
 import { PushNotificationService } from 'src/app/services/push-notifications.service';
-
+import {
+  ListeningRoomService,
+  ListeningRoom,
+  RoomEvent,
+} from '../../services/listening-room.service';
+import { UserFacade } from 'src/app/services/facades/users.facade';
 
 interface Track {
   id: string;
@@ -113,8 +117,8 @@ interface Playlist {
     IonSearchbar,
     IonButtons,
     IonRange,
-    IonProgressBar
-],
+    IonProgressBar,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './home.page.html',
   styleUrls: ['./home.page.scss'],
@@ -149,32 +153,28 @@ export class HomePage implements OnInit, OnDestroy {
   hasMorePlaylists: boolean = true;
   allPlaylists: Playlist[] = [];
 
+  showInviteModal = false;
+  userSearchTerm = '';
+  filteredUsers: User[] = [];
+  isSearchingUsers = false;
+  selectedUsers: User[] = [];
+  
   constructor(
     private audiusFacade: AudiusFacade,
     private authService: AuthService,
-    private pushNotificationService: PushNotificationService
+    private pushNotificationService: PushNotificationService,
+    protected listeningRoomService: ListeningRoomService,
+    private userFacade: UserFacade
   ) {
-    addIcons({
-      personCircleOutline,
-      chevronDownOutline,
-      musicalNotesOutline,
-      closeOutline,
-      playOutline,
-      searchOutline,
-      stopOutline,
-      pauseOutline,
-      menuOutline,
-      playSkipForwardOutline,
-      playSkipBackOutline,
-    });
+    addIcons({exitOutline,personAddOutline,checkmarkOutline,closeOutline,peopleOutline,chevronDownOutline,musicalNotesOutline,playOutline,searchOutline,playSkipBackOutline,playSkipForwardOutline,personCircleOutline,stopOutline,pauseOutline,menuOutline,});
   }
 
   ngOnInit() {
     this.authService.currentUser$
-    .pipe(takeUntil(this.destroy$))
-    .subscribe(user => {
-      this.currentUser = user;
-    });
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((user) => {
+        this.currentUser = user;
+      });
     if (this.currentUser) {
       this.pushNotificationService.initialize(this.currentUser.username);
     }
@@ -258,6 +258,37 @@ export class HomePage implements OnInit, OnDestroy {
               this.updateMediaSession();
             }
           });
+      });
+
+    // Suscripciones para ListeningRoomService
+    this.listeningRoomService.currentRoom$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((room) => {
+        console.log('Current listening room updated:', room);
+        // Aquí puedes actualizar la UI según sea necesario
+      });
+
+    this.listeningRoomService.roomEvent$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((event) => {
+        console.log('Room event received:', event);
+        // Manejar diferentes tipos de eventos
+        switch (event.type) {
+          case 'joined':
+            // Por ejemplo, mostrar una notificación
+            break;
+          case 'member_joined':
+            // Actualizar la lista de miembros en la UI
+            break;
+          // Añadir más casos según sea necesario
+        }
+      });
+
+    this.listeningRoomService.pendingInvitations$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((invitations) => {
+        console.log('Pending invitations updated:', invitations);
+        // Actualizar la UI para mostrar invitaciones pendientes
       });
 
     forkJoin({
@@ -484,9 +515,9 @@ export class HomePage implements OnInit, OnDestroy {
       console.error('Error: track es inválido. No se puede reproducir.');
       return;
     }
-  
+
     const trackId = track.id;
-    
+
     // Si se están reproduciendo tracks de una playlist, usar esa playlist
     if (playlistTracks && playlistTracks.length) {
       this.audiusFacade.play(trackId, playlistTracks);
@@ -497,10 +528,27 @@ export class HomePage implements OnInit, OnDestroy {
       // Si no hay playlist, crear una con solo este track
       this.audiusFacade.play(trackId, [track]);
     }
+
+    // Si estamos en una sala de escucha, actualizar el estado de la sala
+    const currentRoom = this.listeningRoomService.getCurrentRoom();
+    if (currentRoom) {
+      this.listeningRoomService.updateRoomTrack(currentRoom.id, trackId);
+      this.listeningRoomService.updateRoomState(currentRoom.id, 'playing', 0);
+    }
   }
 
   pauseTrack() {
     this.audiusFacade.pause();
+
+    // Sincronizar con la sala si estamos en una
+    const currentRoom = this.listeningRoomService.getCurrentRoom();
+    if (currentRoom) {
+      this.listeningRoomService.updateRoomState(
+        currentRoom.id,
+        'paused',
+        this.currentTime
+      );
+    }
   }
 
   stopTrack() {
@@ -529,6 +577,16 @@ export class HomePage implements OnInit, OnDestroy {
 
   seekTo(position: number) {
     this.audiusFacade.seekTo(position);
+
+    // Sincronizar con la sala si estamos en una
+    const currentRoom = this.listeningRoomService.getCurrentRoom();
+    if (currentRoom) {
+      this.listeningRoomService.updateRoomState(
+        currentRoom.id,
+        this.isPlaying ? 'playing' : 'paused',
+        position
+      );
+    }
   }
 
   onSeek(event: Event) {
@@ -777,4 +835,173 @@ export class HomePage implements OnInit, OnDestroy {
     }
     return 'assets/default.jpg';
   }
+
+  // Crear una nueva sala de escucha
+  createListeningRoom(trackId: string) {
+    if (!trackId) {
+      console.error('No se puede crear sala: trackId no válido');
+      return;
+    }
+    this.listeningRoomService.createRoom(trackId);
+  }
+
+  // Unirse a una sala existente
+  joinListeningRoom(roomId: string) {
+    this.listeningRoomService.joinRoom(roomId);
+  }
+
+  // Salir de la sala actual
+  leaveCurrentRoom() {
+    const currentRoom = this.listeningRoomService.getCurrentRoom();
+    if (currentRoom) {
+      this.listeningRoomService.leaveRoom(currentRoom.id);
+    }
+  }
+
+  // Invitar a un usuario a la sala actual
+  inviteUserToRoom(userId: string) {
+    const currentRoom = this.listeningRoomService.getCurrentRoom();
+    if (currentRoom) {
+      this.listeningRoomService.inviteToRoom(currentRoom.id, userId);
+    }
+  }
+
+  // Aceptar una invitación
+  acceptRoomInvitation(invitation: RoomEvent) {
+    this.listeningRoomService.acceptInvitation(invitation);
+  }
+
+  // Rechazar una invitación
+  declineRoomInvitation(invitation: RoomEvent) {
+    this.listeningRoomService.declineInvitation(invitation);
+  }
+
+  // Métodos para gestionar el modal de invitaciones
+inviteUserDialog() {
+  this.showInviteModal = true;
+  this.loadUsers();
+}
+
+closeInviteDialog() {
+  this.showInviteModal = false;
+  this.userSearchTerm = '';
+  this.filteredUsers = [];
+  this.selectedUsers = [];
+}
+
+
+searchUsers(event: any) {
+  const query = event.target.value.toLowerCase().trim();
+  this.userSearchTerm = query;
+  
+  if (!query) {
+    // Si no hay término de búsqueda, mostrar todos los amigos
+    this.loadUsers();
+    return;
+  }
+  
+  this.isSearchingUsers = true;
+  
+  // Filtra los amigos localmente
+  if (this.currentUser && this.currentUser.friends) {
+    this.filteredUsers = this.currentUser.friends.filter(friend => 
+      friend.username.toLowerCase().includes(query) || 
+      (friend.nombre && friend.nombre.toLowerCase().includes(query)) ||
+      (friend.apellidos && friend.apellidos.toLowerCase().includes(query))
+    );
+    this.isSearchingUsers = false;
+  } else {
+    // Si no hay amigos cargados, intentar refrescar datos del usuario
+    this.authService.refreshUserData()
+      .subscribe({
+        next: (user) => {
+          if (user && user.friends) {
+            this.filteredUsers = user.friends.filter((friend: { username: string; nombre: string; apellidos: string; }) => 
+              friend.username.toLowerCase().includes(query) || 
+              (friend.nombre && friend.nombre.toLowerCase().includes(query)) ||
+              (friend.apellidos && friend.apellidos.toLowerCase().includes(query))
+            );
+          } else {
+            this.filteredUsers = [];
+          }
+          this.isSearchingUsers = false;
+        },
+        error: (error) => {
+          console.error('Error al cargar amigos:', error);
+          this.filteredUsers = [];
+          this.isSearchingUsers = false;
+        }
+      });
+  }
+}
+
+
+
+loadUsers() {
+  if (this.currentUser && this.currentUser.friends && this.currentUser.friends.length > 0) {
+    this.filteredUsers = [...this.currentUser.friends];
+  } else {
+    this.filteredUsers = [];
+  }
+}
+
+// 6. Método para seleccionar un usuario para invitar
+selectUserForInvitation(user: User) {
+  if (!this.selectedUsers.some(u => u.id === user.id)) {
+    this.selectedUsers.push(user);
+  }
+}
+
+// 7. Método para quitar un usuario seleccionado
+removeSelectedUser(user: User) {
+  this.selectedUsers = this.selectedUsers.filter(u => u.id !== user.id);
+}
+
+// 8. Método para enviar invitaciones a los usuarios seleccionados
+sendInvitations() {
+  const currentRoom = this.listeningRoomService.getCurrentRoom();
+  if (!currentRoom) {
+    // Si no hay sala, crear una nueva con la canción actual
+    if (this.currentTrack) {
+      // Suponiendo que createRoom es síncrono y retorna void, esperar a que la sala esté creada y luego obtener el room actualizado
+      this.listeningRoomService.createRoom(this.currentTrack.id);
+      // Esperar a que el estado se actualice antes de invitar
+      setTimeout(() => {
+        const newRoom = this.listeningRoomService.getCurrentRoom();
+        if (newRoom && newRoom.id) {
+          this.inviteSelectedUsers(newRoom.id);
+        } else {
+          console.error('Error al crear sala de escucha: roomId no válido');
+        }
+      }, 300);
+    } else {
+      console.error('No hay track actual para crear una sala de escucha');
+    }
+  } else {
+    // Si ya hay una sala, invitar a los usuarios seleccionados
+    this.inviteSelectedUsers(currentRoom.id);
+  }
+}
+
+// 9. Método auxiliar para invitar a los usuarios seleccionados
+private inviteSelectedUsers(roomId: string) {
+  if (this.selectedUsers.length === 0) {
+    return;
+  }
+  
+  // Enviar invitaciones a todos los usuarios seleccionados
+  this.selectedUsers.forEach(user => {
+    this.listeningRoomService.inviteToRoom(roomId, user.id);
+  });
+  
+  // Limpiar selección y cerrar modal
+  this.selectedUsers = [];
+  this.closeInviteDialog();
+}
+
+// Método auxiliar para obtener artwork de track por ID
+getTrackArtwork(trackId: string): string | null {
+  const track = this.findTrackInData(trackId);
+  return track?.artwork?.['150x150'] || null;
+}
 }
