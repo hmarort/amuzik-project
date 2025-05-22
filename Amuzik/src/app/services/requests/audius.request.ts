@@ -31,8 +31,11 @@ export class AudiusRequest {
 
   private cache = new Map<string, any>();
 
+  /**
+   * Constructor de la clase
+   * @param http 
+   */
   constructor(private http: HttpClient) {
-    // Actualizar el tiempo de reproducción cada segundo
     setInterval(() => {
       if (this.currentAudio && !this.currentAudio.paused) {
         this.currentTimeSubject.next(this.currentAudio.currentTime);
@@ -40,6 +43,11 @@ export class AudiusRequest {
     }, 1000);
   }
 
+  /**
+   * Buscamos el contenido en la API de Audius
+   * @param query 
+   * @returns 
+   */
   searchContent(query: string): Observable<any> {
     return this.http.get(`${this.API_URL}/tracks/search?query=${encodeURIComponent(query)}&app_name=${this.APP_NAME}`).pipe(
       tap(response => {
@@ -52,6 +60,11 @@ export class AudiusRequest {
     );
   }
 
+  /**
+   * Obtenemos las pistas de una lista de reproducción
+   * @param playlistId 
+   * @returns 
+   */
   getPlaylistTracks(playlistId: string): Observable<any> {
     const cacheKey = `playlist_${playlistId}`;
     if (this.cache.has(cacheKey)) {
@@ -71,6 +84,10 @@ export class AudiusRequest {
       );
   }
 
+  /**
+   * Obtenemos los tracks más top del momento
+   * @returns 
+   */
   getTrendingTracks(): Observable<any> {
     return this.http
       .get(`${this.API_URL}/tracks/trending?app_name=${this.APP_NAME}`)
@@ -85,6 +102,10 @@ export class AudiusRequest {
       );
   }
 
+  /**
+   * Obtenemos las listas de reproducción más populares
+   * @returns 
+   */
   getPlaylists(): Observable<any> {
     return this.http
       .get(`${this.API_URL}/playlists/trending?app_name=${this.APP_NAME}`)
@@ -99,6 +120,11 @@ export class AudiusRequest {
       );
   }
 
+  /**
+   * Obtenemos la playlist por ID
+   * @param playlistId 
+   * @returns 
+   */
   getPlaylistById(playlistId: string): Observable<any> {
     return this.http
       .get(`${this.API_URL}/playlists/${playlistId}?app_name=${this.APP_NAME}`)
@@ -113,6 +139,11 @@ export class AudiusRequest {
       );
   }
 
+  /**
+   * Obtenemos el track por ID
+   * @param trackId 
+   * @returns 
+   */
   getTrackById(trackId: string): Observable<any> {
     return this.http
       .get(`${this.API_URL}/tracks/${trackId}?app_name=${this.APP_NAME}`)
@@ -127,6 +158,11 @@ export class AudiusRequest {
       );
   }
 
+  /**
+   * Obtenemos el url de stremaing del track que se trate
+   * @param trackId 
+   * @returns 
+   */
   async getTrackStreamUrl(trackId: string): Promise<string> {
     try {
       const response = await fetch(
@@ -145,17 +181,21 @@ export class AudiusRequest {
     }
   }
 
+  /**
+   * Establecemos la lista de reproducción actual
+   * @param playlist 
+   * @param initialTrackId 
+   * @returns 
+   */
   setCurrentPlaylist(playlist: any[] | null, initialTrackId?: string) {
     if (!playlist || playlist.length === 0) {
       this.currentPlaylistSubject.next(null);
       this.currentTrackIndexSubject.next(-1);
       return;
     }
-    
-    // Normalizar los IDs de las canciones en la playlist
     const normalizedPlaylist = playlist.map(track => ({
       ...track,
-      id: track.track_id || track.id // Asegurar consistencia en IDs
+      id: track.track_id || track.id 
     }));
     
     this.currentPlaylistSubject.next(normalizedPlaylist);
@@ -170,15 +210,18 @@ export class AudiusRequest {
         this.currentTrackIndexSubject.next(trackIndex);
       } else {
         console.warn(`No se encontró el track ${initialTrackId} en la playlist`);
-        // Si no se encuentra, establecer el primero como actual
         this.currentTrackIndexSubject.next(0);
       }
     } else if (normalizedPlaylist.length > 0) {
-      // Si no se especifica track inicial, usar el primero
       this.currentTrackIndexSubject.next(0);
     }
   }
 
+  /**
+   * Reproducimos el track del que obtenemos su ID
+   * @param trackId 
+   * @returns 
+   */
   async playTrack(trackId: string | undefined) {
     if (!trackId) {
       console.error('Error: trackId es undefined. No se puede reproducir.');
@@ -196,7 +239,6 @@ export class AudiusRequest {
       return;
     }
   
-    // Guardar el progreso del track actual antes de cambiarlo
     if (this.currentAudio && this.currentTrackIdSubject.value) {
       this.trackPositions.set(
         this.currentTrackIdSubject.value, 
@@ -205,7 +247,7 @@ export class AudiusRequest {
     }
   
     if (!isCurrentTrack) {
-      this.stopCurrentTrack(false); // No resetear la playlist actual
+      this.stopCurrentTrack(false);
   
       const streamUrl = await this.getTrackStreamUrl(trackId);
       if (!streamUrl) {
@@ -233,7 +275,6 @@ export class AudiusRequest {
     this.currentTrackIdSubject.next(trackId);
     this.isPlayingSubject.next(true);
     
-    // Actualizar índice en la playlist actual
     const currentPlaylist = this.currentPlaylistSubject.value;
     if (currentPlaylist) {
       const trackIndex = currentPlaylist.findIndex(track => 
@@ -249,20 +290,23 @@ export class AudiusRequest {
     }
   }
 
+
+  /**
+   * Cargamos los manejadores de Audio, entre ellos el intervalo, etc...
+   * @param trackId 
+   * @returns 
+   */
   private setupAudioEventHandlers(trackId: string) {
     if (!this.currentAudio) return;
 
-    // Restablecer la duración inicial
     this.durationSubject.next(0);
 
-    // Cuando se carga los metadatos, actualizar la duración
     this.currentAudio.onloadedmetadata = () => {
       if (this.currentAudio) {
         this.durationSubject.next(this.currentAudio.duration);
       }
     };
 
-    // Almacenar la posición actual del track cada 5 segundos
     const updateInterval = setInterval(() => {
       if (this.currentAudio && !this.currentAudio.paused) {
         this.trackPositions.set(trackId, this.currentAudio.currentTime);
@@ -282,7 +326,6 @@ export class AudiusRequest {
       this.trackPositions.delete(trackId);
       clearInterval(updateInterval);
       
-      // Reproducir siguiente track si está en una playlist
       this.playNextTrack();
     };
 
@@ -293,11 +336,13 @@ export class AudiusRequest {
     };
   }
 
+  /**
+   * Pausa el track en reproducción
+   */
   pauseTrack() {
     if (this.currentAudio) {
       this.currentAudio.pause();
 
-      // Mantener la posición actual del track
       const currentTrackId = this.currentTrackIdSubject.value;
       if (currentTrackId) {
         this.trackPositions.set(currentTrackId, this.currentAudio.currentTime);
@@ -307,6 +352,10 @@ export class AudiusRequest {
     }
   }
 
+  /**
+   * Detenemos el track en reproduccíon actual
+   * @param resetPlaylist 
+   */
   stopCurrentTrack(resetPlaylist: boolean = true) {
     if (this.currentAudio) {
       this.currentAudio.pause();
@@ -325,22 +374,42 @@ export class AudiusRequest {
     }
   }
 
+  /**
+   * Comprobamos si el track se encuentra en reproducción
+   * @returns 
+   */
   isPlaying(): boolean {
     return this.isPlayingSubject.value;
   }
 
+  /**
+   * Obtenemos el Id del track que esté sonando en el momento
+   * @returns 
+   */
   getCurrentTrackId(): string | null {
     return this.currentTrackIdSubject.value;
   }
 
+  /**
+   * Obtenemos el tiempo actual
+   * @returns 
+   */
   getCurrentTime(): number {
     return this.currentTimeSubject.value;
   }
 
+  /**
+   * Obtenemos la duración de la canción
+   * @returns 
+   */
   getDuration(): number {
     return this.durationSubject.value;
   }
 
+  /**
+   * Desplazamos hacia adelante o hacia atrás la canción pudiendo adelantarla o retrasarla
+   * @param position 
+   */
   seekTo(position: number) {
     if (this.currentAudio) {
       this.currentAudio.currentTime = position;
@@ -353,6 +422,10 @@ export class AudiusRequest {
     }
   } 
   
+  /**
+   * Cuando pulsamos el botón de siguiente nos reproduce la siguiente cancion.
+   * si es en playslist de playlist, si es single a una aleatoria
+   */
   playNextTrack() {
     const currentPlaylist = this.currentPlaylistSubject.value;
     const currentIndex = this.currentTrackIndexSubject.value;
@@ -375,7 +448,11 @@ export class AudiusRequest {
     }
   }
   
-  // Nueva función para encontrar tracks similares
+  /**
+   * Encontrar tracks similares para cuando saltamos de single a otra cancion
+   * @param currentTrackId 
+   * @returns 
+   */
   private findSimilarTrack(currentTrackId: string | null) {
     if (!currentTrackId) return;
     
@@ -416,7 +493,9 @@ export class AudiusRequest {
     });
   }
   
-  // Método auxiliar para encontrar un track aleatorio
+  /**
+   * Encontramos un track aleatorio de entre los trending
+   */
   private findRandomTrack() {
     this.http.get(`${this.API_URL}/tracks/trending?app_name=${this.APP_NAME}`)
       .pipe(
@@ -435,20 +514,22 @@ export class AudiusRequest {
       });
   }
   
+  /**
+   * Pulsando dos veces el botón de retrasar volvemos al track anterior si es que habia sino, no pasa nada porque estamos en el primer track
+   * @returns 
+   */
   playPreviousTrack() {
     const currentPlaylist = this.currentPlaylistSubject.value;
     const currentIndex = this.currentTrackIndexSubject.value;
     
     console.log(`Intentando reproducir track anterior. Índice actual: ${currentIndex}`);
     
-    // Si la posición actual es mayor a 3 segundos, volver al inicio de la canción
     if (this.currentAudio && this.currentAudio.currentTime > 3) {
       console.log('Volviendo al inicio de la canción actual');
       this.seekTo(0);
       return;
     }
     
-    // Si no, ir a la canción anterior
     if (currentPlaylist && currentIndex > 0) {
       const prevTrack = currentPlaylist[currentIndex - 1];
       const prevTrackId = prevTrack.track_id || prevTrack.id;
@@ -463,6 +544,11 @@ export class AudiusRequest {
     }
   }
 
+  /**
+   * Formatemaos el tiempo
+   * @param time 
+   * @returns 
+   */
   formatTime(time: number): string {
     if (isNaN(time)) return '0:00';
     

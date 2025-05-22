@@ -14,6 +14,7 @@ export const environment = {
     grantOfflineAccess: true,
   },
   JWT_SECRET:'W66jQhYGGzEIuCcAXfpTJkt7uH6GBGpcJLCSXo6O2WF1AZkxiMXpypFaKEfA',
+  wsUrl:'wss://chat-server-uoyz.onrender.com'
 };
 /*
  * For easier debugging in development mode, you can import the following file

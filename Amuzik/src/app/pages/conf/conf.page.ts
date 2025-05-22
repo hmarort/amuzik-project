@@ -19,13 +19,14 @@ import {
   IonCardTitle,
   IonAvatar,
   IonButton,
-  IonItemDivider, 
-  IonButtons, 
+  IonItemDivider,
+  IonButtons,
   IonBackButton,
   AlertController,
   ToastController,
   IonInput,
-  IonModal, IonFooter } from '@ionic/angular/standalone';
+  IonModal, IonFooter
+} from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   personOutline,
@@ -44,7 +45,7 @@ import {
   imageOutline
 } from 'ionicons/icons';
 import { Router } from '@angular/router';
-import { ConfigService, Configuraciones } from '../../services/config.service';
+import { ConfigService } from '../../services/config.service';
 import { AuthService, User } from '../../services/auth.service';
 import { Subscription } from 'rxjs';
 import { ImageCroppedEvent, ImageCropperComponent, LoadedImage } from 'ngx-image-cropper';
@@ -55,8 +56,8 @@ import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
   templateUrl: './conf.page.html',
   styleUrls: ['./conf.page.scss'],
   standalone: true,
-  imports: [IonFooter, 
-    IonBackButton, 
+  imports: [IonFooter,
+    IonBackButton,
     IonButtons,
     IonContent,
     IonHeader,
@@ -69,8 +70,6 @@ import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
     IonLabel,
     IonToggle,
     IonIcon,
-    IonSelect,
-    IonSelectOption,
     IonCard,
     IonCardContent,
     IonCardHeader,
@@ -80,13 +79,12 @@ import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
     IonItemDivider,
     IonInput,
     IonModal,
-    ImageCropperComponent
-  ]
+    ImageCropperComponent]
 })
 export class ConfPage implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput!: ElementRef;
   @ViewChild('cropperModal') cropperModal!: IonModal;
-  
+
   // Datos del usuario
   usuario: User = {
     id: '',
@@ -95,7 +93,7 @@ export class ConfPage implements OnInit, OnDestroy {
     nombre: '',
     base64: ''
   };
-  
+
   // Para modo edición
   editMode: boolean = false;
   perfilEditado: User = {
@@ -106,11 +104,11 @@ export class ConfPage implements OnInit, OnDestroy {
     apellidos: '',
     base64: ''
   };
-  
+
   // Para vista previa de la imagen
   previewImage: string | null = null;
   selectedFile: File | null = null;
-  
+
   // Variables para el cropper
   imageChangedEvent: any = '';
   croppedImage: any = '';
@@ -118,20 +116,8 @@ export class ConfPage implements OnInit, OnDestroy {
   originalFileName = '';
   originalFileType = '';
   cropperHeight = 300; // Altura por defecto del cropper
-  
+
   private userSubscription: Subscription | null = null;
-  
-  // Configuraciones
-  configuraciones: Configuraciones;
-  configuracionesOriginales: Configuraciones;
-  
-  // Opciones de idioma
-  idiomas = [
-    { valor: 'es', texto: 'Español' },
-    { valor: 'en', texto: 'Inglés' },
-    { valor: 'fr', texto: 'Francés' },
-    { valor: 'de', texto: 'Alemán' }
-  ];
 
   constructor(
     private router: Router,
@@ -157,10 +143,6 @@ export class ConfPage implements OnInit, OnDestroy {
       checkmarkOutline,
       imageOutline
     });
-    
-    // Inicializar con valores por defecto
-    this.configuraciones = this.configService.configuracionesActuales;
-    this.configuracionesOriginales = JSON.parse(JSON.stringify(this.configuraciones));
   }
 
   ngOnInit() {
@@ -169,13 +151,7 @@ export class ConfPage implements OnInit, OnDestroy {
       this.router.navigate(['/login']);
       return;
     }
-    
-    // Suscribirnos a los cambios en las configuraciones
-    this.configService.configuraciones$.subscribe(config => {
-      this.configuraciones = config;
-      this.configuracionesOriginales = JSON.parse(JSON.stringify(config));
-    });
-    
+
     // Suscribirnos a los cambios en el usuario desde AuthService
     this.userSubscription = this.authService.currentUser$.subscribe(user => {
       if (user) {
@@ -184,7 +160,7 @@ export class ConfPage implements OnInit, OnDestroy {
         this.resetPerfilEditado();
       }
     });
-    
+
     // Obtener el usuario actual si está disponible
     const currentUser = this.authService.getCurrentUser();
     if (currentUser) {
@@ -226,32 +202,32 @@ export class ConfPage implements OnInit, OnDestroy {
   async guardarPerfil() {
     try {
       const formData = new FormData();
-      
+
       // Siempre añadir el ID
       formData.append('id', this.perfilEditado.id);
-      
+
       // Comparar los campos actuales con los originales y solo añadir los modificados
       if (this.perfilEditado.username !== this.usuario.username) {
         formData.append('username', this.perfilEditado.username);
       }
-      
+
       if (this.perfilEditado.email !== this.usuario.email) {
         formData.append('email', this.perfilEditado.email || '');
       }
-      
+
       if (this.perfilEditado.nombre !== this.usuario.nombre) {
         formData.append('nombre', this.perfilEditado.nombre || '');
       }
-      
+
       if (this.perfilEditado.apellidos !== this.usuario.apellidos) {
         formData.append('apellidos', this.perfilEditado.apellidos || '');
       }
-      
+
       // Añadir imagen solo si se seleccionó una nueva
       if (this.selectedFile) {
         formData.append('pfp', this.selectedFile); // Cambiado a 'pfp' para que coincida con el backend
       }
-      
+
       // Llamar al servicio para actualizar
       this.authService.updateUserData(formData).subscribe(
         response => {
@@ -279,7 +255,7 @@ export class ConfPage implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       const file = input.files[0];
-      
+
       // Validar tipo de archivo
       if (!file.type.match(/image\/(jpeg|jpg|png|gif|webp)/)) {
         this.mostrarToast('Por favor, selecciona una imagen válida (JPEG, PNG, GIF o WEBP)', 'warning');
@@ -295,11 +271,11 @@ export class ConfPage implements OnInit, OnDestroy {
       // Guardar el nombre y tipo del archivo original
       this.originalFileName = file.name;
       this.originalFileType = file.type;
-      
+
       // Iniciar el proceso de recorte
       this.imageChangedEvent = event;
       this.showCropper = true;
-      
+
       // Presentar el modal después de un breve retraso para asegurar que el DOM esté listo
       setTimeout(() => {
         this.cropperModal.present();
@@ -320,7 +296,7 @@ export class ConfPage implements OnInit, OnDestroy {
   imageLoaded(image: LoadedImage) {
     // Imagen cargada en el cropper
     console.log('Imagen cargada en el cropper', image);
-    
+
     // Ajustar altura según la imagen cargada
     const imgElement = image.original.image as HTMLImageElement;
     if (imgElement) {
@@ -354,31 +330,31 @@ export class ConfPage implements OnInit, OnDestroy {
       if (this.croppedImage.startsWith('blob:')) {
         // Actualizar la vista previa (sanitizada)
         this.previewImage = this.croppedImage;
-        
+
         // Obtener el blob desde el objectUrl
         const response = await fetch(this.croppedImage);
         const blob = await response.blob();
-        
+
         // Crear un File a partir del Blob
-        this.selectedFile = new File([blob], this.originalFileName, { 
-          type: this.originalFileType || blob.type 
+        this.selectedFile = new File([blob], this.originalFileName, {
+          type: this.originalFileType || blob.type
         });
-      } 
+      }
       // Si tenemos un base64, convertirlo a File
       else if (this.croppedImage.startsWith('data:')) {
         // Actualizar la vista previa (sanitizada)
         this.previewImage = this.croppedImage;
-        
+
         // Convertir base64 a File
         const file = await this.base64ToFile(
-          this.croppedImage, 
-          this.originalFileName, 
+          this.croppedImage,
+          this.originalFileName,
           this.originalFileType
         );
-        
+
         this.selectedFile = file;
       }
-      
+
       // Cerrar el modal
       this.cropperModal.dismiss();
       this.showCropper = false;
@@ -404,72 +380,27 @@ export class ConfPage implements OnInit, OnDestroy {
     const base64Data = dataUrl.split(',')[1];
     const byteCharacters = atob(base64Data);
     const byteArrays = [];
-    
+
     for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
       const slice = byteCharacters.slice(offset, offset + 1024);
-      
+
       const byteNumbers = new Array(slice.length);
       for (let i = 0; i < slice.length; i++) {
         byteNumbers[i] = slice.charCodeAt(i);
       }
-      
+
       const byteArray = new Uint8Array(byteNumbers);
       byteArrays.push(byteArray);
     }
-    
+
     const blob = new Blob(byteArrays, { type: mimeType || 'image/png' });
     return Promise.resolve(new File([blob], filename, { type: mimeType || 'image/png' }));
   }
 
-  async guardarCambios() {
-    try {
-      // Guardar configuraciones usando el servicio
-      this.configService.guardarConfiguraciones(this.configuraciones).subscribe(
-        () => {
-          this.configuracionesOriginales = JSON.parse(JSON.stringify(this.configuraciones));
-          this.mostrarToast('Configuraciones guardadas correctamente');
-        },
-        error => {
-          console.error('Error al guardar configuraciones:', error);
-          this.mostrarToast('Error al guardar configuraciones', 'danger');
-        }
-      );
-    } catch (error) {
-      console.error('Error al guardar configuraciones:', error);
-      this.mostrarToast('Error al guardar configuraciones', 'danger');
-    }
-  }
-
   async cerrarSesion() {
-    // Verificar si hay cambios sin guardar
-    if (this.hayCambiosSinGuardar()) {
-      const alert = await this.alertController.create({
-        header: 'Cambios sin guardar',
-        message: '¿Desea guardar los cambios antes de cerrar sesión?',
-        buttons: [
-          {
-            text: 'Cancelar',
-            role: 'cancel'
-          },
-          {
-            text: 'Salir sin guardar',
-            handler: () => {
-              this.logout();
-            }
-          },
-          {
-            text: 'Guardar y salir',
-            handler: () => {
-              this.guardarCambios();
-              this.logout();
-            }
-          }
-        ]
-      });
-      await alert.present();
-    } else {
-      this.logout();
-    }
+
+    this.logout();
+
   }
 
   logout() {
@@ -480,10 +411,6 @@ export class ConfPage implements OnInit, OnDestroy {
   editarPerfil() {
     // Cambiado a usar el toggle para edición en la misma página
     this.toggleEditMode();
-  }
-
-  hayCambiosSinGuardar(): boolean {
-    return JSON.stringify(this.configuraciones) !== JSON.stringify(this.configuracionesOriginales);
   }
 
   async mostrarToast(mensaje: string, color: string = 'success') {

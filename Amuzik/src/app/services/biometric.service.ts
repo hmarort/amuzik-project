@@ -10,10 +10,15 @@ import { map, catchError, switchMap } from 'rxjs/operators';
 export class BiometricService {
   private biometricCredentialsKey = 'ionic_app_credentials';
 
+  /**
+   * Constructor de la clase
+   * @param platform 
+   */
   constructor(private platform: Platform) {}
 
   /**
-   * Verifica si el dispositivo soporta autenticación biométrica
+   * Verifica si la biometría está disponible en el dispositivo
+   * @returns 
    */
   isBiometricsAvailable(): Observable<boolean> {
     if (!this.platform.is('capacitor')) {
@@ -30,7 +35,10 @@ export class BiometricService {
   }
 
   /**
-   * Guarda las credenciales de forma segura asociadas con autenticación biométrica
+   * Guarda las credenciales en el dispositivo siendo solo accesibles a través de la biometría
+   * @param username 
+   * @param password 
+   * @returns 
    */
   saveCredentials(username: string, password: string): Observable<boolean> {
     if (!this.platform.is('capacitor')) {
@@ -51,7 +59,8 @@ export class BiometricService {
   }
 
   /**
-   * Verifica la identidad del usuario usando biometría y recupera credenciales
+   * Identifica al usuario atrabés de la biometría
+   * @returns 
    */
   verifyIdentity(): Observable<{ username: string; password: string } | null> {
     if (!this.platform.is('capacitor')) {
@@ -73,7 +82,8 @@ export class BiometricService {
   }
 
   /**
-   * Obtiene las credenciales almacenadas
+   * Obtenemos las credenciales almacenadas
+   * @returns 
    */
   private getCredentials(): Observable<{ username: string; password: string } | null> {
     return from(NativeBiometric.getCredentials({
@@ -91,7 +101,8 @@ export class BiometricService {
   }
 
   /**
-   * Elimina las credenciales almacenadas
+   * Eliminamos las credenciales almacenadas
+   * @returns 
    */
   deleteCredentials(): Observable<boolean> {
     return from(NativeBiometric.deleteCredentials({

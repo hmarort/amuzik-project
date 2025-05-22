@@ -210,7 +210,7 @@ export class ChatPage implements OnInit, OnDestroy {
     
     switch (message.status) {
       case 'sent': return 'checkmark';
-      case 'delivered': return 'checkmark-done-outline';
+      case 'delivered': return 'checkmark-done';
       case 'read': return 'checkmark-done-sharp'; // Mismo icono pero podría tener diferente estilo CSS
       default: return '';
     }

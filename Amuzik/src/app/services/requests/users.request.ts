@@ -3,15 +3,17 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
-// Esta interfaz ya no es necesaria ya que estamos usando los endpoints normales
-// pero la mantenemos por compatibilidad con código existente
+/**
+ * Interfaz de datos de usuario de google que ya no necesitamos, pero mantenemos
+ * por compatibilidad con el código antiguo
+ */
 export interface GoogleUserData {
   email: string;
   nombre: string;
   apellidos: string;
   username: string;
   password: string;
-  pfp?: File | Blob;  // Campo para la foto de perfil
+  pfp?: File | Blob;
 }
 
 @Injectable({
@@ -21,12 +23,16 @@ export class UserRequest {
   private apiUrl = environment.apiUrl;
   private token = environment.JWT_SECRET;
 
+  /**
+   * Contructor de la clase
+   * @param http 
+   */
   constructor(private http: HttpClient) {}
 
   /**
-   * Get authorization headers with token
-   * @param contentType Optional content type
-   * @returns HttpHeaders object
+   * Obtiene el token de autenticación
+   * @param contentType 
+   * @returns 
    */
   private getAuthHeaders(contentType?: string): HttpHeaders {
     let headers = new HttpHeaders({
@@ -39,7 +45,10 @@ export class UserRequest {
   }
 
   /**
-   * Login with username and password
+   * Login usando username y contraseña
+   * @param username 
+   * @param password 
+   * @returns 
    */
   login(username: string, password: string): Observable<any> {
     const headers = this.getAuthHeaders('application/json');
@@ -48,7 +57,9 @@ export class UserRequest {
   }
 
   /**
-   * Register a new user
+   * Registro de usuario
+   * @param userData 
+   * @returns 
    */
   register(userData: FormData): Observable<any> {
     const headers = this.getAuthHeaders();
@@ -56,7 +67,9 @@ export class UserRequest {
   }
 
   /**
-   * Update user data
+   * Actualizacion de los datos del usuario
+   * @param userData 
+   * @returns 
    */
   updateUserData(userData: FormData): Observable<any> {
     const headers = this.getAuthHeaders();
@@ -64,7 +77,9 @@ export class UserRequest {
   }
 
   /**
-   * Get user by ID
+   * Obtenemos usuario a través de su id
+   * @param userId 
+   * @returns 
    */
   getUserById(userId: string): Observable<any> {
     const headers = this.getAuthHeaders();
@@ -72,7 +87,9 @@ export class UserRequest {
   }
 
   /**
-   * Get user by username
+   * Obtenemos el usuario a través de su nombre de usuario
+   * @param username 
+   * @returns 
    */
   getUserByUsername(username: string): Observable<any> {
     const headers = this.getAuthHeaders('application/json');
@@ -81,7 +98,10 @@ export class UserRequest {
   }
 
   /**
-   * Save friend relationship
+   * Guardamos la relación de amistad entre usuarios
+   * @param userId 
+   * @param friendId 
+   * @returns 
    */
   saveFriend(userId: string, friendId: string): Observable<any> {
     const headers = this.getAuthHeaders('application/json');
@@ -93,7 +113,10 @@ export class UserRequest {
   }
 
   /**
-   * Delete friend relationship
+   * Eliminamos la relación de amistad de los usuarios
+   * @param userId 
+   * @param friendId 
+   * @returns 
    */
   deleteFriend(userId: string, friendId: string): Observable<any> {
     const headers = this.getAuthHeaders('application/json');

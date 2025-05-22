@@ -13,16 +13,25 @@ import { Router } from '@angular/router';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
+  /**
+   * Constructor de la calse
+   * @param authService 
+   * @param router 
+   */
   constructor(
     private authService: AuthService,
     private router: Router
   ) {}
 
+  /**
+   * Interceptor que se encarga de verificar si tenemos el token corresponfiente antes de pasar de page
+   * @param request 
+   * @param next 
+   * @returns 
+   */
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    // Obtener el token (si ya lo tienes almacenado)
     const token = this.authService.getToken();
     
-    // Si hay un token, agregarlo a todas las solicitudes
     if (token) {
       request = request.clone({
         setHeaders: {
@@ -31,10 +40,8 @@ export class AuthInterceptor implements HttpInterceptor {
       });
     }
 
-    // Manejar errores de autenticación
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
-        // Si el error es 401 (no autorizado), cerrar sesión y redirigir
         if (error.status === 401) {
           this.authService.logout();
         }

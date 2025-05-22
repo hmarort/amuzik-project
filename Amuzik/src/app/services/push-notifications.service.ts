@@ -24,6 +24,14 @@ export class PushNotificationService {
   private deviceToken = new BehaviorSubject<string | null>(null);
   public deviceToken$ = this.deviceToken.asObservable();
 
+  /**
+   * Constructor de la clase
+   * @param router 
+   * @param platform 
+   * @param chatService 
+   * @param authService 
+   * @param http 
+   */
   constructor(
     private router: Router,
     private platform: Platform,
@@ -31,19 +39,17 @@ export class PushNotificationService {
     private authService: AuthService,
     private http: HttpClient
   ) {}
-
   /**
-   * Inicializa el servicio de notificaciones push
+   * Inicializa las notificaciones.
+   * @param username 
+   * @returns 
    */
   async initialize(username: string): Promise<void> {
-    // Solo inicializar en dispositivos nativos
     if (!Capacitor.isNativePlatform()) {
-      console.log('Push Notifications no disponibles en la web');
       return;
     }
 
     try {
-      // Verificar permisos
       PushNotifications.requestPermissions().then((result) => {
         if (result.receive === 'granted') {
           PushNotifications.register();
@@ -52,7 +58,6 @@ export class PushNotificationService {
       const permStatus = await PushNotifications.checkPermissions();
 
       if (permStatus.receive === 'prompt') {
-        // Solicitar permisos
         const permResult = await PushNotifications.requestPermissions();
         if (permResult.receive !== 'granted') {
           return;
@@ -61,9 +66,7 @@ export class PushNotificationService {
         return;
       }
 
-      // Registrar listeners de eventos para notificaciones
       await this.registerListeners(username);
-      // Registrar el dispositivo para notificaciones
       await PushNotifications.register();
     } catch (error) {
       console.error('Error al inicializar las notificaciones push:', error);
@@ -71,74 +74,62 @@ export class PushNotificationService {
   }
 
   /**
-   * Registra los listeners de eventos para las notificaciones
+   * Resgitra los listeners que se encargan de recibir las notificaciones.
+   * @param username 
    */
   private async registerListeners(username: string): Promise<void> {
-    // Cuando recibimos un token de registro
     PushNotifications.addListener('registration', (token: Token) => {
-      console.log('Push registration success, token: ', token.value);
       this.deviceToken.next(token.value);
-      console.log('Console log antes de enviar el token a la base de datos ');
       this.sendTokenToServer(token.value, username);
     });
 
-    // Errores en el registro
     PushNotifications.addListener('registrationError', (error: any) => {
       console.error('Error on push registration: ', error);
     });
 
-    // Cuando se recibe una notificación mientras la app está en primer plano
     PushNotifications.addListener(
       'pushNotificationReceived',
       (notification: PushNotificationSchema) => {
-        console.log('Push recibido en primer plano: ', notification);
         this.handleNotification(notification);
       }
     );
 
-    // Cuando el usuario pulsa en una notificación (app en segundo plano)
     PushNotifications.addListener(
       'pushNotificationActionPerformed',
       (action: ActionPerformed) => {
-        console.log('Push action performed: ', action);
         this.handleNotificationAction(action);
       }
     );
   }
-
   /**
-   * Envía el token de dispositivo al servidor
+   * Envía el token al websocket para guardarlo en la bbdd y asi cuando se envie 
+   * un mensaje a ese usuario, se le envie la notificacion.
+   * @param token 
+   * @param username 
    */
   private async sendTokenToServer(
     token: string,
     username: string
   ): Promise<void> {
-    console.log('Enviando token al servidor');
     try {
-      console.log('Aqui cargamos headers y body');
       const headers = this.getAuthHeaders('application/json');
       const body = {
         username: username,
         token_movil: token,
       };
-      console.log('vamos a enviar el token a la bbdd');
 
       this.http.post(`${this.apiUrl}token`, body, { headers }).subscribe({
         next: (response) =>
           console.log('Token registrado correctamente:', response),
         error: (error) => {
-          // Mostrar más información sobre el error
           console.error('Error al registrar token - status:', error.status);
           console.error('Error al registrar token - message:', error.message);
           if (error.error) {
             console.error('Error del servidor:', error.error);
           }
-          // Si necesitas ver todo el objeto de error completo
           console.error('Error completo:', JSON.stringify(error, null, 2));
         },
       });
-
-      console.log('Token enviado al servidor');
     } catch (error) {
       console.error(
         'Error al enviar token al servidor:',
@@ -148,15 +139,11 @@ export class PushNotificationService {
   }
 
   /**
-   * Maneja una notificación recibida cuando la app está en primer plano
+   * Maneja la notificación recibida.
+   * @param notification 
    */
   private handleNotification(notification: PushNotificationSchema): void {
-    // Aquí puedes mostrar una notificación personalizada dentro de la app
-    // O actualizar la interfaz de usuario
-
-    // Actualizar la lista de mensajes si es un mensaje nuevo
     if (notification.data && notification.data.type === 'chat_message') {
-      // Solicitar actualización de los mensajes
       const senderId = notification.data.senderId;
       if (senderId) {
         this.chatService.loadConversation(senderId);
@@ -165,19 +152,19 @@ export class PushNotificationService {
   }
 
   /**
-   * Maneja la acción cuando el usuario pulsa en una notificación
+   * Maneja la acción de la notificación.
+   * @param action 
    */
   private handleNotificationAction(action: ActionPerformed): void {
     const data = action.notification.data;
 
     if (data && data.type === 'chat_message' && data.senderId) {
-      // Navegar a la conversación con el remitente
       this.router.navigate(['/chat', data.senderId]);
     }
   }
-
   /**
-   * Obtiene el ID único del dispositivo (útil para identificar dispositivos)
+   * 
+   * @returns Obtiene el Id del dispositivo.
    */
   async getDeviceId(): Promise<string> {
     try {
@@ -190,7 +177,7 @@ export class PushNotificationService {
   }
 
   /**
-   * Elimina todas las notificaciones entregadas
+   * Elimina todas las notificaciones entregadas.
    */
   async removeAllDeliveredNotifications(): Promise<void> {
     if (Capacitor.isNativePlatform()) {
@@ -199,16 +186,16 @@ export class PushNotificationService {
   }
 
   /**
-   * Elimina los listeners de notificaciones cuando el servicio se destruye
+   * Elimna los listeners de las aplicaciones.
    */
   removeListeners(): void {
     PushNotifications.removeAllListeners();
   }
 
   /**
-   * Get authorization headers with token
-   * @param contentType Optional content type
-   * @returns HttpHeaders object
+   * Obtiene los headers de autorización para las peticiones HTTP
+   * @param contentType 
+   * @returns 
    */
   private getAuthHeaders(contentType?: string): HttpHeaders {
     let headers = new HttpHeaders({

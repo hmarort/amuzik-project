@@ -8,9 +8,11 @@ import { BiometricService } from './biometric.service';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { environment } from '../../environments/environment';
 
-// Importamos el SDK de Google Identity para web
 declare const google: any;
 
+/**
+ * Interfaz para el usuario
+ */
 export interface User {
   id: string;
   username: string;
@@ -19,7 +21,7 @@ export interface User {
   apellidos?: string;
   base64?: string;
   friends?: User[];
-  provider?: string; // Para indicar el proveedor de autenticación (normal, google, etc.)
+  provider?: string;
 }
 
 @Injectable({
@@ -34,6 +36,13 @@ export class AuthService {
   private biometricEnabledKey = 'biometricEnabled';
   private googleClient: any = null;
 
+  /**
+   * Constructor de la clase
+   * @param userRequest 
+   * @param router 
+   * @param platform 
+   * @param biometricService 
+   */
   constructor(
     private userRequest: UserRequest,
     private router: Router,
@@ -44,28 +53,25 @@ export class AuthService {
 
     this.platform.ready().then(() => {
       if (this.platform.is('capacitor')) {
-        // Inicializar GoogleAuth de Capacitor para dispositivos móviles
         GoogleAuth.initialize(environment.googleAuth).catch((error) => {
           console.warn('Google Auth already initialized or failed:', error);
         });
       } else {
-        // Inicializar Google Identity API para web
         this.initGoogleWebAuth();
       }
     });
   }
 
   /**
-   * Inicializa la API de Google Identity para entornos web
+   * Inicializa el cliente de Google Web Auth 
+   * @returns 
    */
   private initGoogleWebAuth(): void {
-    // Verificar si ya existe el script de Google
     if (typeof google !== 'undefined' && google.accounts) {
       this.setupGoogleClient();
       return;
     }
 
-    // Cargar el script de Google Identity API si no está cargado
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
@@ -77,7 +83,8 @@ export class AuthService {
   }
 
   /**
-   * Configura el cliente de Google Identity API
+   * Configura el cliente de la API Google Identify
+   * @returns 
    */
   private setupGoogleClient(): void {
     if (typeof google === 'undefined' || !google.accounts) {
@@ -85,19 +92,17 @@ export class AuthService {
       return;
     }
 
-    // Inicializar el cliente de Google (versión web)
     this.googleClient = google.accounts.oauth2.initTokenClient({
       client_id: environment.googleAuth.clientId,
       scope: environment.googleAuth.scopes.join(' '),
       callback: (tokenResponse: any) => {
-        // Este callback se utiliza internamente por el método registerWithGoogleWeb
         console.log('Token obtenido correctamente');
       },
     });
   }
 
   /**
-   * Cargar usuario desde localStorage o sessionStorage
+   * Cargamos al usuario desde el almacenamiento local
    */
   private loadUserFromStorage(): void {
     const userData = this.getStoredItem(this.userDataKey);
@@ -113,26 +118,26 @@ export class AuthService {
   }
 
   /**
-   * Determina si se debe usar localStorage o sessionStorage
-   * @returns true si se debe usar localStorage, false para sessionStorage
+   * Determinamos el uso de localStorage o SessionStorage
+   * @returns 
    */
   private useLocalStorage(): boolean {
     return localStorage.getItem(this.rememberMeKey) === 'true';
   }
 
   /**
-   * Obtiene un item del almacenamiento apropiado
-   * @param key La clave del item
-   * @returns El valor almacenado o null
+   * Obtiene un ítem del almacenamiento local o de sesión
+   * @param key 
+   * @returns 
    */
   private getStoredItem(key: string): string | null {
     return localStorage.getItem(key) || sessionStorage.getItem(key);
   }
 
   /**
-   * Almacena un item en el storage apropiado (local o session)
-   * @param key La clave del item
-   * @param value El valor a almacenar
+   * Almacena un ítem en el almacenamiento apropiado
+   * @param key 
+   * @param value 
    */
   private storeItem(key: string, value: string): void {
     if (this.useLocalStorage()) {
@@ -143,24 +148,24 @@ export class AuthService {
   }
 
   /**
-   * Obtener usuario actual
-   * @returns El usuario autenticado o null
+   * Obtener al usuario local
+   * @returns 
    */
   public getCurrentUser(): User | null {
     return this.currentUserSubject.value;
   }
 
   /**
-   * Obtener token de autenticación
-   * @returns El token almacenado o null
+   * Obtenemos el token de autenticación
+   * @returns 
    */
   public getToken(): string | null {
     return this.getStoredItem(this.tokenKey);
   }
 
   /**
-   * Verifica si el usuario tiene habilitada la autenticación biométrica
-   * @returns true si la autenticación biométrica está habilitada
+   * Comprobamos si la biometría está activada
+   * @returns 
    */
   public isBiometricEnabled(): boolean {
     return this.getStoredItem(this.biometricEnabledKey) === 'true';
@@ -168,9 +173,9 @@ export class AuthService {
 
   /**
    * Habilita la autenticación biométrica para el usuario actual
-   * @param username Nombre de usuario
-   * @param password Contraseña
-   * @returns Observable que indica si se guardaron correctamente
+   * @param username 
+   * @param password 
+   * @returns 
    */
   enableBiometricAuth(username: string, password: string): Observable<boolean> {
     return this.biometricService.isBiometricsAvailable().pipe(
@@ -191,7 +196,8 @@ export class AuthService {
   }
 
   /**
-   * Deshabilita la autenticación biométrica para el usuario actual
+   * Deshabilitamos el uso de biometría
+   * @returns 
    */
   disableBiometricAuth(): Observable<boolean> {
     return this.biometricService.deleteCredentials().pipe(
@@ -205,7 +211,8 @@ export class AuthService {
   }
 
   /**
-   * Intenta iniciar sesión utilizando autenticación biométrica
+   * Intentamos iniciar sesión con biometría
+   * @returns 
    */
   loginWithBiometrics(): Observable<any> {
     return this.biometricService.verifyIdentity().pipe(
@@ -222,11 +229,11 @@ export class AuthService {
   }
 
   /**
-   * Método para iniciar sesión
-   * @param username Nombre de usuario
-   * @param password Contraseña
-   * @param saveCredentials Si es true, intentará guardar credenciales para biometría
-   * @returns Observable con la respuesta
+   * Método lógico que se encarga de iniciar sesión llamando al backend para autenticar al usuario
+   * @param username 
+   * @param password 
+   * @param saveBiometrics 
+   * @returns 
    */
   login(
     username: string,
@@ -273,9 +280,9 @@ export class AuthService {
   }
 
   /**
-   * Método para registrarse
-   * @param userData Datos del formulario de registro
-   * @returns Observable con la respuesta
+   * Método para registrar un nuevo usuario
+   * @param userData 
+   * @returns 
    */
   register(userData: FormData): Observable<any> {
     return this.userRequest.register(userData).pipe(
@@ -287,55 +294,48 @@ export class AuthService {
   }
 
   /**
-   * Método para cerrar sesión
+   * Cerramos la sesión del usuario
    */
   logout(): void {
-    // Limpiar datos almacenados
     localStorage.removeItem(this.userDataKey);
     sessionStorage.removeItem(this.userDataKey);
     localStorage.removeItem(this.tokenKey);
     sessionStorage.removeItem(this.tokenKey);
 
-    // Si estamos en una plataforma capacitor, desconectar de Google Auth
     if (this.platform.is('capacitor')) {
       GoogleAuth.signOut().catch((error) => {
         console.error('Error signing out from Google Auth:', error);
       });
     }
 
-    // Resetear el estado
     this.currentUserSubject.next(null);
 
-    // Redirigir al login
     this.router.navigate(['/login']);
   }
 
   /**
-   * Verificar si el usuario está autenticado
-   * @returns true si hay un usuario autenticado
+   * Comprobamos si el usuario está autenticado
+   * @returns 
    */
   isAuthenticated(): boolean {
     return !!this.currentUserSubject.value;
   }
 
   /**
-   * Actualizar datos del usuario
-   * @param userData Datos del formulario de actualización
-   * @returns Observable con la respuesta
+   * Actualizamos los datos del usuario
+   * @param userData 
+   * @returns 
    */
   updateUserData(userData: FormData): Observable<any> {
     return this.userRequest.updateUserData(userData).pipe(
       tap((response) => {
         if (response && response.user) {
-          // Mantener el proveedor actual
           const currentUser = this.currentUserSubject.value;
           const provider = currentUser?.provider || 'normal';
 
-          // Actualizar el usuario en el estado y en el almacenamiento
           const updatedUser = { ...currentUser, ...response.user, provider };
           this.currentUserSubject.next(updatedUser);
 
-          // Guardar en el almacenamiento apropiado
           if (this.getStoredItem(this.userDataKey)) {
             this.storeItem(this.userDataKey, JSON.stringify(updatedUser));
           }
@@ -349,8 +349,8 @@ export class AuthService {
   }
 
   /**
-   * Refrescar los datos del usuario actual siempre desde la base de datos
-   * @returns Observable con la respuesta
+   * Refrescamos los datos del usuario desde el backend
+   * @returns 
    */
   refreshUserData(): Observable<any> {
     const currentUser = this.getCurrentUser();
@@ -363,13 +363,10 @@ export class AuthService {
     return this.userRequest.getUserById(currentUser.id).pipe(
       tap((response) => {
         if (response && response.message) {
-          // Mantener el proveedor actual
           const provider = currentUser.provider || 'normal';
 
-          // Usar siempre los datos frescos del servidor, incluyendo la lista de amigos
           const refreshedUser = { ...response.message, provider };
 
-          // Actualizar el estado y el almacenamiento
           this.currentUserSubject.next(refreshedUser);
 
           if (this.getStoredItem(this.userDataKey)) {
@@ -385,7 +382,8 @@ export class AuthService {
   }
 
   /**
-   * Método para registrarse con Google usando el método apropiado para la plataforma
+   * Registramos al usuario con google
+   * @returns 
    */
   registerWithGoogle(): Observable<any> {
     // Verificar si estamos en una plataforma Capacitor (móvil)
@@ -397,10 +395,10 @@ export class AuthService {
   }
 
   /**
-   * Método para autenticación con Google en dispositivos móviles usando Capacitor
+   * Método de registro de Google para dispositivos móviles
+   * @returns 
    */
   private registerWithGoogleMobile(): Observable<any> {
-    // Usamos el plugin de Capacitor para autenticar con Google
     return from(GoogleAuth.signIn()).pipe(
       switchMap((googleUser) => {
         console.log('Google Auth successful (mobile):', googleUser);
@@ -414,7 +412,8 @@ export class AuthService {
   }
 
   /**
-   * Versión web del registro con Google utilizando Google Identity API
+   * Registro de Google para la web
+   * @returns 
    */
   private registerWithGoogleWeb(): Observable<any> {
     if (!this.googleClient) {
@@ -479,7 +478,9 @@ export class AuthService {
   }
 
   /**
-   * Procesa el usuario de Google después de la autenticación para registro
+   * Procesa al usuario de Google para el registro despues de la autenticación
+   * @param googleUser 
+   * @returns 
    */
   private processGoogleUserRegistration(googleUser: any): Observable<any> {
     if (!googleUser.email) {
@@ -519,11 +520,11 @@ export class AuthService {
   }
 
   /**
-   * Registra un nuevo usuario que viene de Google Auth
-   * @param googleUser Usuario de Google Auth
+   * Registramos el usuario que viene de Auth de Google
+   * @param googleUser 
+   * @returns 
    */
   private registerGoogleUser(googleUser: any): Observable<any> {
-    // Primero intentamos obtener la imagen de perfil de Google
     return this.getGoogleProfileImage(googleUser).pipe(
       switchMap((profileImage) => {
         if (profileImage) {
@@ -532,7 +533,6 @@ export class AuthService {
             profileImage
           );
         } else {
-          // Si no pudimos obtener la imagen de perfil, usamos una predeterminada
           return this.getDefaultProfileImage().pipe(
             switchMap((defaultImage) => {
               return this.registerGoogleUserWithProfileImage(
@@ -545,25 +545,23 @@ export class AuthService {
       }),
       catchError((error) => {
         console.error('Error al obtener imagen:', error);
-        // Como último recurso, intentamos registrar sin imagen
         return this.registerGoogleUserWithoutImage(googleUser);
       })
     );
   }
 
   /**
-   * Método alternativo para registrar sin imagen de perfil
-   * Solo para casos donde no se puede obtener ninguna imagen
+   * Registra un nuevo usuario que viene de Google Auth sin imagen de perfil
+   * @param googleUser 
+   * @returns 
    */
   private registerGoogleUserWithoutImage(googleUser: any): Observable<any> {
     console.warn(
       'Intentando registro sin imagen de perfil - esto podría fallar si el backend requiere pfp'
     );
 
-    // Crear datos básicos para el registro
     const formData = new FormData();
 
-    // Extraer nombre y apellidos del displayName
     let nombre = '';
     let apellidos = '';
 
@@ -588,13 +586,10 @@ export class AuthService {
     formData.append('apellidos', apellidos);
     formData.append('password', password);
 
-    // Almacenar temporalmente la contraseña para mostrarla al usuario
     const tempPassword = password;
 
-    // Registro y retorno de información de credenciales
     return this.userRequest.register(formData).pipe(
       map((response) => {
-        // Retornamos las credenciales para que el usuario pueda iniciar sesión
         return {
           ...response,
           credentials: {
@@ -616,18 +611,17 @@ export class AuthService {
   }
 
   /**
-   * Completar el registro de Google con la imagen de perfil
-   * @param googleUser Usuario de Google Auth
-   * @param profileImage Archivo de imagen de perfil
+   * Registra un nuevo usuario que viene de Google Auth con imagen de perfil
+   * @param googleUser 
+   * @param profileImage 
+   * @returns 
    */
   private registerGoogleUserWithProfileImage(
     googleUser: any,
     profileImage: File
   ): Observable<any> {
-    // Crear FormData para mantener consistencia con el método de registro normal
     const formData = new FormData();
 
-    // Extraer nombre y apellidos de los campos adecuados
     let nombre = '';
     let apellidos = '';
 
@@ -640,29 +634,24 @@ export class AuthService {
       apellidos = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
     }
 
-    // Asegurar que se envíen valores no vacíos (requisitos de la tabla)
     const username = googleUser.email?.split('@')[0] || `user_${Date.now()}`;
     const email = googleUser.email || '';
     nombre = nombre || 'Usuario';
     apellidos = apellidos || 'Google';
     const password = this.generateRandomPassword();
 
-    // Añadir campos requeridos por la tabla users
     formData.append('username', username);
     formData.append('email', email);
     formData.append('nombre', nombre);
     formData.append('apellidos', apellidos);
     formData.append('password', password);
 
-    // Añadir la imagen de perfil como archivo
     formData.append('pfp', profileImage, 'profile.jpg');
 
-    // Guardamos las credenciales para retornarlas
     const credentials = { username, password };
 
     return this.userRequest.register(formData).pipe(
       map((response) => {
-        // Retornamos la respuesta y las credenciales para mostrarlas al usuario
         return {
           ...response,
           credentials,
@@ -682,12 +671,11 @@ export class AuthService {
   }
 
   /**
-   * Método para intentar obtener la imagen de perfil del usuario de Google
-   * @param googleUser Usuario de Google Auth
-   * @returns Observable con el archivo de imagen
+   * Obtiene la imagen de perfil del usuario de Google que se registra
+   * @param googleUser 
+   * @returns 
    */
   private getGoogleProfileImage(googleUser: any): Observable<File | null> {
-    // Comprobar diferentes posibles propiedades para la imagen
     const imageUrl =
       googleUser.imageUrl ||
       googleUser.picture ||
@@ -724,37 +712,32 @@ export class AuthService {
   }
 
   /**
-   * Obtiene una imagen de perfil predeterminada
-   * @returns Observable con el archivo de imagen
+   * Si no obtenemos imgaen de perfil desde google, damos una imagen por defecto
+   * @returns 
    */
   private getDefaultProfileImage(): Observable<File> {
-    // Generamos una imagen simple como último recurso
 
     try {
-      // Crear un canvas pequeño de 100x100 pixels
       const canvas = document.createElement('canvas');
       canvas.width = 100;
       canvas.height = 100;
 
-      // Obtener el contexto 2D y dibujar un círculo de color
       const ctx = canvas.getContext('2d');
       if (ctx) {
         // Fondo
         ctx.fillStyle = '#e0e0e0';
         ctx.fillRect(0, 0, 100, 100);
 
-        // Círculo para avatar
         ctx.fillStyle = '#3498db';
         ctx.beginPath();
         ctx.arc(50, 50, 40, 0, Math.PI * 2);
         ctx.fill();
 
-        // Iniciales genéricas
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 40px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('U', 50, 50);
+        ctx.fillText('AMUZIK'.charAt(Math.floor(Math.random() * 'AMUZIK'.length)), 50, 50);
       }
 
       // Convertir el canvas a blob
@@ -799,16 +782,14 @@ export class AuthService {
   }
 
   /**
-   * Genera una contraseña aleatoria para usuarios de Google
-   * @returns Contraseña aleatoria
+   * Generamos una contraseña aleatoria para el usuario que se registra con google
+   * @returns 
    */
   private generateRandomPassword(): string {
-    // Generamos una contraseña más segura con letras mayúsculas, minúsculas y números
     const chars =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let password = '';
 
-    // Crear contraseña de 12 caracteres
     for (let i = 0; i < 12; i++) {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
     }

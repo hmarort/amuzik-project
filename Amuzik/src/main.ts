@@ -49,6 +49,7 @@ bootstrapApplication(AppComponent, {
     provideMessaging(() => getMessaging()),
   ],
 }).then(() => {
+  /** Comprobamos si estamos en una plataforma nativa (ios o android) */
   if(Capacitor.isNativePlatform()){
     Keyboard.addListener('keyboardWillShow', () => {
       document.body.classList.add('keyboard-is-open');

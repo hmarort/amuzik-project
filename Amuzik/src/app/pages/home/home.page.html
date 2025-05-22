@@ -8,8 +8,6 @@
               <img src="data:image/jpeg;base64,{{currentUser?.base64}}" alt="User Avatar">
             </ion-avatar>
           </div>
-
-
         </ion-menu-toggle>
       </ion-buttons>
       <div class="flex-1 mx-4">
@@ -21,6 +19,47 @@
 </ion-header>
 
 <ion-content color="light" class="ion-padding-bottom">
+  <!-- Listening Room Banner - mostrado cuando el usuario está en una sala -->
+  <div *ngIf="!isNativePlatform && (listeningRoomService.currentRoom$ | async) as currentRoom" class="listening-room-banner">
+    <ion-card color="tertiary" class="ion-no-margin">
+      <ion-card-content>
+        <div class="listening-room-header">
+          <div>
+            <h3>Sala de escucha: {{currentRoom.id}}</h3>
+            <p>{{currentRoom.members.length || 1}} oyentes</p>
+          </div>
+          <ion-buttons>
+            <ion-button fill="clear" (click)="leaveCurrentRoom()">
+              <ion-icon name="exit-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+            <ion-button fill="clear" (click)="inviteUserDialog()">
+              <ion-icon name="person-add-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Invitaciones pendientes -->
+  <div *ngIf="!isNativePlatform && ((listeningRoomService.pendingInvitations$ | async) || []).length > 0" class="pending-invitations">
+    <ion-card color="warning" class="ion-no-margin">
+      <ion-card-content>
+        <div *ngFor="let invitation of listeningRoomService.pendingInvitations$ | async" class="invitation-item">
+          <p><strong>{{invitation.invitername}}</strong> te ha invitado a una sala de escucha</p>
+          <ion-buttons>
+            <ion-button fill="clear" color="success" (click)="acceptRoomInvitation(invitation)">
+              <ion-icon name="checkmark-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+            <ion-button fill="clear" color="danger" (click)="declineRoomInvitation(invitation)">
+              <ion-icon name="close-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
   <div *ngIf="isLoading" class="ion-padding ion-text-center">
     <ion-spinner name="circular"></ion-spinner>
     <p>Cargando música...</p>
@@ -76,13 +115,13 @@
 
       <div *ngIf="playlist.expanded" class="playlist-tracks">
         <ion-list>
-          <ion-item *ngFor="let item of playlist.playlist_contents" lines="none" class="track-item" color="light"
-            (click)="playTrack({
+          <ion-item *ngFor="let item of playlist.playlist_contents; let i = index" lines="none" class="track-item"
+            color="light" (click)="playTrack({
               id: item.track_id || item.id,
               title: item.title || 'Canción ' + (item.track_id || item.id),
               user: { name: item.user?.name || 'Artista desconocido' },
               artwork: item.artwork || playlist.artwork
-            })">
+            }, playlist.playlist_contents)">
             <ion-thumbnail slot="start">
               <img [src]="item.artwork?.['150x150'] || playlist.artwork?.['150x150'] || 'assets/default.jpg'">
             </ion-thumbnail>
@@ -90,9 +129,14 @@
               <h3 class="ion-text-wrap ion-text-white">{{ item.title || 'Canción ' + (item.track_id || item.id) }}</h3>
               <p class="ion-text-sm ion-text-color-medium">{{ item.user?.name || 'Artista desconocido' }}</p>
             </ion-label>
-            <div slot="end" class="track-status">
+            <div slot="end" class="track-actions">
               <ion-icon *ngIf="currentTrack?.id === (item.track_id || item.id) && isPlaying"
                 name="musical-notes-outline" color="primary"></ion-icon>
+              <!-- Botón para crear sala de escucha - oculto en móvil -->
+              <ion-button *ngIf="!isNativePlatform" fill="clear" size="small" color="light"
+                (click)="$event.stopPropagation(); createListeningRoom(item.track_id || item.id)">
+                <ion-icon name="people-outline"></ion-icon>
+              </ion-button>
             </div>
           </ion-item>
         </ion-list>
@@ -126,6 +170,11 @@
           <p *ngIf="item.type === 'track'">Track · {{ item.playCount || 0 }} plays</p>
           <p *ngIf="item.type === 'playlist'">Playlist · {{ item.trackCount || 0 }} tracks</p>
         </ion-label>
+        <!-- Botón para crear sala de escucha - oculto en móvil -->
+        <ion-button *ngIf="!isNativePlatform" slot="end" fill="clear" color="light"
+          (click)="$event.stopPropagation(); createListeningRoom(item.id)">
+          <ion-icon name="people-outline"></ion-icon>
+        </ion-button>
         <ion-icon slot="end" name="play-outline"></ion-icon>
       </ion-item>
     </ion-list>
@@ -139,6 +188,35 @@
         <p>Buscando...</p>
       </div>
     </ng-template>
+  </div>
+</div>
+
+<!-- Modal para invitar usuarios a sala - oculto en móvil -->
+<div *ngIf="!isNativePlatform && showInviteModal" class="invite-modal">
+  <div class="invite-modal-content">
+    <div class="invite-modal-header">
+      <h3>Invitar amigos</h3>
+      <ion-button fill="clear" color="medium" (click)="closeInviteDialog()">
+        <ion-icon name="close-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </div>
+    <div class="invite-modal-body">
+      <ion-searchbar placeholder="Buscar usuarios..." [(ngModel)]="userSearchTerm"
+        (ionInput)="searchUsers($event)"></ion-searchbar>
+      <div class="user-list">
+        <ion-list>
+          <ion-item *ngFor="let user of filteredUsers" button (click)="inviteUserToRoom(user.id)">
+            <ion-avatar slot="start">
+              <img src="data:image/jpeg;base64,{{user.base64}}">
+            </ion-avatar>
+            <ion-label>
+              <h3>{{user.username}}</h3>
+              <p>{{user.nombre}}</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -157,7 +235,17 @@
         <h3 class="ion-text-wrap ion-text-white">{{ currentTrack.title || 'Canción ' + currentTrack.id }}</h3>
         <p class="ion-text-sm ion-text-color-light">{{ currentTrack.user.name || 'Artista desconocido' }}</p>
       </ion-label>
+      <!-- Indicador de sala actual - oculto en móvil -->
+      <div slot="end" class="current-room-indicator" *ngIf="!isNativePlatform && (listeningRoomService.currentRoom$ | async) as room">
+        <ion-icon name="people-outline" color="tertiary"></ion-icon>
+        <span class="room-member-count">{{room.members.length || 1}}</span>
+      </div>
       <ion-buttons slot="end">
+        <!-- Botón para crear sala de escucha - oculto en móvil -->
+        <ion-button *ngIf="!isNativePlatform && !(listeningRoomService.currentRoom$ | async)" fill="clear" color="light"
+          (click)="createListeningRoom(currentTrack.id); $event.stopPropagation()">
+          <ion-icon name="people-outline" slot="icon-only"></ion-icon>
+        </ion-button>
         <ion-button fill="clear" color="light" (click)="previousTrack(); $event.stopPropagation()">
           <ion-icon name="play-skip-back-outline" slot="icon-only"></ion-icon>
         </ion-button>
@@ -178,6 +266,26 @@
       <div class="player-header">
         <ion-button fill="clear" color="light" (click)="togglePlayer()">
           <ion-icon name="chevron-down-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        <!-- Controles de sala - ocultos en móvil -->
+        <div class="room-controls" *ngIf="!isNativePlatform && (listeningRoomService.currentRoom$ | async) as room">
+          <span class="room-badge">
+            <ion-icon name="people-outline"></ion-icon> Sala de escucha
+          </span>
+          <ion-buttons>
+            <ion-button fill="clear" color="danger" (click)="leaveCurrentRoom()">
+              <ion-icon name="exit-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+            <ion-button fill="clear" color="light" (click)="inviteUserDialog()">
+              <ion-icon name="person-add-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </div>
+        <!-- Botón para crear sala - oculto en móvil -->
+        <ion-button *ngIf="!isNativePlatform && !(listeningRoomService.currentRoom$ | async)" fill="clear" color="light"
+          (click)="createListeningRoom(currentTrack.id)">
+          <ion-icon name="people-outline" slot="start"></ion-icon>
+          Crear sala
         </ion-button>
       </div>
 

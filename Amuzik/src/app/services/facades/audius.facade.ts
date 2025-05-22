@@ -3,36 +3,35 @@ import { Injectable } from '@angular/core';
 import { AudiusRequest } from '../requests/audius.request';
 import { Observable, Subject, BehaviorSubject } from 'rxjs';
 
+
 export interface PlaybackState {
   trackId: string | null;
   isPlaying: boolean;
-  position: number; // en segundos
+  position: number;
 }
 
 export interface MusicEvent {
   eventType: 'play' | 'pause' | 'seek';
   trackId: string | null;
   position: number;
-  timestamp: number; // Timestamp cuando ocurrió el evento
-  metadata?: TrackMetadata; // Incluir metadatos si está disponible
+  timestamp: number;
+  metadata?: TrackMetadata;
 }
 
 export interface TrackMetadata {
   title: string;
   artist: string;
   artworkUrl: string;
-  duration: number; // en segundos
+  duration: number;
 }
 
 @Injectable({
   providedIn: 'root',
 })
 export class AudiusFacade {
-  // Subject para eventos musicales
   private musicEventSubject = new Subject<MusicEvent>();
   public musicEvent$ = this.musicEventSubject.asObservable();
 
-  // Estado de reproducción
   private playbackStateSubject = new BehaviorSubject<PlaybackState>({
     trackId: null,
     isPlaying: false,
@@ -40,12 +39,10 @@ export class AudiusFacade {
   });
   public playbackState$ = this.playbackStateSubject.asObservable();
 
-  // Metadatos de la pista actual
   private currentMetadataSubject = new BehaviorSubject<TrackMetadata | null>(null);
   public currentMetadata$ = this.currentMetadataSubject.asObservable();
 
   constructor(private audiusRequest: AudiusRequest) {
-    // Actualizar el estado de reproducción cuando cambia cualquier valor relevante
     this.audiusRequest.currentTrackId$.subscribe(trackId => {
       this.updatePlaybackState({ trackId });
       if (trackId) {
@@ -61,7 +58,6 @@ export class AudiusFacade {
       if (isPlaying) {
         this.emitMusicEvent('play');
       } else {
-        // Solo emitir pausa si ya teníamos un track
         if (this.getPlaybackState().trackId) {
           this.emitMusicEvent('pause');
         }
@@ -73,7 +69,6 @@ export class AudiusFacade {
     });
   }
 
-  // Métodos existentes
   search(query: string): Observable<any> {
     return this.audiusRequest.searchContent(query);
   }
@@ -103,12 +98,10 @@ export class AudiusFacade {
       this.audiusRequest.setCurrentPlaylist(playlist, trackId);
     }
     await this.audiusRequest.playTrack(trackId);
-    // No emitimos el evento aquí porque se emitirá desde los subscriptions
   }
 
   pause(): void {
     this.audiusRequest.pauseTrack();
-    // No emitimos el evento aquí porque se emitirá desde los subscriptions
   }
 
   stop(): void {
@@ -156,24 +149,14 @@ export class AudiusFacade {
     return this.audiusRequest.formatTime(time);
   }
 
-  // Nuevos métodos
-  /**
-   * Obtiene el estado actual de reproducción
-   */
   getPlaybackState(): PlaybackState {
     return this.playbackStateSubject.getValue();
   }
 
-  /**
-   * Suscribe un callback a eventos musicales locales
-   */
   onLocalMusicEvent(callback: (event: MusicEvent) => void) {
     return this.musicEvent$.subscribe(callback);
   }
 
-  /**
-   * Actualiza el estado de reproducción
-   */
   private updatePlaybackState(partialState: Partial<PlaybackState>) {
     const currentState = this.playbackStateSubject.getValue();
     this.playbackStateSubject.next({
@@ -182,9 +165,6 @@ export class AudiusFacade {
     });
   }
 
-  /**
-   * Emite un evento musical
-   */
   private emitMusicEvent(eventType: 'play' | 'pause' | 'seek') {
     const state = this.getPlaybackState();
     const metadata = this.currentMetadataSubject.getValue();
@@ -198,9 +178,6 @@ export class AudiusFacade {
     });
   }
 
-  /**
-   * Obtiene y actualiza los metadatos de una pista
-   */
   private fetchAndUpdateMetadata(trackId: string) {
     this.getTrackById(trackId).subscribe(response => {
       if (response && response.data) {

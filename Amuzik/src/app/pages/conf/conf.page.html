@@ -77,51 +77,6 @@
     <ion-item-divider>
       <ion-label>
         <span class="seccion-titulo">
-          <ion-icon name="person-outline"></ion-icon>
-          Ajustes de Cuenta
-        </span>
-      </ion-label>
-    </ion-item-divider>
-    <ion-item>
-      <ion-icon slot="start" name="language-outline"></ion-icon>
-      <ion-label>Idioma</ion-label>
-      <ion-select [(ngModel)]="configuraciones.cuenta.idioma" interface="popover">
-        <ion-select-option *ngFor="let idioma of idiomas" [value]="idioma.valor">{{idioma.texto}}</ion-select-option>
-      </ion-select>
-    </ion-item>
-  </ion-list>
-
-  <ion-list>
-    <ion-item-divider>
-      <ion-label>
-        <span class="seccion-titulo">
-          <ion-icon name="notifications-outline"></ion-icon>
-          Notificaciones
-        </span>
-      </ion-label>
-    </ion-item-divider>
-    <ion-item>
-      <ion-label>Notificaciones push</ion-label>
-      <ion-toggle [(ngModel)]="configuraciones.notificaciones.push"></ion-toggle>
-    </ion-item>
-    <ion-item>
-      <ion-label>Notificaciones por email</ion-label>
-      <ion-toggle [(ngModel)]="configuraciones.notificaciones.email"></ion-toggle>
-    </ion-item>
-    <ion-item *ngIf="configuraciones.notificaciones.push || configuraciones.notificaciones.email">
-      <ion-label>Sonido</ion-label>
-      <ion-toggle [(ngModel)]="configuraciones.notificaciones.sonido"></ion-toggle>
-    </ion-item>
-    <ion-item *ngIf="configuraciones.notificaciones.push">
-      <ion-label>Vibración</ion-label>
-      <ion-toggle [(ngModel)]="configuraciones.notificaciones.vibracion"></ion-toggle>
-    </ion-item>
-  </ion-list>
-
-  <ion-list>
-    <ion-item-divider>
-      <ion-label>
-        <span class="seccion-titulo">
           <ion-icon name="settings-outline"></ion-icon>
           Configuración General
         </span>
@@ -138,12 +93,6 @@
     <ion-button expand="block" color="danger" (click)="cerrarSesion()">
       <ion-icon slot="start" name="log-out-outline"></ion-icon>
       Cerrar sesión
-    </ion-button>
-  </div>
-
-  <div class="accion-container">
-    <ion-button expand="block" (click)="guardarCambios()" [disabled]="!hayCambiosSinGuardar()">
-      Guardar cambios
     </ion-button>
   </div>
 
