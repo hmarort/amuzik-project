@@ -86,7 +86,6 @@ export class ListeningRoomService {
     const socket = this.chatService.getSocket();
 
     if (!socket) {
-      console.error('No hay conexión WebSocket disponible');
       this.chatService.connectionStatus$.subscribe((status) => {
         if (status.isConnected) {
           this.setupWebSocketListeners();
@@ -98,7 +97,6 @@ export class ListeningRoomService {
     socket.addEventListener('message', (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('Mensaje recibido del WebSocket:', data);
 
         switch (data.type) {
           case 'room_created':
@@ -185,7 +183,6 @@ export class ListeningRoomService {
    */
   getUserRooms(): void {
     if (!this.chatService.isConnected()) {
-      console.error('No hay conexión WebSocket');
       return;
     }
 
@@ -202,7 +199,6 @@ export class ListeningRoomService {
    */
   createRoom(trackId: string): void {
     if (!this.chatService.isConnected()) {
-      console.error('No hay conexión WebSocket');
       return;
     }
 
@@ -221,7 +217,6 @@ export class ListeningRoomService {
    */
   inviteToRoom(roomId: string, inviteeId: string): void {
     if (!this.chatService.isConnected()) {
-      console.error('No hay conexión WebSocket');
       return;
     }
 
@@ -240,7 +235,6 @@ export class ListeningRoomService {
    */
   joinRoom(roomId: string): void {
     if (!this.chatService.isConnected()) {
-      console.error('No hay conexión WebSocket');
       return;
     }
 
@@ -258,7 +252,6 @@ export class ListeningRoomService {
    */
   leaveRoom(roomId: string): void {
     if (!this.chatService.isConnected()) {
-      console.error('No hay conexión WebSocket');
       return;
     }
 
@@ -289,7 +282,6 @@ export class ListeningRoomService {
     progress: number
   ): void {
     if (!this.chatService.isConnected()) {
-      console.error('No hay conexión WebSocket');
       return;
     }
 
@@ -310,7 +302,6 @@ export class ListeningRoomService {
    */
   updateRoomTrack(roomId: string, trackId: string): void {
     if (!this.chatService.isConnected()) {
-      console.error('No hay conexión WebSocket');
       return;
     }
 
@@ -329,7 +320,6 @@ export class ListeningRoomService {
    */
   syncWithRoom(roomId: string): void {
     if (!this.chatService.isConnected()) {
-      console.error('No hay conexión WebSocket');
       return;
     }
 
@@ -636,7 +626,6 @@ export class ListeningRoomService {
    */
   private handleUserRoomsResponse(rooms: ListeningRoom[]): void {
     if (!rooms || !Array.isArray(rooms)) {
-      console.error('Formato incorrecto de respuesta de salas');
       return;
     }
 
@@ -683,7 +672,6 @@ export class ListeningRoomService {
         setTimeout(() => this.audiusFacade.pause(), 100);
       }
     } catch (error) {
-      console.error('Error al sincronizar con la sala:', error);
     } finally {
       setTimeout(() => {
         this.isSyncing = false;

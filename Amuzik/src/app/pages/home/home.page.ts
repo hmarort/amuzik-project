@@ -285,28 +285,23 @@ export class HomePage implements OnInit, OnDestroy {
       });
 
     // Suscripciones para ListeningRoomService
-    if (this.isNativePlatform
+    if (!this.isNativePlatform
     ) {
       this.listeningRoomService.currentRoom$
         .pipe(takeUntil(this.destroy$))
         .subscribe((room) => {
           console.log('Current listening room updated:', room);
-          // Aquí puedes actualizar la UI según sea necesario
         });
 
       this.listeningRoomService.roomEvent$
         .pipe(takeUntil(this.destroy$))
         .subscribe((event) => {
           console.log('Room event received:', event);
-          // Manejar diferentes tipos de eventos
           switch (event.type) {
             case 'joined':
-              // Por ejemplo, mostrar una notificación
               break;
             case 'member_joined':
-              // Actualizar la lista de miembros en la UI
               break;
-            // Añadir más casos según sea necesario
           }
         });
 
@@ -314,10 +309,9 @@ export class HomePage implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe((invitations) => {
           console.log('Pending invitations updated:', invitations);
-          // Actualizar la UI para mostrar invitaciones pendientes
         });
     }else{
-      console.log('No se puede inicializar ListeningRoomService en android');
+      console.log('Esto es is native: ', this.isNativePlatform);
     }
 
     forkJoin({
@@ -336,7 +330,6 @@ export class HomePage implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (results) => {
-          // Procesamos los tracks primero
           if (results.tracks?.data) {
             this.trendingTracks = results.tracks.data.slice(0, 10);
             results.tracks.data.forEach((track: any) => {
@@ -344,7 +337,6 @@ export class HomePage implements OnInit, OnDestroy {
             });
           }
 
-          // Ahora procesamos y validamos las playlists
           if (results.playlists?.data) {
             const rawPlaylists = results.playlists.data.map(
               (playlist: Playlist) => ({
@@ -354,7 +346,6 @@ export class HomePage implements OnInit, OnDestroy {
               })
             );
 
-            // Validamos las playlists (eliminando las inválidas)
             this.validateAllPlaylists(rawPlaylists);
           } else {
             this.isLoading = false;
@@ -403,21 +394,18 @@ export class HomePage implements OnInit, OnDestroy {
           Array.isArray(response.data) &&
           response.data.length > 0
         ) {
-          // Guardamos los tracks en caché
           response.data.forEach((track: any) => {
             if (track.id) {
               this.tracksCache.set(track.id, track);
             }
           });
 
-          // Devolvemos la playlist con sus tracks
           return {
             ...playlist,
             playlist_contents: response.data,
             track_count: response.data.length,
           };
         }
-        // Si no hay tracks, retornamos null para filtrarla
         return null;
       }),
       catchError((error) => {
@@ -547,18 +535,13 @@ export class HomePage implements OnInit, OnDestroy {
 
     const trackId = track.id;
 
-    // Si se están reproduciendo tracks de una playlist, usar esa playlist
     if (playlistTracks && playlistTracks.length) {
       this.audiusFacade.play(trackId, playlistTracks);
     } else if (this.currentPlaylist) {
-      // Mantener la playlist actual si existe
       this.audiusFacade.play(trackId, this.currentPlaylist);
     } else {
-      // Si no hay playlist, crear una con solo este track
       this.audiusFacade.play(trackId, [track]);
     }
-
-    // Si estamos en una sala de escucha, actualizar el estado de la sala
     const currentRoom = this.listeningRoomService.getCurrentRoom();
     if (currentRoom) {
       this.listeningRoomService.updateRoomTrack(currentRoom.id, trackId);
@@ -569,7 +552,6 @@ export class HomePage implements OnInit, OnDestroy {
   pauseTrack() {
     this.audiusFacade.pause();
 
-    // Sincronizar con la sala si estamos en una
     const currentRoom = this.listeningRoomService.getCurrentRoom();
     if (currentRoom) {
       this.listeningRoomService.updateRoomState(
@@ -607,7 +589,6 @@ export class HomePage implements OnInit, OnDestroy {
   seekTo(position: number) {
     this.audiusFacade.seekTo(position);
 
-    // Sincronizar con la sala si estamos en una
     const currentRoom = this.listeningRoomService.getCurrentRoom();
     if (currentRoom) {
       this.listeningRoomService.updateRoomState(
@@ -640,7 +621,6 @@ export class HomePage implements OnInit, OnDestroy {
       ],
     });
 
-    // Mejorar los handlers para que usen nuestras nuevas implementaciones
     navigator.mediaSession.setActionHandler('play', () => {
       if (this.currentTrack) {
         this.audiusFacade.play(this.currentTrack.id);
@@ -793,9 +773,6 @@ export class HomePage implements OnInit, OnDestroy {
       !playlist.playlist_contents ||
       playlist.playlist_contents.length === 0
     ) {
-      console.log(
-        `Cargando tracks para la playlist ${playlist.id} antes de reproducir`
-      );
       this.loadPlaylistTracksEfficiently(playlist)
         .pipe(takeUntil(this.destroy$))
         .subscribe((tracks) => {
@@ -812,7 +789,6 @@ export class HomePage implements OnInit, OnDestroy {
             const firstTrack = normalizedTracks[0];
             const trackId = firstTrack.id;
             if (trackId) {
-              console.log(`Reproduciendo primer track: ${trackId}`);
               this.audiusFacade.play(trackId, normalizedTracks);
             }
           } else {
@@ -820,9 +796,6 @@ export class HomePage implements OnInit, OnDestroy {
           }
         });
     } else {
-      console.log(
-        `Playlist ya cargada con ${playlist.playlist_contents.length} tracks`
-      );
       // Normalizar los tracks
       const normalizedTracks = playlist.playlist_contents.map((track) => ({
         ...track,
@@ -832,7 +805,6 @@ export class HomePage implements OnInit, OnDestroy {
       const firstTrack = normalizedTracks[0];
       const trackId = firstTrack.id;
       if (trackId) {
-        console.log(`Reproduciendo primer track: ${trackId}`);
         this.audiusFacade.play(trackId, normalizedTracks);
       }
     }
@@ -865,7 +837,6 @@ export class HomePage implements OnInit, OnDestroy {
     return 'assets/default.jpg';
   }
 
-  // Crear una nueva sala de escucha
   createListeningRoom(trackId: string) {
     if (!trackId) {
       console.error('No se puede crear sala: trackId no válido');
@@ -874,12 +845,10 @@ export class HomePage implements OnInit, OnDestroy {
     this.listeningRoomService.createRoom(trackId);
   }
 
-  // Unirse a una sala existente
   joinListeningRoom(roomId: string) {
     this.listeningRoomService.joinRoom(roomId);
   }
 
-  // Salir de la sala actual
   leaveCurrentRoom() {
     const currentRoom = this.listeningRoomService.getCurrentRoom();
     if (currentRoom) {
@@ -887,7 +856,6 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
-  // Invitar a un usuario a la sala actual
   inviteUserToRoom(userId: string) {
     const currentRoom = this.listeningRoomService.getCurrentRoom();
     if (currentRoom) {
@@ -895,17 +863,14 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
-  // Aceptar una invitación
   acceptRoomInvitation(invitation: RoomEvent) {
     this.listeningRoomService.acceptInvitation(invitation);
   }
 
-  // Rechazar una invitación
   declineRoomInvitation(invitation: RoomEvent) {
     this.listeningRoomService.declineInvitation(invitation);
   }
 
-  // Métodos para gestionar el modal de invitaciones
   inviteUserDialog() {
     this.showInviteModal = true;
     this.loadUsers();
@@ -923,14 +888,12 @@ export class HomePage implements OnInit, OnDestroy {
     this.userSearchTerm = query;
 
     if (!query) {
-      // Si no hay término de búsqueda, mostrar todos los amigos
       this.loadUsers();
       return;
     }
 
     this.isSearchingUsers = true;
 
-    // Filtra los amigos localmente
     if (this.currentUser && this.currentUser.friends) {
       this.filteredUsers = this.currentUser.friends.filter(
         (friend) =>
@@ -940,7 +903,6 @@ export class HomePage implements OnInit, OnDestroy {
       );
       this.isSearchingUsers = false;
     } else {
-      // Si no hay amigos cargados, intentar refrescar datos del usuario
       this.authService.refreshUserData().subscribe({
         next: (user) => {
           if (user && user.friends) {
@@ -982,27 +944,21 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
-  // 6. Método para seleccionar un usuario para invitar
   selectUserForInvitation(user: User) {
     if (!this.selectedUsers.some((u) => u.id === user.id)) {
       this.selectedUsers.push(user);
     }
   }
 
-  // 7. Método para quitar un usuario seleccionado
   removeSelectedUser(user: User) {
     this.selectedUsers = this.selectedUsers.filter((u) => u.id !== user.id);
   }
 
-  // 8. Método para enviar invitaciones a los usuarios seleccionados
   sendInvitations() {
     const currentRoom = this.listeningRoomService.getCurrentRoom();
     if (!currentRoom) {
-      // Si no hay sala, crear una nueva con la canción actual
       if (this.currentTrack) {
-        // Suponiendo que createRoom es síncrono y retorna void, esperar a que la sala esté creada y luego obtener el room actualizado
         this.listeningRoomService.createRoom(this.currentTrack.id);
-        // Esperar a que el estado se actualice antes de invitar
         setTimeout(() => {
           const newRoom = this.listeningRoomService.getCurrentRoom();
           if (newRoom && newRoom.id) {
@@ -1015,28 +971,23 @@ export class HomePage implements OnInit, OnDestroy {
         console.error('No hay track actual para crear una sala de escucha');
       }
     } else {
-      // Si ya hay una sala, invitar a los usuarios seleccionados
       this.inviteSelectedUsers(currentRoom.id);
     }
   }
 
-  // 9. Método auxiliar para invitar a los usuarios seleccionados
   private inviteSelectedUsers(roomId: string) {
     if (this.selectedUsers.length === 0) {
       return;
     }
 
-    // Enviar invitaciones a todos los usuarios seleccionados
     this.selectedUsers.forEach((user) => {
       this.listeningRoomService.inviteToRoom(roomId, user.id);
     });
 
-    // Limpiar selección y cerrar modal
     this.selectedUsers = [];
     this.closeInviteDialog();
   }
 
-  // Método auxiliar para obtener artwork de track por ID
   getTrackArtwork(trackId: string): string | null {
     const track = this.findTrackInData(trackId);
     return track?.artwork?.['150x150'] || null;

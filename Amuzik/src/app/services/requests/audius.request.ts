@@ -51,10 +51,8 @@ export class AudiusRequest {
   searchContent(query: string): Observable<any> {
     return this.http.get(`${this.API_URL}/tracks/search?query=${encodeURIComponent(query)}&app_name=${this.APP_NAME}`).pipe(
       tap(response => {
-        console.log('Track search results:', response);
       }),
       catchError(error => {
-        console.error('Error en la búsqueda de tracks:', error);
         return of({ data: [] });
       })
     );
@@ -74,11 +72,9 @@ export class AudiusRequest {
       .get(`${this.API_URL}/playlists/${playlistId}/tracks?app_name=${this.APP_NAME}`)
       .pipe(
         tap((response) => {
-          console.log('Tracks de la playlist recibidos:', response);
           this.cache.set(cacheKey, response);
         }),
         catchError((error) => {
-          console.error('Error al obtener tracks de la playlist:', error);
           return of({ data: [] });
         })
       );
@@ -93,10 +89,8 @@ export class AudiusRequest {
       .get(`${this.API_URL}/tracks/trending?app_name=${this.APP_NAME}`)
       .pipe(
         tap((response) => {
-          console.log('Tracks recibidos:', response);
         }),
         catchError((error) => {
-          console.error('Error al obtener tracks:', error);
           return of({ data: [] });
         })
       );
@@ -111,10 +105,8 @@ export class AudiusRequest {
       .get(`${this.API_URL}/playlists/trending?app_name=${this.APP_NAME}`)
       .pipe(
         tap((response) => {
-          console.log('Playlists recibidos:', response);
         }),
         catchError((error) => {
-          console.error('Error al obtener playlists:', error);
           return of({ data: [] });
         })
       );
@@ -130,10 +122,8 @@ export class AudiusRequest {
       .get(`${this.API_URL}/playlists/${playlistId}?app_name=${this.APP_NAME}`)
       .pipe(
         tap((response) => {
-          console.log('Playlist obtenida:', response);
         }),
         catchError((error) => {
-          console.error('Error al obtener playlist:', error);
           return of(null);
         })
       );
@@ -149,10 +139,8 @@ export class AudiusRequest {
       .get(`${this.API_URL}/tracks/${trackId}?app_name=${this.APP_NAME}`)
       .pipe(
         tap((response) => {
-          console.log('Track obtenido:', response);
         }),
         catchError((error) => {
-          console.error('Error al obtener track:', error);
           return of(null);
         })
       );
@@ -176,7 +164,6 @@ export class AudiusRequest {
       }
       return response.url;
     } catch (error) {
-      console.error('Error obteniendo la URL de streaming:', error);
       return '';
     }
   }
@@ -206,10 +193,8 @@ export class AudiusRequest {
       );
       
       if (trackIndex !== -1) {
-        console.log(`Estableciendo índice inicial: ${trackIndex} para track: ${initialTrackId}`);
         this.currentTrackIndexSubject.next(trackIndex);
       } else {
-        console.warn(`No se encontró el track ${initialTrackId} en la playlist`);
         this.currentTrackIndexSubject.next(0);
       }
     } else if (normalizedPlaylist.length > 0) {
@@ -224,16 +209,14 @@ export class AudiusRequest {
    */
   async playTrack(trackId: string | undefined) {
     if (!trackId) {
-      console.error('Error: trackId es undefined. No se puede reproducir.');
       return;
     }
   
-    console.log(`Intentando reproducir track: ${trackId}`);
     const isCurrentTrack = this.currentTrackIdSubject.value === trackId;
   
     if (isCurrentTrack && this.currentAudio) {
       this.currentAudio.play().catch((error) => {
-        console.error('Error al reanudar reproducción:', error);
+        //
       });
       this.isPlayingSubject.next(true);
       return;
@@ -251,9 +234,6 @@ export class AudiusRequest {
   
       const streamUrl = await this.getTrackStreamUrl(trackId);
       if (!streamUrl) {
-        console.error(
-          `No se pudo obtener la URL de streaming para el track ID: ${trackId}`
-        );
         return;
       }
   
@@ -269,7 +249,6 @@ export class AudiusRequest {
     }
   
     this.currentAudio?.play().catch((error) => {
-      console.error('Error al intentar reproducir:', error);
     });
   
     this.currentTrackIdSubject.next(trackId);
@@ -282,10 +261,8 @@ export class AudiusRequest {
       );
       
       if (trackIndex !== -1) {
-        console.log(`Actualizando índice actual a: ${trackIndex}`);
         this.currentTrackIndexSubject.next(trackIndex);
       } else {
-        console.warn(`Track ${trackId} no encontrado en la playlist actual`);
       }
     }
   }
@@ -321,7 +298,6 @@ export class AudiusRequest {
     };
 
     this.currentAudio.onended = () => {
-      console.log('Track finalizado');
       this.isPlayingSubject.next(false);
       this.trackPositions.delete(trackId);
       clearInterval(updateInterval);
@@ -330,7 +306,6 @@ export class AudiusRequest {
     };
 
     this.currentAudio.onerror = () => {
-      console.error('Error durante reproducción de audio');
       this.isPlayingSubject.next(false);
       clearInterval(updateInterval);
     };
@@ -429,20 +404,16 @@ export class AudiusRequest {
   playNextTrack() {
     const currentPlaylist = this.currentPlaylistSubject.value;
     const currentIndex = this.currentTrackIndexSubject.value;
-    
-    console.log(`Intentando reproducir siguiente track. Índice actual: ${currentIndex}, Playlist length: ${currentPlaylist?.length || 0}`);
-    
+        
     if (currentPlaylist && currentIndex !== -1 && currentIndex < currentPlaylist.length - 1) {
       const nextTrack = currentPlaylist[currentIndex + 1];
       const nextTrackId = nextTrack.track_id || nextTrack.id;
       if (nextTrackId) {
-        console.log(`Reproduciendo siguiente track: ${nextTrackId}`);
         this.playTrack(nextTrackId);
       } else {
         console.warn('El siguiente track no tiene ID válido');
       }
     } else {
-      console.log('No hay más tracks en la playlist o no hay playlist activa');
       // Si no hay playlist o estamos en el último track, intentamos encontrar uno similar
       this.findSimilarTrack(this.currentTrackIdSubject.value);
     }
@@ -522,10 +493,8 @@ export class AudiusRequest {
     const currentPlaylist = this.currentPlaylistSubject.value;
     const currentIndex = this.currentTrackIndexSubject.value;
     
-    console.log(`Intentando reproducir track anterior. Índice actual: ${currentIndex}`);
     
     if (this.currentAudio && this.currentAudio.currentTime > 3) {
-      console.log('Volviendo al inicio de la canción actual');
       this.seekTo(0);
       return;
     }
@@ -534,13 +503,12 @@ export class AudiusRequest {
       const prevTrack = currentPlaylist[currentIndex - 1];
       const prevTrackId = prevTrack.track_id || prevTrack.id;
       if (prevTrackId) {
-        console.log(`Reproduciendo track anterior: ${prevTrackId}`);
         this.playTrack(prevTrackId);
       } else {
         console.warn('El track anterior no tiene ID válido');
       }
     } else {
-      console.log('Ya estás en el primer track o no hay playlist activa');
+      //
     }
   }
 
