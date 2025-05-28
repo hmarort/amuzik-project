@@ -3,7 +3,6 @@ import { Injectable } from '@angular/core';
 import { AudiusRequest } from '../requests/audius.request';
 import { Observable, Subject, BehaviorSubject } from 'rxjs';
 
-
 export interface PlaybackState {
   trackId: string | null;
   isPlaying: boolean;
@@ -35,15 +34,17 @@ export class AudiusFacade {
   private playbackStateSubject = new BehaviorSubject<PlaybackState>({
     trackId: null,
     isPlaying: false,
-    position: 0
+    position: 0,
   });
   public playbackState$ = this.playbackStateSubject.asObservable();
 
-  private currentMetadataSubject = new BehaviorSubject<TrackMetadata | null>(null);
+  private currentMetadataSubject = new BehaviorSubject<TrackMetadata | null>(
+    null
+  );
   public currentMetadata$ = this.currentMetadataSubject.asObservable();
 
   constructor(private audiusRequest: AudiusRequest) {
-    this.audiusRequest.currentTrackId$.subscribe(trackId => {
+    this.audiusRequest.currentTrackId$.subscribe((trackId) => {
       this.updatePlaybackState({ trackId });
       if (trackId) {
         this.fetchAndUpdateMetadata(trackId);
@@ -52,9 +53,9 @@ export class AudiusFacade {
       }
     });
 
-    this.audiusRequest.isPlaying$.subscribe(isPlaying => {
+    this.audiusRequest.isPlaying$.subscribe((isPlaying) => {
       this.updatePlaybackState({ isPlaying });
-      
+
       if (isPlaying) {
         this.emitMusicEvent('play');
       } else {
@@ -64,7 +65,7 @@ export class AudiusFacade {
       }
     });
 
-    this.audiusRequest.currentTime$.subscribe(position => {
+    this.audiusRequest.currentTime$.subscribe((position) => {
       this.updatePlaybackState({ position });
     });
   }
@@ -93,15 +94,22 @@ export class AudiusFacade {
     return this.audiusRequest.getTrackById(trackId);
   }
 
-  async play(trackId: string, playlist?: any[]) {
+  // Reemplazar el método play en AudiusFacade
+  async play(
+    trackId: string,
+    playlist?: any[],
+    syncPosition?: number,
+    suppressEvents: boolean = false
+  ) {
     if (playlist) {
       this.audiusRequest.setCurrentPlaylist(playlist, trackId);
     }
-    await this.audiusRequest.playTrack(trackId);
+    await this.audiusRequest.playTrack(trackId, syncPosition, suppressEvents);
   }
 
-  pause(): void {
-    this.audiusRequest.pauseTrack();
+  // Reemplazar el método pause en AudiusFacade
+  pause(suppressEvents: boolean = false): void {
+    this.audiusRequest.pauseTrack(suppressEvents);
   }
 
   stop(): void {
@@ -116,9 +124,12 @@ export class AudiusFacade {
     this.audiusRequest.playPreviousTrack();
   }
 
-  seekTo(position: number): void {
-    this.audiusRequest.seekTo(position);
-    this.emitMusicEvent('seek');
+  // Reemplazar el método seekTo en AudiusFacade
+  seekTo(position: number, suppressEvents: boolean = false): void {
+    this.audiusRequest.seekTo(position, suppressEvents);
+    if (!suppressEvents) {
+      this.emitMusicEvent('seek');
+    }
   }
 
   isPlaying(): Observable<boolean> {
@@ -161,35 +172,50 @@ export class AudiusFacade {
     const currentState = this.playbackStateSubject.getValue();
     this.playbackStateSubject.next({
       ...currentState,
-      ...partialState
+      ...partialState,
     });
   }
 
+  // Reemplazar el método emitMusicEvent en AudiusFacade
   private emitMusicEvent(eventType: 'play' | 'pause' | 'seek') {
+    // No emitir eventos si estamos en proceso de sincronización de sala
+    if (this.audiusRequest.isRoomSyncInProgress()) {
+      return;
+    }
+
     const state = this.getPlaybackState();
     const metadata = this.currentMetadataSubject.getValue();
-    
+
     this.musicEventSubject.next({
       eventType,
       trackId: state.trackId,
       position: state.position,
       timestamp: Date.now(),
-      metadata: metadata || undefined
+      metadata: metadata || undefined,
     });
   }
 
   private fetchAndUpdateMetadata(trackId: string) {
-    this.getTrackById(trackId).subscribe(response => {
+    this.getTrackById(trackId).subscribe((response) => {
       if (response && response.data) {
         const track = response.data;
         const metadata: TrackMetadata = {
           title: track.title || 'Unknown Title',
           artist: track.user?.name || 'Unknown Artist',
           artworkUrl: track.artwork?.large_url || '',
-          duration: track.duration || 0
+          duration: track.duration || 0,
         };
         this.currentMetadataSubject.next(metadata);
       }
     });
+  }
+
+  // Agregar estos métodos a AudiusFacade
+  setRoomMode(isRoomMode: boolean): void {
+    this.audiusRequest.setRoomMode(isRoomMode);
+  }
+
+  isRoomSyncInProgress(): boolean {
+    return this.audiusRequest.isRoomSyncInProgress();
   }
 }

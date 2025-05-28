@@ -1,6 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { catchError, Observable, of, tap, BehaviorSubject, switchMap } from 'rxjs';
+import {
+  catchError,
+  Observable,
+  of,
+  tap,
+  BehaviorSubject,
+  switchMap,
+} from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -31,9 +38,14 @@ export class AudiusRequest {
 
   private cache = new Map<string, any>();
 
+  private isRoomModeSubject = new BehaviorSubject<boolean>(false);
+  public isRoomMode$ = this.isRoomModeSubject.asObservable();
+
+  private roomSyncInProgress = false;
+
   /**
    * Constructor de la clase
-   * @param http 
+   * @param http
    */
   constructor(private http: HttpClient) {
     setInterval(() => {
@@ -45,23 +57,28 @@ export class AudiusRequest {
 
   /**
    * Buscamos el contenido en la API de Audius
-   * @param query 
-   * @returns 
+   * @param query
+   * @returns
    */
   searchContent(query: string): Observable<any> {
-    return this.http.get(`${this.API_URL}/tracks/search?query=${encodeURIComponent(query)}&app_name=${this.APP_NAME}`).pipe(
-      tap(response => {
-      }),
-      catchError(error => {
-        return of({ data: [] });
-      })
-    );
+    return this.http
+      .get(
+        `${this.API_URL}/tracks/search?query=${encodeURIComponent(
+          query
+        )}&app_name=${this.APP_NAME}`
+      )
+      .pipe(
+        tap((response) => {}),
+        catchError((error) => {
+          return of({ data: [] });
+        })
+      );
   }
 
   /**
    * Obtenemos las pistas de una lista de reproducción
-   * @param playlistId 
-   * @returns 
+   * @param playlistId
+   * @returns
    */
   getPlaylistTracks(playlistId: string): Observable<any> {
     const cacheKey = `playlist_${playlistId}`;
@@ -69,7 +86,9 @@ export class AudiusRequest {
       return of(this.cache.get(cacheKey));
     }
     return this.http
-      .get(`${this.API_URL}/playlists/${playlistId}/tracks?app_name=${this.APP_NAME}`)
+      .get(
+        `${this.API_URL}/playlists/${playlistId}/tracks?app_name=${this.APP_NAME}`
+      )
       .pipe(
         tap((response) => {
           this.cache.set(cacheKey, response);
@@ -82,14 +101,13 @@ export class AudiusRequest {
 
   /**
    * Obtenemos los tracks más top del momento
-   * @returns 
+   * @returns
    */
   getTrendingTracks(): Observable<any> {
     return this.http
       .get(`${this.API_URL}/tracks/trending?app_name=${this.APP_NAME}`)
       .pipe(
-        tap((response) => {
-        }),
+        tap((response) => {}),
         catchError((error) => {
           return of({ data: [] });
         })
@@ -98,14 +116,13 @@ export class AudiusRequest {
 
   /**
    * Obtenemos las listas de reproducción más populares
-   * @returns 
+   * @returns
    */
   getPlaylists(): Observable<any> {
     return this.http
       .get(`${this.API_URL}/playlists/trending?app_name=${this.APP_NAME}`)
       .pipe(
-        tap((response) => {
-        }),
+        tap((response) => {}),
         catchError((error) => {
           return of({ data: [] });
         })
@@ -114,15 +131,14 @@ export class AudiusRequest {
 
   /**
    * Obtenemos la playlist por ID
-   * @param playlistId 
-   * @returns 
+   * @param playlistId
+   * @returns
    */
   getPlaylistById(playlistId: string): Observable<any> {
     return this.http
       .get(`${this.API_URL}/playlists/${playlistId}?app_name=${this.APP_NAME}`)
       .pipe(
-        tap((response) => {
-        }),
+        tap((response) => {}),
         catchError((error) => {
           return of(null);
         })
@@ -131,15 +147,14 @@ export class AudiusRequest {
 
   /**
    * Obtenemos el track por ID
-   * @param trackId 
-   * @returns 
+   * @param trackId
+   * @returns
    */
   getTrackById(trackId: string): Observable<any> {
     return this.http
       .get(`${this.API_URL}/tracks/${trackId}?app_name=${this.APP_NAME}`)
       .pipe(
-        tap((response) => {
-        }),
+        tap((response) => {}),
         catchError((error) => {
           return of(null);
         })
@@ -148,8 +163,8 @@ export class AudiusRequest {
 
   /**
    * Obtenemos el url de stremaing del track que se trate
-   * @param trackId 
-   * @returns 
+   * @param trackId
+   * @returns
    */
   async getTrackStreamUrl(trackId: string): Promise<string> {
     try {
@@ -170,9 +185,9 @@ export class AudiusRequest {
 
   /**
    * Establecemos la lista de reproducción actual
-   * @param playlist 
-   * @param initialTrackId 
-   * @returns 
+   * @param playlist
+   * @param initialTrackId
+   * @returns
    */
   setCurrentPlaylist(playlist: any[] | null, initialTrackId?: string) {
     if (!playlist || playlist.length === 0) {
@@ -180,18 +195,19 @@ export class AudiusRequest {
       this.currentTrackIndexSubject.next(-1);
       return;
     }
-    const normalizedPlaylist = playlist.map(track => ({
+    const normalizedPlaylist = playlist.map((track) => ({
       ...track,
-      id: track.track_id || track.id 
+      id: track.track_id || track.id,
     }));
-    
+
     this.currentPlaylistSubject.next(normalizedPlaylist);
-    
+
     if (initialTrackId) {
-      const trackIndex = normalizedPlaylist.findIndex(track => 
-        (track.id === initialTrackId || track.track_id === initialTrackId)
+      const trackIndex = normalizedPlaylist.findIndex(
+        (track) =>
+          track.id === initialTrackId || track.track_id === initialTrackId
       );
-      
+
       if (trackIndex !== -1) {
         this.currentTrackIndexSubject.next(trackIndex);
       } else {
@@ -202,78 +218,107 @@ export class AudiusRequest {
     }
   }
 
+  // Reemplazar el método playTrack completo en AudiusRequest
   /**
-   * Reproducimos el track del que obtenemos su ID
-   * @param trackId 
-   * @returns 
+   * Reproduce track con control de sincronización para sala
+   * @param trackId
+   * @param syncPosition Posición para sincronizar (modo sala)
+   * @param suppressEvents Suprimir eventos de cambio (para evitar loops)
    */
-  async playTrack(trackId: string | undefined) {
-    if (!trackId) {
-      return;
-    }
-  
+  async playTrack(
+    trackId: string | undefined,
+    syncPosition?: number,
+    suppressEvents: boolean = false
+  ) {
+    if (!trackId) return;
+
     const isCurrentTrack = this.currentTrackIdSubject.value === trackId;
-  
+    const isRoomMode = this.isRoomModeSubject.value;
+
+    // Si es modo sala y estamos sincronizando, marcar como en progreso
+    if (isRoomMode && syncPosition !== undefined) {
+      this.roomSyncInProgress = true;
+    }
+
+    // Lógica existente de reproducción...
     if (isCurrentTrack && this.currentAudio) {
+      if (syncPosition !== undefined) {
+        this.currentAudio.currentTime = syncPosition;
+      }
       this.currentAudio.play().catch((error) => {
-        //
+        console.error('Error playing audio:', error);
       });
       this.isPlayingSubject.next(true);
+
+      // Resetear flag de sincronización
+      setTimeout(() => {
+        this.roomSyncInProgress = false;
+      }, 100);
+
       return;
     }
-  
-    if (this.currentAudio && this.currentTrackIdSubject.value) {
-      this.trackPositions.set(
-        this.currentTrackIdSubject.value, 
-        this.currentAudio.currentTime
-      );
-    }
-  
+
+    // Si es un track diferente...
     if (!isCurrentTrack) {
-      this.stopCurrentTrack(false);
-  
-      const streamUrl = await this.getTrackStreamUrl(trackId);
-      if (!streamUrl) {
-        return;
+      const previousTrackId = this.currentTrackIdSubject.value;
+      if (previousTrackId) {
+        this.trackPositions.delete(previousTrackId);
       }
-  
+
+      this.stopCurrentTrack(false);
+
+      const streamUrl = await this.getTrackStreamUrl(trackId);
+      if (!streamUrl) return;
+
       this.currentAudio = new Audio();
       this.currentAudio.src = streamUrl;
-  
-      const savedPosition = this.trackPositions.get(trackId);
-      if (savedPosition !== undefined) {
-        this.currentAudio.currentTime = savedPosition;
+
+      // Aplicar posición de sincronización o restaurar posición guardada
+      if (syncPosition !== undefined) {
+        this.currentAudio.currentTime = syncPosition;
+      } else {
+        const savedPosition = this.trackPositions.get(trackId);
+        this.currentAudio.currentTime = savedPosition || 0;
       }
-  
-      this.setupAudioEventHandlers(trackId);
+
+      this.setupAudioEventHandlers(trackId, suppressEvents);
     }
-  
+
     this.currentAudio?.play().catch((error) => {
+      console.error('Error playing audio:', error);
     });
-  
+
     this.currentTrackIdSubject.next(trackId);
     this.isPlayingSubject.next(true);
-    
+
+    // Actualizar índice de playlist
     const currentPlaylist = this.currentPlaylistSubject.value;
     if (currentPlaylist) {
-      const trackIndex = currentPlaylist.findIndex(track => 
-        (track.track_id === trackId || track.id === trackId)
+      const trackIndex = currentPlaylist.findIndex(
+        (track) => track.track_id === trackId || track.id === trackId
       );
-      
+
       if (trackIndex !== -1) {
         this.currentTrackIndexSubject.next(trackIndex);
-      } else {
       }
     }
-  }
 
+    // Resetear flag de sincronización
+    setTimeout(() => {
+      this.roomSyncInProgress = false;
+    }, 100);
+  }
 
   /**
    * Cargamos los manejadores de Audio, entre ellos el intervalo, etc...
-   * @param trackId 
-   * @returns 
+   * @param trackId
+   * @returns
    */
-  private setupAudioEventHandlers(trackId: string) {
+  // Reemplazar el método setupAudioEventHandlers en AudiusRequest
+  private setupAudioEventHandlers(
+    trackId: string,
+    suppressEvents: boolean = false
+  ) {
     if (!this.currentAudio) return;
 
     this.durationSubject.next(0);
@@ -284,15 +329,8 @@ export class AudiusRequest {
       }
     };
 
-    const updateInterval = setInterval(() => {
-      if (this.currentAudio && !this.currentAudio.paused) {
-        this.trackPositions.set(trackId, this.currentAudio.currentTime);
-        this.currentTimeSubject.next(this.currentAudio.currentTime);
-      }
-    }, 5000);
-
     this.currentAudio.ontimeupdate = () => {
-      if (this.currentAudio) {
+      if (this.currentAudio && !this.roomSyncInProgress) {
         this.currentTimeSubject.next(this.currentAudio.currentTime);
       }
     };
@@ -300,27 +338,34 @@ export class AudiusRequest {
     this.currentAudio.onended = () => {
       this.isPlayingSubject.next(false);
       this.trackPositions.delete(trackId);
-      clearInterval(updateInterval);
-      
-      this.playNextTrack();
+
+      // Solo reproducir siguiente si no estamos en modo sala o si no hay sincronización en progreso
+      if (!this.isRoomModeSubject.value && !suppressEvents) {
+        this.playNextTrack();
+      }
     };
 
     this.currentAudio.onerror = () => {
       this.isPlayingSubject.next(false);
-      clearInterval(updateInterval);
+      this.trackPositions.delete(trackId);
     };
   }
 
   /**
    * Pausa el track en reproducción
    */
-  pauseTrack() {
+  pauseTrack(suppressEvents: boolean = false) {
     if (this.currentAudio) {
       this.currentAudio.pause();
 
-      const currentTrackId = this.currentTrackIdSubject.value;
-      if (currentTrackId) {
-        this.trackPositions.set(currentTrackId, this.currentAudio.currentTime);
+      if (!suppressEvents && !this.roomSyncInProgress) {
+        const currentTrackId = this.currentTrackIdSubject.value;
+        if (currentTrackId) {
+          this.trackPositions.set(
+            currentTrackId,
+            this.currentAudio.currentTime
+          );
+        }
       }
 
       this.isPlayingSubject.next(false);
@@ -329,7 +374,7 @@ export class AudiusRequest {
 
   /**
    * Detenemos el track en reproduccíon actual
-   * @param resetPlaylist 
+   * @param resetPlaylist
    */
   stopCurrentTrack(resetPlaylist: boolean = true) {
     if (this.currentAudio) {
@@ -337,12 +382,17 @@ export class AudiusRequest {
       this.currentAudio.currentTime = 0;
       this.currentAudio = null;
     }
-  
+
+    // LIMPIAR todas las posiciones al detener
+    if (resetPlaylist) {
+      this.trackPositions.clear();
+    }
+
     this.currentTrackIdSubject.next(null);
     this.isPlayingSubject.next(false);
     this.currentTimeSubject.next(0);
     this.durationSubject.next(0);
-    
+
     if (resetPlaylist) {
       this.currentPlaylistSubject.next(null);
       this.currentTrackIndexSubject.next(-1);
@@ -351,7 +401,7 @@ export class AudiusRequest {
 
   /**
    * Comprobamos si el track se encuentra en reproducción
-   * @returns 
+   * @returns
    */
   isPlaying(): boolean {
     return this.isPlayingSubject.value;
@@ -359,7 +409,7 @@ export class AudiusRequest {
 
   /**
    * Obtenemos el Id del track que esté sonando en el momento
-   * @returns 
+   * @returns
    */
   getCurrentTrackId(): string | null {
     return this.currentTrackIdSubject.value;
@@ -367,7 +417,7 @@ export class AudiusRequest {
 
   /**
    * Obtenemos el tiempo actual
-   * @returns 
+   * @returns
    */
   getCurrentTime(): number {
     return this.currentTimeSubject.value;
@@ -375,28 +425,31 @@ export class AudiusRequest {
 
   /**
    * Obtenemos la duración de la canción
-   * @returns 
+   * @returns
    */
   getDuration(): number {
     return this.durationSubject.value;
   }
 
   /**
-   * Desplazamos hacia adelante o hacia atrás la canción pudiendo adelantarla o retrasarla
-   * @param position 
+   * Busca posición específica (para sincronización de sala)
+   * @param position
+   * @param suppressEvents
    */
-  seekTo(position: number) {
+  seekTo(position: number, suppressEvents: boolean = false) {
     if (this.currentAudio) {
       this.currentAudio.currentTime = position;
       this.currentTimeSubject.next(position);
 
-      const currentTrackId = this.currentTrackIdSubject.value;
-      if (currentTrackId) {
-        this.trackPositions.set(currentTrackId, position);
+      if (!suppressEvents && !this.roomSyncInProgress) {
+        const currentTrackId = this.currentTrackIdSubject.value;
+        if (currentTrackId) {
+          this.trackPositions.set(currentTrackId, position);
+        }
       }
     }
-  } 
-  
+  }
+
   /**
    * Cuando pulsamos el botón de siguiente nos reproduce la siguiente cancion.
    * si es en playslist de playlist, si es single a una aleatoria
@@ -404,8 +457,12 @@ export class AudiusRequest {
   playNextTrack() {
     const currentPlaylist = this.currentPlaylistSubject.value;
     const currentIndex = this.currentTrackIndexSubject.value;
-        
-    if (currentPlaylist && currentIndex !== -1 && currentIndex < currentPlaylist.length - 1) {
+
+    if (
+      currentPlaylist &&
+      currentIndex !== -1 &&
+      currentIndex < currentPlaylist.length - 1
+    ) {
       const nextTrack = currentPlaylist[currentIndex + 1];
       const nextTrackId = nextTrack.track_id || nextTrack.id;
       if (nextTrackId) {
@@ -418,65 +475,73 @@ export class AudiusRequest {
       this.findSimilarTrack(this.currentTrackIdSubject.value);
     }
   }
-  
+
   /**
    * Encontrar tracks similares para cuando saltamos de single a otra cancion
-   * @param currentTrackId 
-   * @returns 
+   * @param currentTrackId
+   * @returns
    */
   private findSimilarTrack(currentTrackId: string | null) {
     if (!currentTrackId) return;
-    
-    this.getTrackById(currentTrackId).pipe(
-      switchMap(trackData => {
-        if (!trackData?.data) return of(null);
-        
-        const genre = trackData.data.genre;
-        
-        if (genre) {
-          return this.http.get(`${this.API_URL}/tracks/trending?genre=${encodeURIComponent(genre)}&app_name=${this.APP_NAME}`)
-            .pipe(
-              catchError(() => of({ data: [] }))
-            );
-        }
-        
-        return of(null);
-      }),
-      catchError(() => of({ data: [] }))
-    ).subscribe((response: any) => {
-      if (response?.data && response.data.length > 0) {
-        // Filtrar el track actual
-        const similarTracks = response.data.filter((t: any) => t.id !== currentTrackId);
-        
-        if (similarTracks.length > 0) {
-          const randomIndex = Math.floor(Math.random() * similarTracks.length);
-          const nextTrack = similarTracks[randomIndex];
-          
-          // Crear una nueva playlist con tracks similares
-          this.setCurrentPlaylist(similarTracks, nextTrack.id);
-          this.playTrack(nextTrack.id);
-        } else {
-          this.findRandomTrack();
-        }
-      } else {
-        this.findRandomTrack();
-      }
-    });
-  }
-  
-  /**
-   * Encontramos un track aleatorio de entre los trending
-   */
-  private findRandomTrack() {
-    this.http.get(`${this.API_URL}/tracks/trending?app_name=${this.APP_NAME}`)
+
+    this.getTrackById(currentTrackId)
       .pipe(
+        switchMap((trackData) => {
+          if (!trackData?.data) return of(null);
+
+          const genre = trackData.data.genre;
+
+          if (genre) {
+            return this.http
+              .get(
+                `${this.API_URL}/tracks/trending?genre=${encodeURIComponent(
+                  genre
+                )}&app_name=${this.APP_NAME}`
+              )
+              .pipe(catchError(() => of({ data: [] })));
+          }
+
+          return of(null);
+        }),
         catchError(() => of({ data: [] }))
       )
       .subscribe((response: any) => {
         if (response?.data && response.data.length > 0) {
+          // Filtrar el track actual
+          const similarTracks = response.data.filter(
+            (t: any) => t.id !== currentTrackId
+          );
+
+          if (similarTracks.length > 0) {
+            const randomIndex = Math.floor(
+              Math.random() * similarTracks.length
+            );
+            const nextTrack = similarTracks[randomIndex];
+
+            // Crear una nueva playlist con tracks similares
+            this.setCurrentPlaylist(similarTracks, nextTrack.id);
+            this.playTrack(nextTrack.id);
+          } else {
+            this.findRandomTrack();
+          }
+        } else {
+          this.findRandomTrack();
+        }
+      });
+  }
+
+  /**
+   * Encontramos un track aleatorio de entre los trending
+   */
+  private findRandomTrack() {
+    this.http
+      .get(`${this.API_URL}/tracks/trending?app_name=${this.APP_NAME}`)
+      .pipe(catchError(() => of({ data: [] })))
+      .subscribe((response: any) => {
+        if (response?.data && response.data.length > 0) {
           const randomIndex = Math.floor(Math.random() * response.data.length);
           const randomTrack = response.data[randomIndex];
-          
+
           if (randomTrack?.id) {
             this.setCurrentPlaylist(response.data);
             this.playTrack(randomTrack.id);
@@ -484,21 +549,20 @@ export class AudiusRequest {
         }
       });
   }
-  
+
   /**
    * Pulsando dos veces el botón de retrasar volvemos al track anterior si es que habia sino, no pasa nada porque estamos en el primer track
-   * @returns 
+   * @returns
    */
   playPreviousTrack() {
     const currentPlaylist = this.currentPlaylistSubject.value;
     const currentIndex = this.currentTrackIndexSubject.value;
-    
-    
+
     if (this.currentAudio && this.currentAudio.currentTime > 3) {
       this.seekTo(0);
       return;
     }
-    
+
     if (currentPlaylist && currentIndex > 0) {
       const prevTrack = currentPlaylist[currentIndex - 1];
       const prevTrackId = prevTrack.track_id || prevTrack.id;
@@ -514,14 +578,29 @@ export class AudiusRequest {
 
   /**
    * Formatemaos el tiempo
-   * @param time 
-   * @returns 
+   * @param time
+   * @returns
    */
   formatTime(time: number): string {
     if (isNaN(time)) return '0:00';
-    
+
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  }
+
+  /**
+   * Establece el modo sala
+   * @param isRoomMode
+   */
+  setRoomMode(isRoomMode: boolean) {
+    this.isRoomModeSubject.next(isRoomMode);
+  }
+
+  /**
+   * Verifica si está en proceso de sincronización de sala
+   */
+  isRoomSyncInProgress(): boolean {
+    return this.roomSyncInProgress;
   }
 }

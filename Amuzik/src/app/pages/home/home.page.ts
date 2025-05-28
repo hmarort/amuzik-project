@@ -285,8 +285,7 @@ export class HomePage implements OnInit, OnDestroy {
       });
 
     // Suscripciones para ListeningRoomService
-    if (!this.isNativePlatform
-    ) {
+    if (!this.isNativePlatform) {
       this.listeningRoomService.currentRoom$
         .pipe(takeUntil(this.destroy$))
         .subscribe((room) => {
@@ -310,7 +309,7 @@ export class HomePage implements OnInit, OnDestroy {
         .subscribe((invitations) => {
           console.log('Pending invitations updated:', invitations);
         });
-    }else{
+    } else {
       console.log('Esto es is native: ', this.isNativePlatform);
     }
 

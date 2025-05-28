@@ -64,8 +64,8 @@ export class ListeningRoomService {
 
   /**
    * Constructor de la clase
-   * @param chatService 
-   * @param audiusFacade 
+   * @param chatService
+   * @param audiusFacade
    */
   constructor(
     private chatService: ChatService,
@@ -80,7 +80,7 @@ export class ListeningRoomService {
 
   /**
    * Configura los listeners del websocket
-   * @returns 
+   * @returns
    */
   private setupWebSocketListeners(): void {
     const socket = this.chatService.getSocket();
@@ -144,19 +144,30 @@ export class ListeningRoomService {
   /**
    * Configura los listeners de eventos de música
    */
+  // Reemplazar el método setupMusicEventListeners en ListeningRoomService
+  /**
+   * Configura los listeners de eventos de música
+   */
   private setupMusicEventListeners(): void {
     this.audiusFacade.musicEvent$.subscribe((event: MusicEvent) => {
       const currentRoom = this.currentRoomSubject.getValue();
-      if (!currentRoom || this.isSyncing) return;
+
+      // Solo enviar eventos si estamos en una sala y no estamos sincronizando
+      if (
+        !currentRoom ||
+        this.isSyncing ||
+        this.audiusFacade.isRoomSyncInProgress()
+      ) {
+        return;
+      }
+
       switch (event.eventType) {
         case 'play':
           this.updateRoomState(currentRoom.id, 'playing', event.position);
           break;
-
         case 'pause':
           this.updateRoomState(currentRoom.id, 'paused', event.position);
           break;
-
         case 'seek':
           this.updateRoomState(
             currentRoom.id,
@@ -169,7 +180,16 @@ export class ListeningRoomService {
 
     this.audiusFacade.getCurrentTrackId().subscribe((trackId) => {
       const currentRoom = this.currentRoomSubject.getValue();
-      if (!currentRoom || this.isSyncing || !trackId) return;
+
+      // Solo actualizar track si no estamos sincronizando
+      if (
+        !currentRoom ||
+        this.isSyncing ||
+        this.audiusFacade.isRoomSyncInProgress() ||
+        !trackId
+      ) {
+        return;
+      }
 
       if (currentRoom.trackId !== trackId) {
         this.updateRoomTrack(currentRoom.id, trackId);
@@ -179,7 +199,7 @@ export class ListeningRoomService {
 
   /**
    * Obtiene las salas en las que está el usuario
-   * @returns 
+   * @returns
    */
   getUserRooms(): void {
     if (!this.chatService.isConnected()) {
@@ -191,11 +211,11 @@ export class ListeningRoomService {
       type: 'get_user_rooms',
     });
   }
-  
+
   /**
    * Crea una nueva sala de escucha
-   * @param trackId 
-   * @returns 
+   * @param trackId
+   * @returns
    */
   createRoom(trackId: string): void {
     if (!this.chatService.isConnected()) {
@@ -211,9 +231,9 @@ export class ListeningRoomService {
 
   /**
    * Invita a un usuario a una sala de escucha
-   * @param roomId 
-   * @param inviteeId 
-   * @returns 
+   * @param roomId
+   * @param inviteeId
+   * @returns
    */
   inviteToRoom(roomId: string, inviteeId: string): void {
     if (!this.chatService.isConnected()) {
@@ -228,15 +248,15 @@ export class ListeningRoomService {
     });
   }
 
+  // Reemplazar el método joinRoom en ListeningRoomService
   /**
    * Se une el usuario a una sala de escucha
-   * @param roomId 
-   * @returns 
    */
   joinRoom(roomId: string): void {
-    if (!this.chatService.isConnected()) {
-      return;
-    }
+    if (!this.chatService.isConnected()) return;
+
+    // Activar modo sala
+    this.audiusFacade.setRoomMode(true);
 
     this.chatService.sendCustomMessage({
       channel: 'room',
@@ -245,17 +265,17 @@ export class ListeningRoomService {
     });
   }
 
+  // Reemplazar el método leaveRoom en ListeningRoomService
   /**
    * Se va el usuario de una sala de escucha
-   * @param roomId 
-   * @returns 
    */
   leaveRoom(roomId: string): void {
-    if (!this.chatService.isConnected()) {
-      return;
-    }
+    if (!this.chatService.isConnected()) return;
 
     const currentRoom = this.currentRoomSubject.getValue();
+
+    // Desactivar modo sala
+    this.audiusFacade.setRoomMode(false);
 
     this.chatService.sendCustomMessage({
       channel: 'room',
@@ -271,10 +291,10 @@ export class ListeningRoomService {
 
   /**
    * Actualiza el estado de la sala de escucha
-   * @param roomId 
-   * @param state 
-   * @param progress 
-   * @returns 
+   * @param roomId
+   * @param state
+   * @param progress
+   * @returns
    */
   updateRoomState(
     roomId: string,
@@ -296,9 +316,9 @@ export class ListeningRoomService {
 
   /**
    * Actualiza la pista de la sala de escucha
-   * @param roomId 
-   * @param trackId 
-   * @returns 
+   * @param roomId
+   * @param trackId
+   * @returns
    */
   updateRoomTrack(roomId: string, trackId: string): void {
     if (!this.chatService.isConnected()) {
@@ -315,8 +335,8 @@ export class ListeningRoomService {
 
   /**
    * Sincroniza el estado de la sala de escucha con el servidor
-   * @param roomId 
-   * @returns 
+   * @param roomId
+   * @returns
    */
   syncWithRoom(roomId: string): void {
     if (!this.chatService.isConnected()) {
@@ -332,7 +352,7 @@ export class ListeningRoomService {
 
   /**
    * Acepta una invitación a una sala de escucha
-   * @param invitation 
+   * @param invitation
    */
   acceptInvitation(invitation: RoomEvent): void {
     this.joinRoom(invitation.room!.id);
@@ -342,7 +362,7 @@ export class ListeningRoomService {
 
   /**
    * Rechaza la invitación a una sala de escucha
-   * @param invitation 
+   * @param invitation
    */
   declineInvitation(invitation: RoomEvent): void {
     this.removePendingInvitation(invitation);
@@ -350,7 +370,7 @@ export class ListeningRoomService {
 
   /**
    * Elimina las invitaciones pendientes.
-   * @param invitation 
+   * @param invitation
    */
   private removePendingInvitation(invitation: RoomEvent): void {
     const currentInvitations = this.pendingInvitationsSubject.getValue();
@@ -366,7 +386,7 @@ export class ListeningRoomService {
 
   /**
    * Obtiene la sala de escucha actual
-   * @returns 
+   * @returns
    */
   getCurrentRoom(): ListeningRoom | null {
     return this.currentRoomSubject.getValue();
@@ -374,7 +394,7 @@ export class ListeningRoomService {
 
   /**
    * Obtiene las salas de escucha activas
-   * @returns 
+   * @returns
    */
   getActiveRooms(): ListeningRoom[] {
     return this.activeRoomsSubject.getValue();
@@ -382,7 +402,7 @@ export class ListeningRoomService {
 
   /**
    * Determina si se debe sincronizar el estado de la sala con el servidor
-   * @returns 
+   * @returns
    */
   private shouldSync(): boolean {
     const now = Date.now();
@@ -394,7 +414,7 @@ export class ListeningRoomService {
 
   /**
    * Maneja la creación de una  sala de escucha
-   * @param room 
+   * @param room
    */
   private handleRoomCreated(room: ListeningRoom): void {
     const currentRooms = this.activeRoomsSubject.getValue();
@@ -411,7 +431,7 @@ export class ListeningRoomService {
 
   /**
    * Manejamos la unión de usuarios a una sala de escucha
-   * @param room 
+   * @param room
    */
   private handleRoomJoined(room: ListeningRoom): void {
     const currentRooms = this.activeRoomsSubject.getValue();
@@ -438,7 +458,7 @@ export class ListeningRoomService {
 
   /**
    * Maneja la ida de un usuario de una sala de escucha
-   * @param roomId 
+   * @param roomId
    */
   private handleRoomLeft(roomId: string): void {
     const currentRooms = this.activeRoomsSubject.getValue();
@@ -459,7 +479,7 @@ export class ListeningRoomService {
 
   /**
    * Manejamos la actulaización de una sala de escucha
-   * @param room 
+   * @param room
    */
   private handleRoomUpdated(room: ListeningRoom): void {
     const currentRooms = this.activeRoomsSubject.getValue();
@@ -482,8 +502,8 @@ export class ListeningRoomService {
 
   /**
    * Se encarga del manejo de la union de usuarios a la sala
-   * @param roomId 
-   * @param userId 
+   * @param roomId
+   * @param userId
    */
   private handleMemberJoined(roomId: string, userId: string): void {
     // Actualizar lista de salas
@@ -518,9 +538,9 @@ export class ListeningRoomService {
 
   /**
    * Se encarga del manejo de la salida de un usuario de la sala
-   * @param roomId 
-   * @param userId 
-   * @param newCreatorId 
+   * @param roomId
+   * @param userId
+   * @param newCreatorId
    */
   private handleMemberLeft(
     roomId: string,
@@ -569,7 +589,7 @@ export class ListeningRoomService {
 
   /**
    * maneja la invitación a la sala de escucha
-   * @param data 
+   * @param data
    */
   private handleRoomInvitation(data: any): void {
     const invitation: RoomEvent = {
@@ -598,7 +618,7 @@ export class ListeningRoomService {
 
   /**
    * Maneja la sincronización de la sala de escucha
-   * @param data 
+   * @param data
    */
   private handleRoomSync(data: any): void {
     const { roomId, state, progress, trackId } = data;
@@ -621,8 +641,8 @@ export class ListeningRoomService {
 
   /**
    * Maneja la respuesta de las salas de usuario
-   * @param rooms 
-   * @returns 
+   * @param rooms
+   * @returns
    */
   private handleUserRoomsResponse(rooms: ListeningRoom[]): void {
     if (!rooms || !Array.isArray(rooms)) {
@@ -634,13 +654,15 @@ export class ListeningRoomService {
 
   /**
    * Sincroniza el estado de la sala de escucha con el servidor
-   * @param room 
-   * @returns 
+   * @param room
+   * @returns
+   */
+  // Reemplazar el método handleSyncWithRoom en ListeningRoomService
+  /**
+   * Sincroniza el estado de la sala de escucha con el servidor
    */
   private handleSyncWithRoom(room: ListeningRoom): void {
-    if (!this.shouldSync()) {
-      return;
-    }
+    if (!this.shouldSync()) return;
 
     this.isSyncing = true;
     this.lastSyncTimestamp = Date.now();
@@ -648,30 +670,37 @@ export class ListeningRoomService {
     try {
       const currentTrackId = this.audiusFacade.getPlaybackState().trackId;
 
-      if (currentTrackId !== room.trackId) {
-        this.audiusFacade.play(room.trackId);
-      }
-
+      // Calcular posición ajustada para compensar latencia
       let adjustedProgress = room.progress;
       if (room.state === 'playing') {
         const elapsedSeconds = (Date.now() - room.timestamp) / 1000;
         adjustedProgress = room.progress + elapsedSeconds;
       }
 
-      this.audiusFacade.seekTo(adjustedProgress);
-
-      if (
-        room.state === 'playing' &&
-        !this.audiusFacade.getPlaybackState().isPlaying
-      ) {
-        setTimeout(() => this.audiusFacade.play(room.trackId), 100);
-      } else if (
-        room.state === 'paused' &&
-        this.audiusFacade.getPlaybackState().isPlaying
-      ) {
-        setTimeout(() => this.audiusFacade.pause(), 100);
+      // Si es un track diferente, cambiar track
+      if (currentTrackId !== room.trackId) {
+        this.audiusFacade.play(room.trackId, undefined, adjustedProgress, true);
+      } else {
+        // Solo sincronizar posición si es el mismo track
+        this.audiusFacade.seekTo(adjustedProgress, true);
       }
+
+      // Sincronizar estado de reproducción
+      setTimeout(() => {
+        if (
+          room.state === 'playing' &&
+          !this.audiusFacade.getPlaybackState().isPlaying
+        ) {
+          this.audiusFacade.play(room.trackId, undefined, undefined, true);
+        } else if (
+          room.state === 'paused' &&
+          this.audiusFacade.getPlaybackState().isPlaying
+        ) {
+          this.audiusFacade.pause(true);
+        }
+      }, 100);
     } catch (error) {
+      console.error('Error syncing with room:', error);
     } finally {
       setTimeout(() => {
         this.isSyncing = false;
