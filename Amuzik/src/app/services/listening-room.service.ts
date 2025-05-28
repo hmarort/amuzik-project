@@ -144,15 +144,10 @@ export class ListeningRoomService {
   /**
    * Configura los listeners de eventos de música
    */
-  // Reemplazar el método setupMusicEventListeners en ListeningRoomService
-  /**
-   * Configura los listeners de eventos de música
-   */
   private setupMusicEventListeners(): void {
     this.audiusFacade.musicEvent$.subscribe((event: MusicEvent) => {
       const currentRoom = this.currentRoomSubject.getValue();
 
-      // Solo enviar eventos si estamos en una sala y no estamos sincronizando
       if (
         !currentRoom ||
         this.isSyncing ||
@@ -181,7 +176,6 @@ export class ListeningRoomService {
     this.audiusFacade.getCurrentTrackId().subscribe((trackId) => {
       const currentRoom = this.currentRoomSubject.getValue();
 
-      // Solo actualizar track si no estamos sincronizando
       if (
         !currentRoom ||
         this.isSyncing ||
@@ -248,14 +242,14 @@ export class ListeningRoomService {
     });
   }
 
-  // Reemplazar el método joinRoom en ListeningRoomService
   /**
    * Se une el usuario a una sala de escucha
+   * @param roomId 
+   * @returns 
    */
   joinRoom(roomId: string): void {
     if (!this.chatService.isConnected()) return;
 
-    // Activar modo sala
     this.audiusFacade.setRoomMode(true);
 
     this.chatService.sendCustomMessage({
@@ -265,16 +259,16 @@ export class ListeningRoomService {
     });
   }
 
-  // Reemplazar el método leaveRoom en ListeningRoomService
   /**
    * Se va el usuario de una sala de escucha
+   * @param roomId 
+   * @returns 
    */
   leaveRoom(roomId: string): void {
     if (!this.chatService.isConnected()) return;
 
     const currentRoom = this.currentRoomSubject.getValue();
 
-    // Desactivar modo sala
     this.audiusFacade.setRoomMode(false);
 
     this.chatService.sendCustomMessage({
@@ -506,7 +500,6 @@ export class ListeningRoomService {
    * @param userId
    */
   private handleMemberJoined(roomId: string, userId: string): void {
-    // Actualizar lista de salas
     const currentRooms = this.activeRoomsSubject.getValue();
     const updatedRooms = currentRooms.map((room) => {
       if (room.id === roomId && !room.members.includes(userId)) {
@@ -657,10 +650,6 @@ export class ListeningRoomService {
    * @param room
    * @returns
    */
-  // Reemplazar el método handleSyncWithRoom en ListeningRoomService
-  /**
-   * Sincroniza el estado de la sala de escucha con el servidor
-   */
   private handleSyncWithRoom(room: ListeningRoom): void {
     if (!this.shouldSync()) return;
 
@@ -670,22 +659,18 @@ export class ListeningRoomService {
     try {
       const currentTrackId = this.audiusFacade.getPlaybackState().trackId;
 
-      // Calcular posición ajustada para compensar latencia
       let adjustedProgress = room.progress;
       if (room.state === 'playing') {
         const elapsedSeconds = (Date.now() - room.timestamp) / 1000;
         adjustedProgress = room.progress + elapsedSeconds;
       }
 
-      // Si es un track diferente, cambiar track
       if (currentTrackId !== room.trackId) {
         this.audiusFacade.play(room.trackId, undefined, adjustedProgress, true);
       } else {
-        // Solo sincronizar posición si es el mismo track
         this.audiusFacade.seekTo(adjustedProgress, true);
       }
 
-      // Sincronizar estado de reproducción
       setTimeout(() => {
         if (
           room.state === 'playing' &&

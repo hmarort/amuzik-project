@@ -76,6 +76,7 @@ export class AparienciaPage implements OnInit, OnDestroy {
   modoOscuro: boolean = false;  
   modoPreferido: ModoTema = 'sistema';
   temas: Tema[] = [];
+  percentage: number = 100;
   
   private temaSubscription: Subscription = new Subscription;
   private modoOscuroSubscription: Subscription = new Subscription;
@@ -95,6 +96,9 @@ export class AparienciaPage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // Cargar el tamaño de fuente guardado
+    this.cargarTamanoFuenteGuardado();
+    
     this.temas = this.temaService.temasDisponibles
       .filter(tema => ['green', 'blue', 'purple', 'red', 'orange','standard','neutral'].includes(tema.id))
       .map(tema => ({
@@ -108,6 +112,7 @@ export class AparienciaPage implements OnInit, OnDestroy {
     this.temaSubscription = this.temaService.temaActual$.subscribe(tema => {
       this.temaActual = tema;
     });
+    
     this.modoOscuroSubscription = this.temaService.modoOscuro$.subscribe(modo => {
       this.modoOscuro = modo;
       
@@ -130,6 +135,21 @@ export class AparienciaPage implements OnInit, OnDestroy {
     }
     if (this.preferenciaModoBrilloSubscription) {
       this.preferenciaModoBrilloSubscription.unsubscribe();
+    }
+  }
+
+  /**
+   * Carga el tamaño de fuente guardado desde localStorage
+   */
+  private cargarTamanoFuenteGuardado() {
+    const tamanoGuardado = localStorage.getItem('font-size');
+    if (tamanoGuardado) {
+      this.percentage = parseInt(tamanoGuardado, 10);
+      // Aplicar el tamaño de fuente guardado
+      document.documentElement.style.fontSize = `${this.percentage}%`;
+    } else {
+      // Si no hay valor guardado, usar el predeterminado
+      this.percentage = 100;
     }
   }
 
@@ -157,15 +177,28 @@ export class AparienciaPage implements OnInit, OnDestroy {
     return '';
   }
 
+  /**
+   * Actualiza el tamaño de fuente y lo guarda en localStorage
+   */
   updateFontSize(event: CustomEvent) {
-    const percentage = event.detail.value;
-    document.documentElement.style.fontSize = `${percentage}%`;
-    localStorage.setItem('font-size', percentage.toString());
+    this.percentage = event.detail.value;
+    
+    // Aplicar el cambio inmediatamente
+    document.documentElement.style.fontSize = `${this.percentage}%`;
+    
+    // Guardar en localStorage
+    localStorage.setItem('font-size', this.percentage.toString());
   }
 
+  /**
+   * Restaura la configuración predeterminada
+   */
   restaurarConfiguracion() {
+    // Restaurar tema
     this.temaService.restaurarConfiguracionPredeterminada();
     
+    // Restaurar tamaño de fuente
+    this.percentage = 100;
     document.documentElement.style.fontSize = '100%';
     localStorage.removeItem('font-size');
   }

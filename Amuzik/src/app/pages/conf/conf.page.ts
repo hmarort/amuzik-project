@@ -68,7 +68,6 @@ import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
     IonList,
     IonItem,
     IonLabel,
-    IonToggle,
     IonIcon,
     IonCard,
     IonCardContent,
@@ -102,7 +101,8 @@ export class ConfPage implements OnInit, OnDestroy {
     email: '',
     nombre: '',
     apellidos: '',
-    base64: ''
+    base64: '',
+    password: ''
   };
 
   // Para vista previa de la imagen
@@ -195,7 +195,8 @@ export class ConfPage implements OnInit, OnDestroy {
       email: this.usuario.email || '',
       nombre: this.usuario.nombre || '',
       apellidos: this.usuario.apellidos || '',
-      base64: this.usuario.base64 || ''
+      base64: this.usuario.base64 || '',
+      password: ''
     };
   }
 
@@ -226,6 +227,11 @@ export class ConfPage implements OnInit, OnDestroy {
       // Añadir imagen solo si se seleccionó una nueva
       if (this.selectedFile) {
         formData.append('pfp', this.selectedFile); // Cambiado a 'pfp' para que coincida con el backend
+      }
+
+      // Añadir contraseña solo si se ha modificado
+      if (this.perfilEditado.password) {
+        formData.append('password', this.perfilEditado.password);
       }
 
       // Llamar al servicio para actualizar

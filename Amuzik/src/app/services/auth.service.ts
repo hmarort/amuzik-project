@@ -22,6 +22,7 @@ export interface User {
   base64?: string;
   friends?: User[];
   provider?: string;
+  password?: string;
 }
 
 @Injectable({

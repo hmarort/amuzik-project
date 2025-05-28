@@ -63,6 +63,11 @@
             <ion-input [(ngModel)]="perfilEditado.apellidos" name="apellidos"></ion-input>
           </ion-item>
           
+          <ion-item>
+            <ion-label position="floating">Password</ion-label>
+            <ion-input [(ngModel)]="perfilEditado.password" name="password" type="password"></ion-input>
+          </ion-item>
+          
           <div class="botones-edicion">
             <ion-button type="button" fill="outline" (click)="cancelarEdicion()">Cancelar</ion-button>
             <ion-button type="submit" expand="block">Guardar perfil</ion-button>
