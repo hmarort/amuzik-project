@@ -797,4 +797,21 @@ export class AuthService {
 
     return password;
   }
+
+  deleteUser(): Observable<any> {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser || !currentUser.id) {
+      return throwError(() => new Error('No hay usuario actual o el ID no está disponible'));
+    }
+
+    return this.userRequest.deleteUser(currentUser.id).pipe(
+      tap(() => {
+        this.logout();
+      }),
+      catchError((error) => {
+        console.error('Error al eliminar el usuario:', error);
+        return throwError(() => error);
+      })
+    );
+  }
 }

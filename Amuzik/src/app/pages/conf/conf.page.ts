@@ -410,15 +410,45 @@ export class ConfPage implements OnInit, OnDestroy {
   }
 
   logout() {
-    // Usar el authService para cerrar sesión
     this.authService.logout();
   }
 
   editarPerfil() {
-    // Cambiado a usar el toggle para edición en la misma página
     this.toggleEditMode();
   }
 
+  deleteUser(){
+    this.toastController.create({
+      message: '¿Estás seguro de que quieres eliminar tu cuenta?',
+      buttons: [
+        {
+          text: 'Cancelar',
+          role: 'cancel',
+          handler: () => {
+            console.log('Eliminación cancelada');
+          }
+        },
+        {
+          text: 'Eliminar',
+          handler: () => {
+            this.confirmarEliminacionUsuario();
+          }
+        }
+      ]
+    }).then(toast => {
+      toast.present();
+    });
+  }
+
+  async confirmarEliminacionUsuario() {
+      this.authService.deleteUser().subscribe(() => {
+      this.mostrarToast('Usuario eliminado', 'success');
+      this.cerrarSesion();
+    }, error => {
+      this.mostrarToast('Error al eliminar usuario', 'danger');
+    });
+  }
+  
   async mostrarToast(mensaje: string, color: string = 'success') {
     const toast = await this.toastController.create({
       message: mensaje,

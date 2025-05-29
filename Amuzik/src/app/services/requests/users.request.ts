@@ -98,6 +98,17 @@ export class UserRequest {
   }
 
   /**
+   * Eliminar a un usuario
+   * @param userId 
+   * @returns 
+   */
+  deleteUser(userId: string): Observable<any> {
+    const headers = this.getAuthHeaders('application/json');
+    const body = { id: userId };
+    return this.http.post(`${this.apiUrl}delete`, body, { headers });
+  }
+
+  /**
    * Guardamos la relación de amistad entre usuarios
    * @param userId 
    * @param friendId 
