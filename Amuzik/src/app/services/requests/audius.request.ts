@@ -303,7 +303,6 @@ export class AudiusRequest {
       }
     }
 
-    // Resetear flag de sincronización
     setTimeout(() => {
       this.roomSyncInProgress = false;
     }, 100);
@@ -314,7 +313,6 @@ export class AudiusRequest {
    * @param trackId
    * @returns
    */
-  // Reemplazar el método setupAudioEventHandlers en AudiusRequest
   private setupAudioEventHandlers(
     trackId: string,
     suppressEvents: boolean = false
@@ -383,7 +381,6 @@ export class AudiusRequest {
       this.currentAudio = null;
     }
 
-    // LIMPIAR todas las posiciones al detener
     if (resetPlaylist) {
       this.trackPositions.clear();
     }
@@ -507,7 +504,6 @@ export class AudiusRequest {
       )
       .subscribe((response: any) => {
         if (response?.data && response.data.length > 0) {
-          // Filtrar el track actual
           const similarTracks = response.data.filter(
             (t: any) => t.id !== currentTrackId
           );

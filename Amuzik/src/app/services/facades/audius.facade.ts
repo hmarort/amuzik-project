@@ -210,7 +210,6 @@ export class AudiusFacade {
     });
   }
 
-  // Agregar estos métodos a AudiusFacade
   setRoomMode(isRoomMode: boolean): void {
     this.audiusRequest.setRoomMode(isRoomMode);
   }
