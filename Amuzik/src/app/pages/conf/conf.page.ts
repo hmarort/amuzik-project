@@ -9,6 +9,7 @@ import {
   IonList,
   IonItem,
   IonLabel,
+  IonMenuToggle,
   IonToggle,
   IonIcon,
   IonSelect,
@@ -45,7 +46,6 @@ import {
   imageOutline
 } from 'ionicons/icons';
 import { Router } from '@angular/router';
-import { ConfigService } from '../../services/config.service';
 import { AuthService, User } from '../../services/auth.service';
 import { Subscription } from 'rxjs';
 import { ImageCroppedEvent, ImageCropperComponent, LoadedImage } from 'ngx-image-cropper';
@@ -57,7 +57,7 @@ import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
   styleUrls: ['./conf.page.scss'],
   standalone: true,
   imports: [IonFooter,
-    IonBackButton,
+    IonMenuToggle,
     IonButtons,
     IonContent,
     IonHeader,
@@ -121,7 +121,6 @@ export class ConfPage implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
-    private configService: ConfigService,
     private authService: AuthService,
     private alertController: AlertController,
     private toastController: ToastController,

@@ -1,15 +1,17 @@
 <ion-header mode="md" [translucent]="true">
   <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-menu-toggle menu="main-menu" autoHide="false">
-        <div class="chip-style">
-          <ion-avatar>
-            <img src="data:image/jpeg;base64,{{currentUser?.base64}}" alt="User Avatar">
-          </ion-avatar>
-        </div>
-      </ion-menu-toggle>
-    </ion-buttons>
-    <ion-title>Amigos</ion-title>
+    <div class="flex items-center justify-between w-full px-4 py-2">
+      <ion-buttons slot="start">
+        <ion-menu-toggle menu="main-menu" autoHide="false">
+          <div class="chip-style">
+            <ion-avatar>
+              <img src="data:image/jpeg;base64,{{currentUser?.base64}}" alt="User Avatar">
+            </ion-avatar>
+          </div>
+        </ion-menu-toggle>
+      </ion-buttons>
+      <ion-title>Amigos</ion-title>
+    </div>
   </ion-toolbar>
 </ion-header>
 

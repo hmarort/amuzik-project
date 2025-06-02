@@ -1,9 +1,18 @@
-<ion-header [translucent]="true">
+<ion-header mode="md" [translucent]="true">
   <ion-toolbar>
-    <ion-title color="primary">Configuración</ion-title>
-    <ion-buttons slot="end">
-      <ion-back-button defaultHref="/home"></ion-back-button>
-    </ion-buttons>
+    <div class="flex items-center justify-between w-full px-4 py-2">
+      <ion-buttons slot="start">
+        <ion-menu-toggle menu="main-menu" autoHide="false">
+          <div class="chip-style">
+            <ion-avatar>
+              <img src="data:image/jpeg;base64,{{
+                usuario.base64}}" alt="User Avatar">
+            </ion-avatar>
+          </div>
+        </ion-menu-toggle>
+      </ion-buttons>
+      <ion-title>Configuración</ion-title>
+    </div>
   </ion-toolbar>
 </ion-header>
 

@@ -1185,6 +1185,9 @@ ion-content {
   
   .track-card {
     scroll-snap-align: start;
+    :hover {
+      cursor: pointer;
+    }
     flex: 0 0 auto;
     width: 150px;
     margin-right: 12px;
@@ -1335,6 +1338,10 @@ ion-content {
     margin-top: -16px;
     
     .track-item {
+      :hover {
+        cursor: pointer;
+        background-color: var(--ion-color-light);
+      }
       --padding-start: var(--spacing-sm);
       --padding-end: var(--spacing-sm);
       --inner-padding-end: var(--spacing-sm);
@@ -1537,6 +1544,9 @@ ion-footer ion-thumbnail {
 
 /* Estilos para chips y avatares */
 .chip-style {
+  :hover{
+    cursor: pointer;
+  }
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1632,6 +1642,9 @@ ion-avatar {
   }
   
   .friend-item {
+    :hover{
+      cursor: pointer;
+    }
     --padding-start: 12px;
     --padding-end: 12px;
     --padding-top: 8px;

@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { 
   IonContent, 
   IonHeader, 
-  IonTitle, 
+  IonTitle,
+  IonMenuToggle, 
   IonToolbar, 
   IonLabel, 
   IonIcon, 
@@ -20,7 +21,7 @@ import {
   IonBackButton, 
   IonButtons,
   IonSegment,
-  IonSegmentButton } from '@ionic/angular/standalone';
+  IonSegmentButton, IonAvatar } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { 
   contrastOutline, 
@@ -33,6 +34,7 @@ import {
   desktopOutline } from 'ionicons/icons';
 import { TemaService, ModoTema } from 'src/app/services/tema.service';
 import { Subscription } from 'rxjs';
+import { AuthService, User } from '../../services/auth.service';
 
 interface Tema {
   id: string;
@@ -47,9 +49,9 @@ interface Tema {
   templateUrl: './apariencia.page.html',
   styleUrls: ['./apariencia.page.scss'],
   standalone: true,
-  imports: [
+  imports: [IonAvatar,
     IonButtons,
-    IonBackButton,
+    IonMenuToggle,
     IonRange,
     IonContent,
     IonHeader,
@@ -68,8 +70,7 @@ interface Tema {
     IonRow,
     IonCol,
     IonSegment,
-    IonSegmentButton
-]
+    IonSegmentButton]
 })
 export class AparienciaPage implements OnInit, OnDestroy {
   temaActual: string = '';
@@ -77,12 +78,15 @@ export class AparienciaPage implements OnInit, OnDestroy {
   modoPreferido: ModoTema = 'sistema';
   temas: Tema[] = [];
   percentage: number = 100;
+  usuario: User | null = null;
   
   private temaSubscription: Subscription = new Subscription;
   private modoOscuroSubscription: Subscription = new Subscription;
   private preferenciaModoBrilloSubscription: Subscription = new Subscription;
 
-  constructor(private temaService: TemaService) {
+  private userSubscription: Subscription | null = null;
+
+  constructor(private temaService: TemaService, private authService: AuthService) {
     addIcons({
       closeOutline,
       contrastOutline,
@@ -99,6 +103,12 @@ export class AparienciaPage implements OnInit, OnDestroy {
     // Cargar el tamaño de fuente guardado
     this.cargarTamanoFuenteGuardado();
     
+    this.userSubscription = this.authService.currentUser$.subscribe(user => {
+      if (user) {
+        this.usuario = user;
+      }
+    });
+
     this.temas = this.temaService.temasDisponibles
       .filter(tema => ['green', 'blue', 'purple', 'red', 'orange','standard','neutral'].includes(tema.id))
       .map(tema => ({
