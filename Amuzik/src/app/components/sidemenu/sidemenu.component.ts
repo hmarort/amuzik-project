@@ -11,14 +11,13 @@ import {
   IonIcon,
   IonLabel,
   IonMenuToggle,
-  IonFooter,
-} from '@ionic/angular/standalone';
+  IonFooter, IonButton } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { 
   settingsOutline, 
   brushOutline,
   moonOutline, 
-  sunnyOutline, homeOutline } from 'ionicons/icons';
+  sunnyOutline, homeOutline, downloadOutline } from 'ionicons/icons';
 import { Router } from '@angular/router';
 
 @Component({
@@ -26,7 +25,7 @@ import { Router } from '@angular/router';
   templateUrl: './sidemenu.component.html',
   styleUrls: ['./sidemenu.component.scss'],
   standalone: true,
-  imports: [
+  imports: [IonButton, 
     CommonModule,
     IonMenu,
     IonHeader,
@@ -45,7 +44,7 @@ export class SidemenuComponent implements OnInit {
 
   constructor(private router: Router) {
     // Registrar iconos
-    addIcons({settingsOutline,brushOutline,homeOutline,moonOutline,sunnyOutline});
+    addIcons({settingsOutline,brushOutline,homeOutline,downloadOutline,moonOutline,sunnyOutline});
     
     // Cargar preferencia de tema
     const savedTheme = localStorage.getItem('darkMode');
