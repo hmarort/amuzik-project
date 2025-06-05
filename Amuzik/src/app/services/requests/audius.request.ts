@@ -14,7 +14,7 @@ import {
 })
 export class AudiusRequest {
   private readonly API_URL = 'https://discoveryprovider.audius.co/v1';
-  private readonly APP_NAME = 'amuzik';
+  private readonly APP_NAME = 'Amuzik';
   private currentAudio: HTMLAudioElement | null = null;
   private trackPositions: Map<string, number> = new Map();
 
