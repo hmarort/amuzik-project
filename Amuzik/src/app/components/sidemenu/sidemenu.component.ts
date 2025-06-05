@@ -42,27 +42,36 @@ import { Router } from '@angular/router';
 export class SidemenuComponent implements OnInit {
   darkMode = false;
 
+  /**
+   * Constructor
+   * @param router 
+   */
   constructor(private router: Router) {
-    // Registrar iconos
     addIcons({settingsOutline,brushOutline,homeOutline,downloadOutline,moonOutline,sunnyOutline});
-    
-    // Cargar preferencia de tema
+
     const savedTheme = localStorage.getItem('darkMode');
     this.darkMode = savedTheme === 'true';
   }
 
   ngOnInit() {}
 
-  // Navegar a configuración
+  /**
+   * Navegar a conf
+   */
   goToSettings() {
     this.router.navigate(['/conf']);
   }
 
-  // Navegar a apariencia
+  /**
+   * Navegar a apariencia
+   */
   goToAppearance() {
     this.router.navigate(['/apariencia']);
   }
-
+  
+  /**
+   * Navegar a home
+   */
   goToHome() {
     this.router.navigate(['/home']);
   }
