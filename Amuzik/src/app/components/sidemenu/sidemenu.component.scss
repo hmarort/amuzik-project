@@ -1,13 +1,17 @@
-/* src/app/components/side-menu/side-menu.component.scss */
-ion-menu {
-    --width: 280px;
-    
-    ion-footer {
-      ion-item {
-        margin-bottom: 8px;
-        --border-radius: 4px;
-        margin-left: 8px;
-        margin-right: 8px;
-      }
-    }
-  }
+.menu-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100vh;
+}
+
+ion-list {
+  flex-grow: 1;
+  flex-shrink: 0;
+}
+
+.menu-footer {
+  padding: 32px;
+  margin-top: auto;
+  flex-shrink: 0;
+}

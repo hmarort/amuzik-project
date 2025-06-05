@@ -4,8 +4,8 @@
       <ion-title>Menú</ion-title>
     </ion-toolbar>
   </ion-header>
-  
-  <ion-content>
+
+  <ion-content class="menu-content">
     <ion-list>
       <ion-menu-toggle auto-hide="false">
         <ion-item button (click)="goToSettings()">
@@ -13,7 +13,7 @@
           <ion-label>Configuración</ion-label>
         </ion-item>
       </ion-menu-toggle>
-      
+
       <ion-menu-toggle auto-hide="false">
         <ion-item button (click)="goToAppearance()">
           <ion-icon slot="start" name="brush-outline"></ion-icon>
@@ -27,15 +27,15 @@
           <ion-label>Inicio</ion-label>
         </ion-item>
       </ion-menu-toggle>
-
-      <ion-menu-toggle auto-hide="false">
-          <div class="accion-container">
-            <ion-button expand="block" color="tertiary" href="https://github.com/hmarort/amuzik-project/releases/download/v2.0.0/Amuzik.apk">
-              <ion-icon slot="start" name="download-outline"></ion-icon>
-              Descargar Amuzik
-            </ion-button>
-          </div>
-      </ion-menu-toggle>
     </ion-list>
+
+    <div class="menu-footer">
+      <ion-menu-toggle auto-hide="false">
+        <ion-button expand="block" color="tertiary" href="https://github.com/hmarort/amuzik-project/releases/download/v2.0.0/Amuzik.apk">
+          <ion-icon slot="start" name="download-outline"></ion-icon>
+          Descargar Amuzik
+        </ion-button>
+      </ion-menu-toggle>
+    </div>
   </ion-content>
 </ion-menu>
