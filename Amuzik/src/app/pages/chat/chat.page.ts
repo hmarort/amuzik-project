@@ -65,7 +65,6 @@ export class ChatPage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // Get the current logged in user
     const userSub = this.authService.currentUser$.subscribe((user: User | null) => {
       this.currentUser = user;
       if (user && this.friendId) {
@@ -97,20 +96,20 @@ export class ChatPage implements OnInit, OnDestroy {
     this.scrollToBottom();
     this.setupMessageObserver();
     
-    // Marcar mensajes como leídos cuando se entra a la vista
     if (this.friendId) {
       this.chatService.markMessagesAsRead(this.friendId);
     }
   }
 
   ionViewWillLeave() {
-    // Opcional: desconectar observer
     if (this.mutationObserver) {
       this.mutationObserver.disconnect();
     }
   }
 
-  // Observar cambios en el contenedor de mensajes para auto-scroll
+  /**
+   * Configura un observer para detectar cambios en el contenedor de mensajes
+   */
   private setupMessageObserver(): void {
     const chatContainer = document.querySelector('.chat-container');
     if (chatContainer && !this.mutationObserver) {
@@ -124,7 +123,9 @@ export class ChatPage implements OnInit, OnDestroy {
       });
     }
   }
-
+  /**
+   * Carga los datos del amigo actual.
+   */
   loadFriendData() {
     this.isLoading = true;
     if (this.currentUser && this.currentUser.friends) {
@@ -146,7 +147,9 @@ export class ChatPage implements OnInit, OnDestroy {
       });
     }
   }
-
+  /**
+   * Carga los mensajes de la conversación con el amigo actual.
+   */
   loadMessages() {
     this.isLoading = true;
     
@@ -170,13 +173,21 @@ export class ChatPage implements OnInit, OnDestroy {
     this.subscriptions.push(messagesSub);
   }
 
-  // Ordenar mensajes por fecha
+  /**
+   * Ordena los mensajes por fecha.
+   * @param messages 
+   * @returns 
+   */
   private sortMessagesByDate(messages: Message[]): Message[] {
     return [...messages].sort((a, b) => {
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
   }
 
+  /**
+   * Envía un nuevo mensaje.
+   * @returns 
+   */
   sendMessage() {
     if (this.newMessage.trim() === '') return;
     
@@ -185,6 +196,9 @@ export class ChatPage implements OnInit, OnDestroy {
     this.scrollToBottom();
   }
 
+  /**
+   * Desplaza el contenido hacia abajo para mostrar el último mensaje.
+   */
   scrollToBottom() {
     if (this.content) {
       setTimeout(() => {
@@ -193,30 +207,45 @@ export class ChatPage implements OnInit, OnDestroy {
     }
   }
 
-  // Helper method to determine if a message was sent by the current user
+  /**
+   * Determina si un mensaje fue enviado por el usuario actual.
+   * @param message 
+   * @returns 
+   */
   isMyMessage(message: Message): boolean {
     return message.senderId === this.currentUser?.id;
   }
 
-  // Helper function to get user's avatar
+  /**
+   * Obtiene el avatar del amigo.
+   * @returns 
+   */
   getFriendAvatar(): string {
     if (!this.friend) return '';
-    return this.friend.base64 || 'assets/img/default-avatar.png'; // Fallback to default avatar
+    return this.friend.base64 || 'assets/img/default-avatar.png';
   }
   
-  // Helper to get status icon
+  /**
+   * Obtiene el icono de estado del mensaje.
+   * @param message 
+   * @returns 
+   */
   getMessageStatusIcon(message: Message): string {
     if (!message.status || !this.isMyMessage(message)) return '';
     
     switch (message.status) {
       case 'sent': return 'checkmark';
       case 'delivered': return 'checkmark-done';
-      case 'read': return 'checkmark-done-sharp'; // Mismo icono pero podría tener diferente estilo CSS
+      case 'read': return 'checkmark-done-sharp';
       default: return '';
     }
   }
   
-  // Helper to format time
+  /**
+   * Formatea la fecha del mensaje para mostrarla de manera legible.
+   * @param date 
+   * @returns 
+   */
   formatMessageTime(date: Date): string {
     if (!date) return '';
     
@@ -242,8 +271,7 @@ export class ChatPage implements OnInit, OnDestroy {
       return daysOfWeek[messageDate.getDay()] + ' ' + 
              messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
-    
-    // Para fechas más antiguas, mostrar día/mes/año
+
     return messageDate.toLocaleDateString() + ' ' + 
            messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }

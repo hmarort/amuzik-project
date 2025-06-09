@@ -85,7 +85,11 @@ export class AparienciaPage implements OnInit, OnDestroy {
   private preferenciaModoBrilloSubscription: Subscription = new Subscription;
 
   private userSubscription: Subscription | null = null;
-
+  /**
+   * Constructor de la clase
+   * @param temaService 
+   * @param authService 
+   */
   constructor(private temaService: TemaService, private authService: AuthService) {
     addIcons({
       closeOutline,
@@ -98,7 +102,9 @@ export class AparienciaPage implements OnInit, OnDestroy {
       desktopOutline
     });
   }
-
+  /**
+   * Inicializa el componente AparienciaPage.
+   */
   ngOnInit() {
     // Cargar el tamaño de fuente guardado
     this.cargarTamanoFuenteGuardado();
@@ -136,6 +142,9 @@ export class AparienciaPage implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Limpia las suscripciones al destruir el componente.
+   */
   ngOnDestroy() {
     if (this.temaSubscription) {
       this.temaSubscription.unsubscribe();
@@ -163,19 +172,36 @@ export class AparienciaPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Selecciona un tema.
+   * @param tema 
+   */
   seleccionarTema(tema: Tema) {
     this.temaService.cambiarTema(tema.id);
   }
 
+  /**
+   * Cambia el modo de visualización manualmente.
+   * @param modo 
+   */
   cambiarModoManual(modo: ModoTema) {
     this.temaService.cambiarPreferenciaModo(modo);
   }
 
+  /**
+   * Obtiene la clase CSS previa para un tema.
+   * @param tema 
+   * @returns 
+   */
   obtenerClasePrevia(tema: Tema): string {
     const sufijo = this.modoOscuro ? '-dark' : '-light';
     return `${tema.colorClase}${sufijo}`;
   }
 
+  /**
+   * Obtiene el ID del tema actual.
+   * @returns 
+   */
   obtenerTemaActualId(): string {
     const temaActualNombre = this.temaActual.split('-light')[0].split('-dark')[0];
     
@@ -189,6 +215,7 @@ export class AparienciaPage implements OnInit, OnDestroy {
 
   /**
    * Actualiza el tamaño de fuente y lo guarda en localStorage
+   * @param event 
    */
   updateFontSize(event: CustomEvent) {
     this.percentage = event.detail.value;
@@ -201,7 +228,7 @@ export class AparienciaPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Restaura la configuración predeterminada
+   * Restaurar la configuración predeterminada de apariencia.
    */
   restaurarConfiguracion() {
     // Restaurar tema

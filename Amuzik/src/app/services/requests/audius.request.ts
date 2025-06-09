@@ -218,7 +218,6 @@ export class AudiusRequest {
     }
   }
 
-  // Reemplazar el método playTrack completo en AudiusRequest
   /**
    * Reproduce track con control de sincronización para sala
    * @param trackId
@@ -337,7 +336,6 @@ export class AudiusRequest {
       this.isPlayingSubject.next(false);
       this.trackPositions.delete(trackId);
 
-      // Solo reproducir siguiente si no estamos en modo sala o si no hay sincronización en progreso
       if (!this.isRoomModeSubject.value && !suppressEvents) {
         this.playNextTrack();
       }

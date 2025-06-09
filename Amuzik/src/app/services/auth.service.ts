@@ -798,6 +798,10 @@ export class AuthService {
     return password;
   }
 
+  /**
+   * Eliminar el usuario actual
+   * @returns 
+   */
   deleteUser(): Observable<any> {
     const currentUser = this.getCurrentUser();
     if (!currentUser || !currentUser.id) {
