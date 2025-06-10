@@ -94,7 +94,7 @@ export class TemaService {
    * Inicializa el tema y el modo de brillo según la configuración guardada en localStorage.
    */
   private inicializarTema() {
-    const temaGuardado = localStorage.getItem('tema-app') || 'standard';
+    const temaGuardado = localStorage.getItem('tema-app') || 'standard-light';
     const modoPreferencia = localStorage.getItem('modo-preferencia') as ModoTema || 'sistema';
     
     this.preferenciaModoBrillo.next(modoPreferencia);
