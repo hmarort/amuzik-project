@@ -173,9 +173,9 @@
         <!-- Botón para crear sala de escucha - oculto en móvil -->
         <ion-button *ngIf="!isNativePlatform" slot="end" fill="clear" color="light"
           (click)="$event.stopPropagation(); createListeningRoom(item.id)">
-          <ion-icon name="people-outline"></ion-icon>
+          <ion-icon class="text-ionic-primary" name="people-outline"></ion-icon>
         </ion-button>
-        <ion-icon slot="end" name="play-outline"></ion-icon>
+        <ion-icon class="text-ionic-primary" slot="end" name="play-outline"></ion-icon>
       </ion-item>
     </ion-list>
     <ng-template #noResults>

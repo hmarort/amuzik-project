@@ -1678,6 +1678,9 @@ ion-fab {
 
 /* Resultados de búsqueda */
 .search-results {
+  :hover {
+    cursor: pointer;
+  }
   margin-top: 1.5rem;
   
   h4 {
@@ -1686,6 +1689,7 @@ ion-fab {
   }
   
   .search-result-item {
+
     --border-radius: var(--border-radius-md);
     margin-bottom: var(--spacing-xs);
   }
