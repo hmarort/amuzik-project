@@ -13,8 +13,8 @@ import {
   providedIn: 'root',
 })
 export class AudiusRequest {
-  private readonly API_URL = 'https://discoveryprovider3.audius.co/v1';
-  private readonly APP_NAME = 'Amuzik';
+  private readonly API_URL = 'https://discoveryprovider.audius.co/v1';
+  private readonly APP_NAME = 'amuzik';
   private currentAudio: HTMLAudioElement | null = null;
   private trackPositions: Map<string, number> = new Map();
 
