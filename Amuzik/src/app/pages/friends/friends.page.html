@@ -26,7 +26,7 @@
   <div class="add-friend-form" *ngIf="showAddFriendForm">
     <ion-card>
       <ion-card-header>
-        <ion-card-title>Buscar y añadir amigos</ion-card-title>
+        <ion-card-title class="text-ionic-primary">Buscar y añadir amigos</ion-card-title>
       </ion-card-header>
       <ion-card-content>
         <div class="search-container">
@@ -57,7 +57,7 @@
               </ion-avatar>
               <ion-label>
                 <h2>{{ user.username }}</h2>
-                <p *ngIf="user.nombre || user.apellidos">
+                <p class="text-ionic-secundary" *ngIf="user.nombre || user.apellidos">
                   {{ user.nombre }} {{ user.apellidos }}
                 </p>
               </ion-label>
@@ -87,9 +87,9 @@
           </ion-avatar>
           <ion-label>
             <h2>{{ friend.username }}</h2>
-            <p *ngIf="friend.nombre || friend.apellidos">
+            <h3 class="text-ionic-primary" *ngIf="friend.nombre || friend.apellidos">
               {{ friend.nombre }} {{ friend.apellidos }}
-            </p>
+            </h3>
           </ion-label>
           <ion-icon name="chatbubble-outline" slot="end"></ion-icon>
         </ion-item>
