@@ -167,6 +167,13 @@ export class HomePage implements OnInit, OnDestroy {
 
   isNativePlatform = Capacitor.isNativePlatform();
 
+  // Variables estáticas para controlar la carga única
+  private static dataLoaded = false;
+  private static staticTrendingTracks: Track[] = [];
+  private static staticAllPlaylists: Playlist[] = [];
+  private static staticTracksCache: Map<string, any> = new Map();
+  private static isInitializing = false;
+
   constructor(
     private audiusFacade: AudiusFacade,
     private authService: AuthService,
@@ -194,17 +201,22 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.initializeBasicSubscriptions();
+    this.initializeListeningRoomSubscriptions();
+    this.loadInitialData();
+  }
+
+  private initializeBasicSubscriptions() {
+    // Suscripciones básicas que siempre deben ejecutarse
     this.authService.currentUser$
       .pipe(takeUntil(this.destroy$))
       .subscribe((user) => {
         this.currentUser = user;
       });
+
     if (this.currentUser) {
       this.pushNotificationService.initialize(this.currentUser.username);
     }
-    SplashScreen.show({
-      autoHide: false,
-    });
 
     this.audiusFacade
       .isPlaying()
@@ -269,6 +281,7 @@ export class HomePage implements OnInit, OnDestroy {
               const trackData = response.data;
 
               this.tracksCache.set(trackId, trackData);
+              HomePage.staticTracksCache.set(trackId, trackData);
 
               this.currentTrack = {
                 id: trackData.id,
@@ -283,8 +296,9 @@ export class HomePage implements OnInit, OnDestroy {
             }
           });
       });
+  }
 
-    // Suscripciones para ListeningRoomService
+  private initializeListeningRoomSubscriptions() {
     if (!this.isNativePlatform) {
       this.listeningRoomService.currentRoom$
         .pipe(takeUntil(this.destroy$))
@@ -312,6 +326,78 @@ export class HomePage implements OnInit, OnDestroy {
     } else {
       console.log('Esto es is native: ', this.isNativePlatform);
     }
+  }
+
+  private loadInitialData() {
+    // Si los datos ya están cargados, usarlos directamente
+    if (HomePage.dataLoaded) {
+      this.useStaticData();
+      return;
+    }
+
+    // Si ya se está inicializando en otra instancia, esperar
+    if (HomePage.isInitializing) {
+      this.waitForInitialization();
+      return;
+    }
+
+    // Marcar como iniciando y cargar datos
+    HomePage.isInitializing = true;
+    this.loadDataFromAPI();
+  }
+
+  private useStaticData() {
+    console.log('Usando datos estáticos ya cargados');
+
+    // Copiar datos estáticos a la instancia actual
+    this.trendingTracks = [...HomePage.staticTrendingTracks];
+    this.allPlaylists = [...HomePage.staticAllPlaylists];
+    this.tracksCache = new Map(HomePage.staticTracksCache);
+
+    // Configurar las playlists para mostrar
+    this.playlists = this.allPlaylists.slice(0, this.limit);
+    this.hasMorePlaylists = this.allPlaylists.length > this.limit;
+
+    // Expandir la primera playlist si existe
+    if (this.playlists.length > 0) {
+      this.togglePlaylistExpansion(this.playlists[0]);
+    }
+
+    this.isLoading = false;
+    SplashScreen.hide();
+  }
+
+  private waitForInitialization() {
+    console.log('Esperando inicialización de datos...');
+
+    // Verificar cada 100ms si la inicialización ha terminado
+    const checkInterval = setInterval(() => {
+      if (HomePage.dataLoaded) {
+        clearInterval(checkInterval);
+        this.useStaticData();
+      }
+    }, 100);
+
+    // Timeout de seguridad (10 segundos)
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      if (!HomePage.dataLoaded) {
+        console.warn(
+          'Timeout esperando inicialización, cargando datos nuevamente'
+        );
+        HomePage.isInitializing = false;
+        this.loadDataFromAPI();
+      }
+    }, 10000);
+  }
+
+  private loadDataFromAPI() {
+    console.log('Cargando datos desde la API...');
+
+    // Mostrar splash screen solo en la primera carga
+    SplashScreen.show({
+      autoHide: false,
+    });
 
     forkJoin({
       tracks: this.audiusFacade
@@ -324,15 +410,19 @@ export class HomePage implements OnInit, OnDestroy {
       .pipe(
         takeUntil(this.destroy$),
         finalize(() => {
-          // La pantalla de splash se ocultará después de validar las playlists
+          HomePage.isInitializing = false;
         })
       )
       .subscribe({
         next: (results) => {
           if (results.tracks?.data) {
-            this.trendingTracks = results.tracks.data.slice(0, 10);
+            const tracks = results.tracks.data.slice(0, 10);
+            this.trendingTracks = tracks;
+            HomePage.staticTrendingTracks = [...tracks];
+
             results.tracks.data.forEach((track: any) => {
               this.tracksCache.set(track.id, track);
+              HomePage.staticTracksCache.set(track.id, track);
             });
           }
 
@@ -348,11 +438,14 @@ export class HomePage implements OnInit, OnDestroy {
             this.validateAllPlaylists(rawPlaylists);
           } else {
             this.isLoading = false;
+            HomePage.dataLoaded = true;
             SplashScreen.hide();
           }
         },
         error: () => {
           this.isLoading = false;
+          HomePage.dataLoaded = true;
+          HomePage.isInitializing = false;
           SplashScreen.hide();
         },
       });
@@ -368,12 +461,15 @@ export class HomePage implements OnInit, OnDestroy {
         map((results) => results.filter((p) => p !== null) as Playlist[]),
         finalize(() => {
           this.isLoading = false;
+          HomePage.dataLoaded = true;
           SplashScreen.hide();
         }),
         takeUntil(this.destroy$)
       )
       .subscribe((validPlaylists) => {
         this.allPlaylists = validPlaylists;
+        HomePage.staticAllPlaylists = [...validPlaylists];
+
         this.playlists = this.allPlaylists.slice(0, this.limit);
         this.hasMorePlaylists = this.allPlaylists.length > this.limit;
 
@@ -396,6 +492,7 @@ export class HomePage implements OnInit, OnDestroy {
           response.data.forEach((track: any) => {
             if (track.id) {
               this.tracksCache.set(track.id, track);
+              HomePage.staticTracksCache.set(track.id, track);
             }
           });
 
@@ -422,9 +519,30 @@ export class HomePage implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  // Método para limpiar los datos estáticos (útil para desarrollo o logout)
+  static clearStaticData() {
+    HomePage.dataLoaded = false;
+    HomePage.staticTrendingTracks = [];
+    HomePage.staticAllPlaylists = [];
+    HomePage.staticTracksCache.clear();
+    HomePage.isInitializing = false;
+  }
+
   private findTrackInData(trackId: string): Track | null {
+    // Buscar primero en la caché local
     if (this.tracksCache.has(trackId)) {
       const cachedTrack = this.tracksCache.get(trackId);
+      return {
+        id: cachedTrack.id,
+        title: cachedTrack.title,
+        user: { name: cachedTrack.user?.name || 'Artista Desconocido' },
+        artwork: cachedTrack.artwork,
+      };
+    }
+
+    // Buscar en la caché estática
+    if (HomePage.staticTracksCache.has(trackId)) {
+      const cachedTrack = HomePage.staticTracksCache.get(trackId);
       return {
         id: cachedTrack.id,
         title: cachedTrack.title,
@@ -455,6 +573,7 @@ export class HomePage implements OnInit, OnDestroy {
           artwork: playlistTrack.artwork || playlist.artwork,
         };
         this.tracksCache.set(trackId, track);
+        HomePage.staticTracksCache.set(trackId, track);
         return track;
       }
     }
@@ -512,6 +631,7 @@ export class HomePage implements OnInit, OnDestroy {
           response.data.forEach((track: any) => {
             if (track.id) {
               this.tracksCache.set(track.id, track);
+              HomePage.staticTracksCache.set(track.id, track);
             }
           });
 
@@ -708,6 +828,7 @@ export class HomePage implements OnInit, OnDestroy {
             this.searchResults = response.data.map((track: any) => {
               if (track.id) {
                 this.tracksCache.set(track.id, track);
+                HomePage.staticTracksCache.set(track.id, track);
               }
 
               return {
