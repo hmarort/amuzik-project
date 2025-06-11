@@ -19,7 +19,7 @@ import {
   moonOutline, 
   sunnyOutline, homeOutline, downloadOutline } from 'ionicons/icons';
 import { Router } from '@angular/router';
-
+import { Capacitor } from '@capacitor/core';
 @Component({
   selector: 'app-side-menu',
   templateUrl: './sidemenu.component.html',
@@ -42,6 +42,7 @@ import { Router } from '@angular/router';
 export class SidemenuComponent implements OnInit {
   darkMode = false;
 
+  isNative: boolean = Capacitor.getPlatform() === 'ios' || Capacitor.getPlatform() === 'android';
   /**
    * Constructor
    * @param router 

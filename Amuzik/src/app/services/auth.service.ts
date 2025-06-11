@@ -39,10 +39,10 @@ export class AuthService {
 
   /**
    * Constructor de la clase
-   * @param userRequest 
-   * @param router 
-   * @param platform 
-   * @param biometricService 
+   * @param userRequest
+   * @param router
+   * @param platform
+   * @param biometricService
    */
   constructor(
     private userRequest: UserRequest,
@@ -64,8 +64,8 @@ export class AuthService {
   }
 
   /**
-   * Inicializa el cliente de Google Web Auth 
-   * @returns 
+   * Inicializa el cliente de Google Web Auth
+   * @returns
    */
   private initGoogleWebAuth(): void {
     if (typeof google !== 'undefined' && google.accounts) {
@@ -85,7 +85,7 @@ export class AuthService {
 
   /**
    * Configura el cliente de la API Google Identify
-   * @returns 
+   * @returns
    */
   private setupGoogleClient(): void {
     if (typeof google === 'undefined' || !google.accounts) {
@@ -120,7 +120,7 @@ export class AuthService {
 
   /**
    * Determinamos el uso de localStorage o SessionStorage
-   * @returns 
+   * @returns
    */
   private useLocalStorage(): boolean {
     return localStorage.getItem(this.rememberMeKey) === 'true';
@@ -128,8 +128,8 @@ export class AuthService {
 
   /**
    * Obtiene un ítem del almacenamiento local o de sesión
-   * @param key 
-   * @returns 
+   * @param key
+   * @returns
    */
   private getStoredItem(key: string): string | null {
     return localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -137,8 +137,8 @@ export class AuthService {
 
   /**
    * Almacena un ítem en el almacenamiento apropiado
-   * @param key 
-   * @param value 
+   * @param key
+   * @param value
    */
   private storeItem(key: string, value: string): void {
     if (this.useLocalStorage()) {
@@ -150,7 +150,7 @@ export class AuthService {
 
   /**
    * Obtener al usuario local
-   * @returns 
+   * @returns
    */
   public getCurrentUser(): User | null {
     return this.currentUserSubject.value;
@@ -158,7 +158,7 @@ export class AuthService {
 
   /**
    * Obtenemos el token de autenticación
-   * @returns 
+   * @returns
    */
   public getToken(): string | null {
     return this.getStoredItem(this.tokenKey);
@@ -166,17 +166,20 @@ export class AuthService {
 
   /**
    * Comprobamos si la biometría está activada
-   * @returns 
+   * @returns
    */
   public isBiometricEnabled(): boolean {
-    return this.getStoredItem(this.biometricEnabledKey) === 'true';
+    return (
+      localStorage.getItem(this.biometricEnabledKey) === 'true' ||
+      sessionStorage.getItem(this.biometricEnabledKey) === 'true'
+    );
   }
 
   /**
    * Habilita la autenticación biométrica para el usuario actual
-   * @param username 
-   * @param password 
-   * @returns 
+   * @param username
+   * @param password
+   * @returns
    */
   enableBiometricAuth(username: string, password: string): Observable<boolean> {
     return this.biometricService.isBiometricsAvailable().pipe(
@@ -188,7 +191,8 @@ export class AuthService {
         return this.biometricService.saveCredentials(username, password).pipe(
           tap((success) => {
             if (success) {
-              this.storeItem(this.biometricEnabledKey, 'true');
+              // SIEMPRE guardar en localStorage para que persista entre sesiones
+              localStorage.setItem(this.biometricEnabledKey, 'true');
             }
           })
         );
@@ -198,12 +202,13 @@ export class AuthService {
 
   /**
    * Deshabilitamos el uso de biometría
-   * @returns 
+   * @returns
    */
   disableBiometricAuth(): Observable<boolean> {
     return this.biometricService.deleteCredentials().pipe(
       tap((success) => {
         if (success) {
+          // Eliminar de ambos almacenamientos para asegurar limpieza completa
           localStorage.removeItem(this.biometricEnabledKey);
           sessionStorage.removeItem(this.biometricEnabledKey);
         }
@@ -213,7 +218,7 @@ export class AuthService {
 
   /**
    * Intentamos iniciar sesión con biometría
-   * @returns 
+   * @returns
    */
   loginWithBiometrics(): Observable<any> {
     return this.biometricService.verifyIdentity().pipe(
@@ -231,10 +236,10 @@ export class AuthService {
 
   /**
    * Método lógico que se encarga de iniciar sesión llamando al backend para autenticar al usuario
-   * @param username 
-   * @param password 
-   * @param saveBiometrics 
-   * @returns 
+   * @param username
+   * @param password
+   * @param saveBiometrics
+   * @returns
    */
   login(
     username: string,
@@ -282,8 +287,8 @@ export class AuthService {
 
   /**
    * Método para registrar un nuevo usuario
-   * @param userData 
-   * @returns 
+   * @param userData
+   * @returns
    */
   register(userData: FormData): Observable<any> {
     return this.userRequest.register(userData).pipe(
@@ -316,7 +321,7 @@ export class AuthService {
 
   /**
    * Comprobamos si el usuario está autenticado
-   * @returns 
+   * @returns
    */
   isAuthenticated(): boolean {
     return !!this.currentUserSubject.value;
@@ -324,8 +329,8 @@ export class AuthService {
 
   /**
    * Actualizamos los datos del usuario
-   * @param userData 
-   * @returns 
+   * @param userData
+   * @returns
    */
   updateUserData(userData: FormData): Observable<any> {
     return this.userRequest.updateUserData(userData).pipe(
@@ -351,7 +356,7 @@ export class AuthService {
 
   /**
    * Refrescamos los datos del usuario desde el backend
-   * @returns 
+   * @returns
    */
   refreshUserData(): Observable<any> {
     const currentUser = this.getCurrentUser();
@@ -384,7 +389,7 @@ export class AuthService {
 
   /**
    * Registramos al usuario con google
-   * @returns 
+   * @returns
    */
   registerWithGoogle(): Observable<any> {
     // Verificar si estamos en una plataforma Capacitor (móvil)
@@ -397,7 +402,7 @@ export class AuthService {
 
   /**
    * Método de registro de Google para dispositivos móviles
-   * @returns 
+   * @returns
    */
   private registerWithGoogleMobile(): Observable<any> {
     return from(GoogleAuth.signIn()).pipe(
@@ -414,7 +419,7 @@ export class AuthService {
 
   /**
    * Registro de Google para la web
-   * @returns 
+   * @returns
    */
   private registerWithGoogleWeb(): Observable<any> {
     if (!this.googleClient) {
@@ -480,8 +485,8 @@ export class AuthService {
 
   /**
    * Procesa al usuario de Google para el registro despues de la autenticación
-   * @param googleUser 
-   * @returns 
+   * @param googleUser
+   * @returns
    */
   private processGoogleUserRegistration(googleUser: any): Observable<any> {
     if (!googleUser.email) {
@@ -522,8 +527,8 @@ export class AuthService {
 
   /**
    * Registramos el usuario que viene de Auth de Google
-   * @param googleUser 
-   * @returns 
+   * @param googleUser
+   * @returns
    */
   private registerGoogleUser(googleUser: any): Observable<any> {
     return this.getGoogleProfileImage(googleUser).pipe(
@@ -553,8 +558,8 @@ export class AuthService {
 
   /**
    * Registra un nuevo usuario que viene de Google Auth sin imagen de perfil
-   * @param googleUser 
-   * @returns 
+   * @param googleUser
+   * @returns
    */
   private registerGoogleUserWithoutImage(googleUser: any): Observable<any> {
     console.warn(
@@ -613,9 +618,9 @@ export class AuthService {
 
   /**
    * Registra un nuevo usuario que viene de Google Auth con imagen de perfil
-   * @param googleUser 
-   * @param profileImage 
-   * @returns 
+   * @param googleUser
+   * @param profileImage
+   * @returns
    */
   private registerGoogleUserWithProfileImage(
     googleUser: any,
@@ -673,8 +678,8 @@ export class AuthService {
 
   /**
    * Obtiene la imagen de perfil del usuario de Google que se registra
-   * @param googleUser 
-   * @returns 
+   * @param googleUser
+   * @returns
    */
   private getGoogleProfileImage(googleUser: any): Observable<File | null> {
     const imageUrl =
@@ -714,10 +719,9 @@ export class AuthService {
 
   /**
    * Si no obtenemos imgaen de perfil desde google, damos una imagen por defecto
-   * @returns 
+   * @returns
    */
   private getDefaultProfileImage(): Observable<File> {
-
     try {
       const canvas = document.createElement('canvas');
       canvas.width = 100;
@@ -738,7 +742,11 @@ export class AuthService {
         ctx.font = 'bold 40px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('AMUZIK'.charAt(Math.floor(Math.random() * 'AMUZIK'.length)), 50, 50);
+        ctx.fillText(
+          'AMUZIK'.charAt(Math.floor(Math.random() * 'AMUZIK'.length)),
+          50,
+          50
+        );
       }
 
       // Convertir el canvas a blob
@@ -784,7 +792,7 @@ export class AuthService {
 
   /**
    * Generamos una contraseña aleatoria para el usuario que se registra con google
-   * @returns 
+   * @returns
    */
   private generateRandomPassword(): string {
     const chars =
@@ -800,12 +808,14 @@ export class AuthService {
 
   /**
    * Eliminar el usuario actual
-   * @returns 
+   * @returns
    */
   deleteUser(): Observable<any> {
     const currentUser = this.getCurrentUser();
     if (!currentUser || !currentUser.id) {
-      return throwError(() => new Error('No hay usuario actual o el ID no está disponible'));
+      return throwError(
+        () => new Error('No hay usuario actual o el ID no está disponible')
+      );
     }
 
     return this.userRequest.deleteUser(currentUser.id).pipe(
