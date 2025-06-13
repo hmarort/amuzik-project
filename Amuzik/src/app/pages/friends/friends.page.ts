@@ -76,6 +76,13 @@ export class FriendsPage implements OnInit {
   searchResults: User[] = [];
   isLoading: boolean = false;
 
+  /**
+   * Constructor de la clase
+   * @param router 
+   * @param alertController 
+   * @param authService 
+   * @param userFacade 
+   */
   constructor(
     private router: Router,
     private alertController: AlertController,
@@ -93,6 +100,9 @@ export class FriendsPage implements OnInit {
     });
   }
 
+  /**
+   * Inicializa el componente FriendsPage.
+   */
   ngOnInit() {
     // Cargar datos iniciales
     this.loadUserData();
@@ -108,7 +118,9 @@ export class FriendsPage implements OnInit {
     });
   }
 
-  // Método para cargar datos del usuario siempre desde el servidor
+  /**
+   * Carga los datos del usuario actual y actualiza la lista de amigos.
+   */
   loadUserData() {
     if (this.authService.isAuthenticated()) {
       this.isLoading = true;
@@ -128,21 +140,35 @@ export class FriendsPage implements OnInit {
     }
   }
 
+  /**
+   * Abre el formulario para añadir un nuevo amigo.
+   * @param friendId 
+   */
   openChat(friendId: string) {
     this.router.navigate(['/chat', friendId]);
   }
 
+  /**
+   * Deja de mostrar el formulario para añadir un nuevo amigo.
+   */
   cancelAddFriend() {
     this.showAddFriendForm = false;
     this.resetSearch();
   }
 
+  /**
+   * Resetea el formulario de búsqueda y los resultados.
+   */
   resetSearch() {
     this.searchUsername = '';
     this.searchResults = [];
     this.isSearching = false;
   }
 
+  /**
+   * Busca un usuario por su nombre de usuario.
+   * @returns 
+   */
   searchUser() {
     if (!this.searchUsername.trim()) {
       this.presentAlert('Error', 'Por favor, introduce un nombre de usuario para buscar');
@@ -195,6 +221,11 @@ export class FriendsPage implements OnInit {
       });
   }
 
+  /**
+   * Añade un amigo a la lista de amigos del usuario actual.
+   * @param user 
+   * @returns 
+   */
   addFriend(user: User) {
     if (!this.currentUser) {
       this.presentAlert('Error', 'No se pudo agregar el amigo. No se ha iniciado sesión.');
@@ -210,7 +241,6 @@ export class FriendsPage implements OnInit {
         next: (response: any) => {
           console.log('Respuesta al guardar amigo:', response);
           
-          // Verificar si la respuesta es exitosa según la estructura que devuelve la API
           if (response && response.status === 'success') {
             // Refrescar los datos del usuario desde el servidor para obtener la lista actualizada de amigos
             this.isLoading = true;
@@ -242,6 +272,10 @@ export class FriendsPage implements OnInit {
       });
   }
 
+  /**
+   * Elimina un amigo de la lista de amigos del usuario actual.
+   * @param friend 
+   */
   async removeFriend(friend: User) {
     const alert = await this.alertController.create({
       header: 'Eliminar amigo',
@@ -298,6 +332,11 @@ export class FriendsPage implements OnInit {
     await alert.present();
   }
 
+  /**
+   * Muestra una alerta con un mensaje específico.
+   * @param header 
+   * @param message 
+   */
   async presentAlert(header: string, message: string) {
     const alert = await this.alertController.create({
       header,

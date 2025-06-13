@@ -56,6 +56,12 @@ export class ChatPage implements OnInit, OnDestroy {
   private subscriptions: Subscription[] = [];
   private mutationObserver: MutationObserver | null = null;
   
+  /**
+   * Constructor de la clase
+   * @param route 
+   * @param authService 
+   * @param chatService 
+   */
   constructor(
     private route: ActivatedRoute,
     private authService: AuthService,
@@ -64,6 +70,9 @@ export class ChatPage implements OnInit, OnDestroy {
     addIcons({alertCircleOutline,arrowBackOutline,chatbubbleOutline,send,arrowBack,checkmarkDone,checkmarkDoneSharp,checkmark});
   }
 
+  /**
+   * Inicializa el componente.
+   */
   ngOnInit() {
     const userSub = this.authService.currentUser$.subscribe((user: User | null) => {
       this.currentUser = user;
@@ -82,6 +91,9 @@ export class ChatPage implements OnInit, OnDestroy {
     this.subscriptions.push(routeSub);
   }
 
+  /**
+   * Limpia las suscripciones y el observer al destruir el componente.
+   */
   ngOnDestroy() {
     // Limpiar todas las suscripciones
     this.subscriptions.forEach(sub => sub.unsubscribe());
@@ -92,6 +104,9 @@ export class ChatPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Cuando entramos en la vista nos desplaza para abajo y organiza los mensajes
+   */
   ionViewDidEnter() {
     this.scrollToBottom();
     this.setupMessageObserver();
@@ -101,6 +116,9 @@ export class ChatPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Limpia todo, y deja de obersevar cambios
+   */
   ionViewWillLeave() {
     if (this.mutationObserver) {
       this.mutationObserver.disconnect();
@@ -123,6 +141,7 @@ export class ChatPage implements OnInit, OnDestroy {
       });
     }
   }
+  
   /**
    * Carga los datos del amigo actual.
    */
@@ -147,6 +166,7 @@ export class ChatPage implements OnInit, OnDestroy {
       });
     }
   }
+  
   /**
    * Carga los mensajes de la conversación con el amigo actual.
    */
@@ -174,7 +194,7 @@ export class ChatPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Ordena los mensajes por fecha.
+   * Ordena los mensajes por fecha
    * @param messages 
    * @returns 
    */

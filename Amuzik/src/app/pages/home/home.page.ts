@@ -73,6 +73,9 @@ import {
 import { UserFacade } from 'src/app/services/facades/users.facade';
 import { Capacitor } from '@capacitor/core';
 
+/**
+ * Interfaz para representar un track.
+ */
 interface Track {
   id: string;
   title: string;
@@ -84,6 +87,9 @@ interface Track {
   };
 }
 
+/**
+ * Interfaz para representar una playlist.
+ */
 interface Playlist {
   id: string;
   playlist_name: string;
@@ -174,6 +180,14 @@ export class HomePage implements OnInit, OnDestroy {
   private static staticTracksCache: Map<string, any> = new Map();
   private static isInitializing = false;
 
+  /**
+   * Constructor de la clase
+   * @param audiusFacade 
+   * @param authService 
+   * @param pushNotificationService 
+   * @param listeningRoomService 
+   * @param userFacade 
+   */
   constructor(
     private audiusFacade: AudiusFacade,
     private authService: AuthService,
@@ -200,12 +214,18 @@ export class HomePage implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Inicializa el componente y suscripciones necesarias.
+   */
   ngOnInit() {
     this.initializeBasicSubscriptions();
     this.initializeListeningRoomSubscriptions();
     this.loadInitialData();
   }
 
+  /**
+   * Inicializa las suscripciones básicas que siempre deben ejecutarse.
+   */
   private initializeBasicSubscriptions() {
     // Suscripciones básicas que siempre deben ejecutarse
     this.authService.currentUser$
@@ -298,6 +318,9 @@ export class HomePage implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * Inicializa las suscripciones para la sala de escucha.
+   */
   private initializeListeningRoomSubscriptions() {
     if (!this.isNativePlatform) {
       this.listeningRoomService.currentRoom$
@@ -328,6 +351,10 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Carga los datos iniciales de la página.
+   * @returns 
+   */
   private loadInitialData() {
     // Si los datos ya están cargados, usarlos directamente
     if (HomePage.dataLoaded) {
@@ -346,6 +373,9 @@ export class HomePage implements OnInit, OnDestroy {
     this.loadDataFromAPI();
   }
 
+  /**
+   * Usa los datos estáticos ya cargados para evitar múltiples llamadas a la API.
+   */
   private useStaticData() {
     console.log('Usando datos estáticos ya cargados');
 
@@ -367,6 +397,9 @@ export class HomePage implements OnInit, OnDestroy {
     SplashScreen.hide();
   }
 
+  /**
+   * Espera a que la inicialización de datos esté completa.
+   */
   private waitForInitialization() {
     console.log('Esperando inicialización de datos...');
 
@@ -391,6 +424,9 @@ export class HomePage implements OnInit, OnDestroy {
     }, 10000);
   }
 
+  /**
+   * Carga los datos desde la API de Audius.
+   */
   private loadDataFromAPI() {
     console.log('Cargando datos desde la API...');
 
@@ -451,6 +487,10 @@ export class HomePage implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * Valida todas las playlists y carga sus tracks.
+   * @param playlists 
+   */
   private validateAllPlaylists(playlists: Playlist[]) {
     const validationTasks = playlists.map((playlist) =>
       this.validatePlaylist(playlist).pipe(catchError(() => of(null)))
@@ -479,6 +519,11 @@ export class HomePage implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * Valida una playlist y carga sus tracks.
+   * @param playlist 
+   * @returns 
+   */
   private validatePlaylist(playlist: Playlist) {
     if (!playlist.id) return of(null);
 
@@ -514,12 +559,17 @@ export class HomePage implements OnInit, OnDestroy {
     );
   }
 
+  /**
+   * Limpia las suscripciones y recursos al destruir el componente.
+   */
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  // Método para limpiar los datos estáticos (útil para desarrollo o logout)
+  /**
+   * Limpia los datos estáticos y la caché para permitir una nueva carga de datos.
+   */
   static clearStaticData() {
     HomePage.dataLoaded = false;
     HomePage.staticTrendingTracks = [];
@@ -528,6 +578,11 @@ export class HomePage implements OnInit, OnDestroy {
     HomePage.isInitializing = false;
   }
 
+  /**
+   * Busca un track en los datos cargados, priorizando la caché local y estática.
+   * @param trackId 
+   * @returns 
+   */
   private findTrackInData(trackId: string): Track | null {
     // Buscar primero en la caché local
     if (this.tracksCache.has(trackId)) {
@@ -581,6 +636,11 @@ export class HomePage implements OnInit, OnDestroy {
     return null;
   }
 
+  /**
+   * Alterna la expansión de una playlist.
+   * @param playlist 
+   * @returns 
+   */
   togglePlaylistExpansion(playlist: Playlist) {
     if (playlist.expanded) {
       playlist.expanded = false;
@@ -606,6 +666,12 @@ export class HomePage implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * Carga los tracks de una playlist de manera eficiente.
+   * @param playlist 
+   * @param forceReload 
+   * @returns 
+   */
   private loadPlaylistTracksEfficiently(
     playlist: Playlist,
     forceReload: boolean = false
@@ -646,6 +712,12 @@ export class HomePage implements OnInit, OnDestroy {
     );
   }
 
+  /**
+   * Reproduce un track específico y actualiza el estado de la sala de escucha.
+   * @param track 
+   * @param playlistTracks 
+   * @returns 
+   */
   playTrack(track: Track, playlistTracks?: any[]) {
     if (!track?.id) {
       console.error('Error: track es inválido. No se puede reproducir.');
@@ -668,6 +740,9 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Reproduce un track específico y actualiza el estado de la sala de escucha.
+   */
   pauseTrack() {
     this.audiusFacade.pause();
 
@@ -681,10 +756,17 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Detiene la reproducción del track actual.
+   */
   stopTrack() {
     this.audiusFacade.stop();
   }
 
+  /**
+   * Alterna entre reproducir y pausar un track.
+   * @param track 
+   */
   togglePlayPause(track: Track) {
     if (this.currentTrack?.id === track.id) {
       this.isPlaying ? this.pauseTrack() : this.audiusFacade.play(track.id);
@@ -693,18 +775,31 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Alterna la expansión del reproductor de música.
+   */
   togglePlayer() {
     this.isPlayerExpanded = !this.isPlayerExpanded;
   }
 
+  /**
+   * Reproduce el siguiente track en la lista de reproducción actual.
+   */
   nextTrack() {
     this.audiusFacade.next();
   }
 
+  /**
+   * Reproduce el track anterior en la lista de reproducción actual.
+   */
   previousTrack() {
     this.audiusFacade.previous();
   }
 
+  /**
+   * Reproduce un track específico y actualiza el estado de la sala de escucha.
+   * @param position 
+   */
   seekTo(position: number) {
     this.audiusFacade.seekTo(position);
 
@@ -718,12 +813,20 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Maneja el evento de búsqueda de un rango para buscar una posición específica en el track.
+   * @param event 
+   */
   onSeek(event: Event) {
     const rangeEvent = event as RangeCustomEvent;
     const position = rangeEvent.detail.value as number;
     this.seekTo(position);
   }
 
+  /**
+   * Actualiza la sesión de medios del navegador para reflejar el track actual.
+   * @returns 
+   */
   updateMediaSession() {
     if (!('mediaSession' in navigator) || !this.currentTrack) return;
 
@@ -759,15 +862,29 @@ export class HomePage implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Formatea el tiempo en un string legible.
+   * @param time 
+   * @returns 
+   */
   getFormattedTime(time: number): string {
     return this.audiusFacade.formatTime(time);
   }
 
+  /**
+   * Calcula el porcentaje de duración del track actual.
+   * @returns 
+   */
   getDurationPercentage(): number {
     if (!this.duration) return 0;
     return (this.currentTime / this.duration) * 100;
   }
 
+  /**
+   * Carga más playlists al hacer scroll infinito.
+   * @param event 
+   * @returns 
+   */
   loadMore(event: any) {
     if (!this.hasMorePlaylists) {
       (event as InfiniteScrollCustomEvent).target.complete();
@@ -800,6 +917,11 @@ export class HomePage implements OnInit, OnDestroy {
     }, 300);
   }
 
+  /**
+   * Maneja la búsqueda de música basada en el término ingresado.
+   * @param event 
+   * @returns 
+   */
   searchMusic(event: any) {
     const query = event.target.value.trim();
     this.searchTerm = query;
@@ -848,12 +970,20 @@ export class HomePage implements OnInit, OnDestroy {
     }, 300);
   }
 
+  /**
+   * Limpia los resultados de búsqueda y el término de búsqueda.
+   */
   clearSearch() {
     this.searchTerm = '';
     this.searchResults = [];
     this.showSearchResults = false;
   }
 
+  /**
+   * Reproduce un resultado de búsqueda específico.
+   * @param item 
+   * @returns 
+   */
   playSearchResult(item: any) {
     if (item.type === 'track') {
       this.playTrack({
@@ -888,6 +1018,11 @@ export class HomePage implements OnInit, OnDestroy {
         });
     }
   }
+
+  /**
+   * Reproduce una playlist completa.
+   * @param playlist 
+   */
   playPlaylist(playlist: Playlist) {
     if (
       !playlist.playlist_contents ||
@@ -930,6 +1065,12 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Reproduce un track específico de una playlist.
+   * @param playlist 
+   * @param trackIndex 
+   * @returns 
+   */
   trackFromPlaylist(playlist: Playlist, trackIndex: number) {
     if (
       !playlist.playlist_contents ||
@@ -946,10 +1087,21 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Verifica si un track está actualmente reproduciéndose.
+   * @param trackId 
+   * @returns 
+   */
   isCurrentlyPlaying(trackId: string): boolean {
     return this.currentTrack?.id === trackId && this.isPlaying;
   }
 
+  /**
+   * Obtiene la URL del artwork de un track.
+   * @param track 
+   * @param size 
+   * @returns 
+   */
   getArtworkUrl(track: any, size: string = '480x480'): string {
     if (track?.artwork && track.artwork[size]) {
       return track.artwork[size];
@@ -957,6 +1109,11 @@ export class HomePage implements OnInit, OnDestroy {
     return 'assets/default.jpg';
   }
 
+  /**
+   * Crea una nueva sala de escucha para un track específico.
+   * @param trackId 
+   * @returns 
+   */
   createListeningRoom(trackId: string) {
     if (!trackId) {
       console.error('No se puede crear sala: trackId no válido');
@@ -965,10 +1122,17 @@ export class HomePage implements OnInit, OnDestroy {
     this.listeningRoomService.createRoom(trackId);
   }
 
+  /**
+   * Se une a una sala de escucha existente.
+   * @param roomId 
+   */
   joinListeningRoom(roomId: string) {
     this.listeningRoomService.joinRoom(roomId);
   }
 
+  /**
+   * Abandona la sala de escucha actual.
+   */
   leaveCurrentRoom() {
     const currentRoom = this.listeningRoomService.getCurrentRoom();
     if (currentRoom) {
@@ -976,6 +1140,10 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Invita a un usuario a la sala de escucha actual.
+   * @param userId 
+   */
   inviteUserToRoom(userId: string) {
     const currentRoom = this.listeningRoomService.getCurrentRoom();
     if (currentRoom) {
@@ -983,19 +1151,33 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Acepta una invitación a una sala de escucha.
+   * @param invitation 
+   */
   acceptRoomInvitation(invitation: RoomEvent) {
     this.listeningRoomService.acceptInvitation(invitation);
   }
 
+  /**
+   * Declina una invitación a una sala de escucha.
+   * @param invitation 
+   */
   declineRoomInvitation(invitation: RoomEvent) {
     this.listeningRoomService.declineInvitation(invitation);
   }
 
+  /**
+   * Abre el diálogo de invitación para seleccionar usuarios.
+   */
   inviteUserDialog() {
     this.showInviteModal = true;
     this.loadUsers();
   }
 
+  /**
+   * Cierra el diálogo de invitación y limpia los datos.
+   */
   closeInviteDialog() {
     this.showInviteModal = false;
     this.userSearchTerm = '';
@@ -1003,6 +1185,11 @@ export class HomePage implements OnInit, OnDestroy {
     this.selectedUsers = [];
   }
 
+  /**
+   * Busca usuarios en la lista de amigos del usuario actual.
+   * @param event 
+   * @returns 
+   */
   searchUsers(event: any) {
     const query = event.target.value.toLowerCase().trim();
     this.userSearchTerm = query;
@@ -1052,6 +1239,9 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Carga los usuarios amigos del usuario actual.
+   */
   loadUsers() {
     if (
       this.currentUser &&
@@ -1064,16 +1254,27 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Selecciona un usuario para invitar a la sala de escucha.
+   * @param user 
+   */
   selectUserForInvitation(user: User) {
     if (!this.selectedUsers.some((u) => u.id === user.id)) {
       this.selectedUsers.push(user);
     }
   }
 
+  /**
+   * Elimina un usuario seleccionado de la lista de invitaciones.
+   * @param user 
+   */
   removeSelectedUser(user: User) {
     this.selectedUsers = this.selectedUsers.filter((u) => u.id !== user.id);
   }
 
+  /**
+   * Envía invitaciones a los usuarios seleccionados en la sala de escucha actual.
+   */
   sendInvitations() {
     const currentRoom = this.listeningRoomService.getCurrentRoom();
     if (!currentRoom) {
@@ -1095,6 +1296,11 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Invita a los usuarios seleccionados a la sala de escucha actual.
+   * @param roomId 
+   * @returns 
+   */
   private inviteSelectedUsers(roomId: string) {
     if (this.selectedUsers.length === 0) {
       return;
@@ -1108,6 +1314,11 @@ export class HomePage implements OnInit, OnDestroy {
     this.closeInviteDialog();
   }
 
+  /**
+   * Obtiene la URL del artwork de un track específico.
+   * @param trackId 
+   * @returns 
+   */
   getTrackArtwork(trackId: string): string | null {
     const track = this.findTrackInData(trackId);
     return track?.artwork?.['150x150'] || null;

@@ -32,6 +32,15 @@ export class LoginPage implements OnInit {
   showPassword = false;
   returnUrl: string;
 
+  /**
+   * Constructor de la clase 
+   * @param formBuilder 
+   * @param router 
+   * @param route 
+   * @param authService 
+   * @param toastController 
+   * @param platform 
+   */
   constructor(
     private formBuilder: FormBuilder,
     private router: Router,
@@ -46,14 +55,18 @@ export class LoginPage implements OnInit {
     this.loginForm = this.formBuilder.group({
       username: ['', [Validators.required]],
       password: ['', [Validators.required, Validators.minLength(6)]],
-      rememberMe: [true], // Por defecto activado para persistencia
-      enableBiometric: [false] // Para habilitar la autenticación biométrica
+      rememberMe: [true],
+      enableBiometric: [false]
     });
     
     // Capturar URL a la que redirigir después del login
     this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/home';
   }
 
+  /**
+   * Inicializa el componente
+   * @returns 
+   */
   ngOnInit() {
     // Verificar si ya hay una sesión activa y redirigir
     if (this.authService.isAuthenticated()) {
@@ -66,7 +79,7 @@ export class LoginPage implements OnInit {
   }
 
   /**
-   * Comprueba si la autenticación biométrica está disponible
+   * Verifica si la autenticación biométrica está disponible en el dispositivo
    */
   private checkBiometricAvailability() {
     this.authService.biometricService.isBiometricsAvailable().subscribe({
@@ -81,6 +94,10 @@ export class LoginPage implements OnInit {
     });
   }
 
+  /**
+   * Maneja el envío del formulario de inicio de sesión
+   * @returns 
+   */
   async onSubmit() {
     if (this.loginForm.invalid) {
       this.markFormGroupTouched(this.loginForm);
@@ -141,7 +158,7 @@ export class LoginPage implements OnInit {
   }
   
   /**
-   * Intenta iniciar sesión con biometría
+   * Inicia sesión utilizando autenticación biométrica
    */
   async loginWithBiometrics() {
     this.isBiometricSubmitting = true;
@@ -167,7 +184,8 @@ export class LoginPage implements OnInit {
   }
   
   /**
-   * Marca todos los controles en un formGroup como touched
+   * Marca todos los controles de un FormGroup como tocados si son inválidos
+   * @param formGroup 
    */
   private markFormGroupTouched(formGroup: FormGroup) {
     Object.keys(formGroup.controls).forEach(key => {
@@ -179,7 +197,8 @@ export class LoginPage implements OnInit {
   }
 
   /**
-   * Muestra un mensaje de error en un toast
+   * Muestra un toast de error con un mensaje específico
+   * @param message 
    */
   private async showErrorToast(message: string) {
     const toast = await this.toastController.create({
@@ -192,7 +211,9 @@ export class LoginPage implements OnInit {
   }
 
   /**
-   * Muestra un toast con un mensaje
+   * Muestra un toast con un mensaje y color específicos
+   * @param message 
+   * @param color 
    */
   private async showToast(message: string, color: string = 'primary') {
     const toast = await this.toastController.create({
@@ -204,10 +225,16 @@ export class LoginPage implements OnInit {
     toast.present();
   }
 
+  /**
+   * Cambia la visibilidad de la contraseña
+   */
   togglePasswordVisibility() {
     this.showPassword = !this.showPassword;
   }
 
+  /**
+   * Navega a la página de registro
+   */
   navigateToRegister() {
     this.router.navigate(['/signin']);
   }

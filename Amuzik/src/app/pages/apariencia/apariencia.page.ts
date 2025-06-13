@@ -36,6 +36,9 @@ import { TemaService, ModoTema } from 'src/app/services/tema.service';
 import { Subscription } from 'rxjs';
 import { AuthService, User } from '../../services/auth.service';
 
+/**
+ * Interfaz de los temas
+ */
 interface Tema {
   id: string;
   nombre: string;

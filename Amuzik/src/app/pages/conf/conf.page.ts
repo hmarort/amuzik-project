@@ -115,10 +115,18 @@ export class ConfPage implements OnInit, OnDestroy {
   showCropper = false;
   originalFileName = '';
   originalFileType = '';
-  cropperHeight = 300; // Altura por defecto del cropper
+  cropperHeight = 300;
 
   private userSubscription: Subscription | null = null;
 
+  /**
+   * Constuctor de la clase
+   * @param router 
+   * @param authService 
+   * @param alertController 
+   * @param toastController 
+   * @param sanitizer 
+   */
   constructor(
     private router: Router,
     private authService: AuthService,
@@ -144,6 +152,10 @@ export class ConfPage implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Inicializa el componente
+   * @returns 
+   */
   ngOnInit() {
     // Verificar autenticación
     if (!this.authService.isAuthenticated()) {
@@ -168,6 +180,9 @@ export class ConfPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Limpia las suscripciones al destruir el componente
+   */
   ngOnDestroy() {
     // Desuscribirse para evitar memory leaks
     if (this.userSubscription) {
@@ -175,11 +190,17 @@ export class ConfPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Activa el modo de edición del perfil.
+   */
   toggleEditMode() {
     this.editMode = true;
     this.resetPerfilEditado();
   }
 
+  /**
+   * Cancela la edición y resetea los datos del perfil editado.
+   */
   cancelarEdicion() {
     this.editMode = false;
     this.resetPerfilEditado();
@@ -187,6 +208,9 @@ export class ConfPage implements OnInit, OnDestroy {
     this.selectedFile = null;
   }
 
+  /**
+   * Resetea los datos del perfil editado con los datos actuales del usuario.
+   */
   resetPerfilEditado() {
     this.perfilEditado = {
       id: this.usuario.id,
@@ -199,6 +223,9 @@ export class ConfPage implements OnInit, OnDestroy {
     };
   }
 
+  /**
+   * Guarda los cambios realizados en el perfil del usuario.
+   */
   async guardarPerfil() {
     try {
       const formData = new FormData();
@@ -223,17 +250,14 @@ export class ConfPage implements OnInit, OnDestroy {
         formData.append('apellidos', this.perfilEditado.apellidos || '');
       }
 
-      // Añadir imagen solo si se seleccionó una nueva
       if (this.selectedFile) {
-        formData.append('pfp', this.selectedFile); // Cambiado a 'pfp' para que coincida con el backend
+        formData.append('pfp', this.selectedFile);
       }
 
-      // Añadir contraseña solo si se ha modificado
       if (this.perfilEditado.password) {
         formData.append('password', this.perfilEditado.password);
       }
 
-      // Llamar al servicio para actualizar
       this.authService.updateUserData(formData).subscribe(
         response => {
           this.editMode = false;
@@ -252,10 +276,18 @@ export class ConfPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Abre el modal para recortar la imagen.
+   */
   seleccionarImagen() {
     this.fileInput.nativeElement.click();
   }
 
+  /**
+   * Maneja la selección de un archivo de imagen.
+   * @param event 
+   * @returns 
+   */
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
@@ -281,15 +313,17 @@ export class ConfPage implements OnInit, OnDestroy {
       this.imageChangedEvent = event;
       this.showCropper = true;
 
-      // Presentar el modal después de un breve retraso para asegurar que el DOM esté listo
       setTimeout(() => {
         this.cropperModal.present();
       }, 100);
     }
   }
 
+  /**
+   * Maneja la imagen recortada y actualiza la vista previa.
+   * @param event 
+   */
   imageCropped(event: ImageCroppedEvent) {
-    // Guardar la imagen recortada y sanitizar el objectUrl para mayor seguridad
     if (event.objectUrl) {
       this.croppedImage = event.objectUrl;
     } else if (event.base64) {
@@ -298,6 +332,10 @@ export class ConfPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Maneja la imagen cargada en el cropper.
+   * @param image 
+   */
   imageLoaded(image: LoadedImage) {
     // Imagen cargada en el cropper
     console.log('Imagen cargada en el cropper', image);
@@ -305,18 +343,22 @@ export class ConfPage implements OnInit, OnDestroy {
     // Ajustar altura según la imagen cargada
     const imgElement = image.original.image as HTMLImageElement;
     if (imgElement) {
-      // Calcular una altura razonable basada en las dimensiones de la imagen
-      // pero manteniéndola dentro de límites razonables para la UI
       const aspectRatio = imgElement.naturalWidth / imgElement.naturalHeight;
       this.cropperHeight = Math.min(400, Math.round(300 / aspectRatio));
     }
   }
 
+  /**
+   * Evento que se da cuando el cropper está listo.
+   */
   cropperReady() {
     // El cropper está listo
     console.log('Cropper listo');
   }
 
+  /**
+   * Muestra un mensaje de error si falla la carga de la imagen.
+   */
   loadImageFailed() {
     // Error al cargar la imagen
     this.mostrarToast('Error al cargar la imagen', 'danger');
@@ -324,6 +366,10 @@ export class ConfPage implements OnInit, OnDestroy {
     this.cropperModal.dismiss();
   }
 
+  /**
+   * Confirma el recorte de la imagen y actualiza la vista previa.
+   * @returns 
+   */
   async confirmCrop() {
     if (!this.croppedImage) {
       this.mostrarToast('Error al procesar la imagen', 'danger');
@@ -331,7 +377,6 @@ export class ConfPage implements OnInit, OnDestroy {
     }
 
     try {
-      // Si tenemos un objectUrl, usarlo para crear un Blob/File
       if (this.croppedImage.startsWith('blob:')) {
         // Actualizar la vista previa (sanitizada)
         this.previewImage = this.croppedImage;
@@ -347,7 +392,6 @@ export class ConfPage implements OnInit, OnDestroy {
       }
       // Si tenemos un base64, convertirlo a File
       else if (this.croppedImage.startsWith('data:')) {
-        // Actualizar la vista previa (sanitizada)
         this.previewImage = this.croppedImage;
 
         // Convertir base64 a File
@@ -369,6 +413,9 @@ export class ConfPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Cancela el recorte de la imagen y cierra el modal.
+   */
   cancelCrop() {
     this.cropperModal.dismiss();
     this.showCropper = false;
@@ -376,12 +423,18 @@ export class ConfPage implements OnInit, OnDestroy {
     this.croppedImage = '';
   }
 
+  /**
+   * Convierte una cadena base64 a un objeto File.
+   * @param dataUrl 
+   * @param filename 
+   * @param mimeType 
+   * @returns 
+   */
   base64ToFile(
     dataUrl: string,
     filename: string,
     mimeType: string
   ): Promise<File> {
-    // Extraer la parte de datos del base64 (eliminar el prefijo data:image/xyz;base64,)
     const base64Data = dataUrl.split(',')[1];
     const byteCharacters = atob(base64Data);
     const byteArrays = [];
@@ -402,20 +455,32 @@ export class ConfPage implements OnInit, OnDestroy {
     return Promise.resolve(new File([blob], filename, { type: mimeType || 'image/png' }));
   }
 
+  /**
+   * Cierra la sesión del usuario y redirige a la página de inicio de sesión.
+   */
   async cerrarSesion() {
 
     this.logout();
 
   }
 
+  /**
+   * Cierra la sesión del usuario.
+   */
   logout() {
     this.authService.logout();
   }
 
+  /**
+   * Abre el modal para editar el perfil.
+   */
   editarPerfil() {
     this.toggleEditMode();
   }
 
+  /**
+   * Muestra un mensaje de confirmación para eliminar el usuario.
+   */
   deleteUser(){
     this.toastController.create({
       message: '¿Estás seguro de que quieres eliminar tu cuenta?',
@@ -439,6 +504,9 @@ export class ConfPage implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Confirma la eliminación del usuario y realiza la solicitud al servicio de autenticación.
+   */
   async confirmarEliminacionUsuario() {
       this.authService.deleteUser().subscribe(() => {
       this.mostrarToast('Usuario eliminado', 'success');
@@ -448,6 +516,11 @@ export class ConfPage implements OnInit, OnDestroy {
     });
   }
   
+  /**
+   * Muestra un mensaje toast con el mensaje y color especificados.
+   * @param mensaje 
+   * @param color 
+   */
   async mostrarToast(mensaje: string, color: string = 'success') {
     const toast = await this.toastController.create({
       message: mensaje,

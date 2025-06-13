@@ -64,8 +64,16 @@ export class SigninPage implements OnInit {
   showCropper = false;
   originalFileName = '';
   originalFileType = '';
-  cropperHeight = 300; // Altura por defecto del cropper
+  cropperHeight = 300;
 
+  /**
+   * Constructor de la clase
+   * @param formBuilder 
+   * @param router 
+   * @param authService 
+   * @param toastController 
+   * @param sanitizer 
+   */
   constructor(
     private formBuilder: FormBuilder,
     private router: Router,
@@ -98,8 +106,16 @@ export class SigninPage implements OnInit {
     });
   }
 
+  /**
+   * Inicializa el componente SigninPage.
+   */
   ngOnInit() {}
 
+  /**
+   * Maneja el cambio de archivo desde el input.
+   * @param event 
+   * @returns 
+   */
   onFileChange(event: Event) {
     const fileInput = event.target as HTMLInputElement;
     if (fileInput.files && fileInput.files.length > 0) {
@@ -128,13 +144,16 @@ export class SigninPage implements OnInit {
       this.imageChangedEvent = event;
       this.showCropper = true;
       
-      // Presentar el modal después de un breve retraso para asegurar que el DOM esté listo
       setTimeout(() => {
         this.cropperModal.present();
       }, 100);
     }
   }
 
+  /**
+   * Maneja el evento de imagen recortada.
+   * @param event 
+   */
   imageCropped(event: ImageCroppedEvent) {
     // Guardar la imagen recortada y sanitizar el objectUrl para mayor seguridad
     if (event.objectUrl) {
@@ -145,6 +164,10 @@ export class SigninPage implements OnInit {
     }
   }
 
+  /**
+   * Maneja el evento cuando la imagen se carga en el cropper.
+   * @param image 
+   */
   imageLoaded(image: LoadedImage) {
     // Imagen cargada en el cropper
     console.log('Imagen cargada en el cropper', image);
@@ -152,18 +175,22 @@ export class SigninPage implements OnInit {
     // Ajustar altura según la imagen cargada
     const imgElement = image.original.image as HTMLImageElement;
     if (imgElement) {
-      // Calcular una altura razonable basada en las dimensiones de la imagen
-      // pero manteniéndola dentro de límites razonables para la UI
       const aspectRatio = imgElement.naturalWidth / imgElement.naturalHeight;
       this.cropperHeight = Math.min(400, Math.round(300 / aspectRatio));
     }
   }
 
+  /**
+   * Indica que el cropper está listo para usarse.
+   */
   cropperReady() {
     // El cropper está listo
     console.log('Cropper listo');
   }
 
+  /**
+   * Maneja el error al cargar la imagen en el cropper.
+   */
   loadImageFailed() {
     // Error al cargar la imagen
     this.showToast('Error al cargar la imagen', 'danger');
@@ -171,6 +198,10 @@ export class SigninPage implements OnInit {
     this.cropperModal.dismiss();
   }
 
+  /**
+   * Confirma el recorte de la imagen y actualiza el formulario.
+   * @returns 
+   */
   async confirmCrop() {
     if (!this.croppedImage) {
       this.showToast('Error al procesar la imagen', 'danger');
@@ -230,6 +261,9 @@ export class SigninPage implements OnInit {
     }
   }
 
+  /**
+   * Cancela el recorte de la imagen y cierra el modal.
+   */
   cancelCrop() {
     this.cropperModal.dismiss();
     this.showCropper = false;
@@ -237,6 +271,13 @@ export class SigninPage implements OnInit {
     this.croppedImage = '';
   }
 
+  /**
+   * Convierte una cadena base64 a un objeto File.
+   * @param dataUrl 
+   * @param filename 
+   * @param mimeType 
+   * @returns 
+   */
   base64ToFile(
     dataUrl: string,
     filename: string,
@@ -263,10 +304,18 @@ export class SigninPage implements OnInit {
     return Promise.resolve(new File([blob], filename, { type: mimeType || 'image/png' }));
   }
 
+  /**
+   * Muestra u oculta la contraseña en el campo de entrada.
+   */
   togglePasswordVisibility() {
     this.showPassword = !this.showPassword;
   }
 
+  /**
+   * Muestra un mensaje de toast.
+   * @param message 
+   * @param color 
+   */
   async showToast(message: string, color: string = 'primary') {
     const toast = await this.toastController.create({
       message: message,
@@ -277,6 +326,10 @@ export class SigninPage implements OnInit {
     toast.present();
   }
 
+  /**
+   * Maneja el envío del formulario de registro.
+   * @returns 
+   */
   async onSubmit() {
     if (this.signinForm.invalid) {
       Object.keys(this.signinForm.controls).forEach((key) => {
@@ -325,6 +378,9 @@ export class SigninPage implements OnInit {
     }
   }
 
+  /**
+   * Registra al usuario usando Google.
+   */
   registerWithGoogle() {
     this.isGoogleSubmitting = true;
     this.googleCredentials = null;
@@ -359,10 +415,17 @@ export class SigninPage implements OnInit {
     });
   }
 
+  /**
+   * Navega a la página de inicio de sesión.
+   */
   navigateToLogin() {
     this.router.navigate(['/login']);
   }
 
+  /**
+   * Copia las credenciales de Google al portapapeles.
+   * @returns 
+   */
   copyCredentialsToClipboard() {
     if (!this.googleCredentials) return;
     

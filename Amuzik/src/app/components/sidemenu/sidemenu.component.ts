@@ -44,7 +44,7 @@ export class SidemenuComponent implements OnInit {
 
   isNative: boolean = Capacitor.getPlatform() === 'ios' || Capacitor.getPlatform() === 'android';
   /**
-   * Constructor
+   * Constructor del componente
    * @param router 
    */
   constructor(private router: Router) {
@@ -54,6 +54,9 @@ export class SidemenuComponent implements OnInit {
     this.darkMode = savedTheme === 'true';
   }
 
+  /**
+   * Inicializa el componente
+   */
   ngOnInit() {}
 
   /**
